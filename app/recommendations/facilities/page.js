@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Star, ArrowLeft, MapPin, Search } from 'lucide-react'
-import { FACILITY_TYPES } from '@/lib/facility-types'
+import { FACILITY_TYPE_CONFIG as FACILITY_TYPES } from '@/lib/facility-types'
 import PageShell from '@/components/PageShell'
 
 export default function TopFacilitiesPage() {
