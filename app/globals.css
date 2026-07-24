@@ -1,0 +1,354 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   P4 — Mobile/Desktop Layout Override (Auto/Mobile/Desktop preference)
+   Independent of Field/Standard view mode.
+
+   Mode = "mobile":  frame the body to a phone-sized canvas on big
+                      screens so the user sees the mobile layout.
+                      No effect on actual mobile devices (already mobile).
+   Mode = "desktop": rely on JS to set <meta viewport content="width=1280">,
+                      which forces a desktop rendering on mobile devices.
+                      We also stretch container padding on mobile so layouts
+                      don't squish.
+   Mode = "auto":    pass-through, no CSS overrides.
+   ------------------------------------------------------------------ */
+
+/* Mobile-on-desktop: constrain body to a phone-sized frame */
+@media (min-width: 769px) {
+  html[data-forced-layout="mobile"] body {
+    max-width: 480px;
+    margin: 0 auto;
+    border-left: 1px solid rgb(229 231 235);
+    border-right: 1px solid rgb(229 231 235);
+    box-shadow: 0 0 0 100vmax rgb(245 245 245);
+    clip-path: inset(0 -100vmax);
+    min-height: 100dvh;
+  }
+  html[data-forced-layout="mobile"] .container {
+    max-width: 100% !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  /* Stop sticky headers from extending past the frame */
+  html[data-forced-layout="mobile"] [class*="sticky"] {
+    position: relative !important;
+  }
+}
+
+/* Desktop-on-mobile hint: when the meta viewport has been forced to 1280,
+   we want the container to actually use its desktop max-width */
+html[data-forced-layout="desktop"] .container {
+  max-width: 1400px;
+}
+
+
+
+/* ------------------------------------------------------------------
+   Field Mode — when viewMode = 'field' AND viewport is actually mobile,
+   force mobile-first layout constraints. We deliberately scope these
+   rules to data-is-mobile="1" so a desktop user who has chosen Field
+   Mode as a preference does NOT see desktop pages collapsed to a
+   single column.
+   ------------------------------------------------------------------ */
+html[data-view-mode="field"][data-is-mobile="1"] body {
+  overflow-x: hidden;
+}
+html[data-view-mode="field"][data-is-mobile="1"] .container {
+  max-width: 100% !important;
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+/* Hide elements explicitly marked desktop-only in field mode (mobile only) */
+html[data-view-mode="field"][data-is-mobile="1"] [data-field-hide] { display: none !important; }
+/* Force any non-field-aware page main to have bottom padding so it
+   doesn't get hidden behind the global bottom nav. */
+html[data-view-mode="field"][data-is-mobile="1"] main:not([data-field-aware]) {
+  padding-bottom: 80px !important;
+}
+/* Compact grids: collapse 2/3/4-column grids to single column on mobile only.
+   Pages that opt out can add data-field-keep-grid to bypass. */
+html[data-view-mode="field"][data-is-mobile="1"] :not([data-field-keep-grid]) > .grid {
+  grid-template-columns: 1fr !important;
+}
+
+/* ------------------------------------------------------------------
+   Map view — single scroll container.
+   The map screen (ResponsiveMapLayout) is a fixed h-[100dvh] shell that
+   manages its own internal scroll panes. Inside the global app shell it
+   would otherwise stack against AppFooter and overflow the viewport,
+   producing a second (page-level) scrollbar on top of the map's own.
+   While the map is mounted it sets data-map-shell="1" on <html>, so we
+   pin the document to the viewport and hide the global footer.
+   ------------------------------------------------------------------ */
+html[data-map-shell="1"],
+html[data-map-shell="1"] body {
+  height: 100%;
+  overflow: hidden;
+}
+/* The shell and its children already size to 100dvh — drop the min-height
+   so the footer's height can't push the shell past the viewport. */
+html[data-map-shell="1"] .dm-app-shell {
+  min-height: 0;
+  height: 100%;
+}
+/* AppFooter is redundant here: the map fills the viewport and has its own
+   mobile action bar. Hiding it removes the overflow that caused scrollbar #2. */
+html[data-map-shell="1"] .dm-app-shell > footer {
+  display: none;
+}
+
+/* ------------------------------------------------------------------
+   Admin shell — freeze-pane scrolling.
+   <main class="admin-main"> is overflow-hidden. Pages that use
+   AdminPageFrame fill it with their own scroll panes. Legacy pages
+   that DON'T use AdminPageFrame get an automatic scrollable wrapper
+   so they don't get clipped. The CSS :has() selector lets us detect
+   whether the page opted into the frame.
+   ------------------------------------------------------------------ */
+main.admin-main {
+  position: relative;
+}
+/* If a direct child has data-admin-frame, page handles its own scroll */
+main.admin-main:has(> [data-admin-frame]) {
+  overflow: hidden;
+  padding: 0;
+}
+/* Otherwise (legacy pages): make main scrollable with padding */
+main.admin-main:not(:has(> [data-admin-frame])) {
+  overflow-y: auto;
+  padding: 1rem;
+}
+@media (min-width: 768px) {
+  main.admin-main:not(:has(> [data-admin-frame])) {
+    padding: 1.5rem;
+  }
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+        monospace;
+}
+
+.App {
+    text-align: center;
+}
+
+.App-logo {
+    height: 40vmin;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .App-logo {
+        animation: App-logo-spin infinite 20s linear;
+    }
+}
+
+.App-header {
+    background-color: #0f0f10;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: calc(10px + 2vmin);
+    color: white;
+}
+
+.App-link {
+    color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+
+/* ------------------------------------------------------------------
+   Landing page motion helpers (HomeFeatures & friends).
+   Pure CSS so no animation library is required. All of it is disabled
+   under prefers-reduced-motion.
+   ------------------------------------------------------------------ */
+
+/* Fade + rise on load, used with inline animation-delay for stagger */
+@keyframes dm-reveal {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dm-reveal {
+  opacity: 0;
+  animation: dm-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Slow drifting background blobs */
+@keyframes dm-float {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(0, -26px, 0) scale(1.06); }
+}
+.dm-float      { animation: dm-float 11s ease-in-out infinite; }
+.dm-float-slow { animation: dm-float 16s ease-in-out infinite reverse; }
+
+/* Hand-drawn underline stroke */
+@keyframes dm-draw {
+  from { stroke-dashoffset: 220; }
+  to   { stroke-dashoffset: 0; }
+}
+.dm-draw {
+  stroke-dasharray: 220;
+  stroke-dashoffset: 220;
+  animation: dm-draw 1.1s ease-out 0.45s forwards;
+}
+
+/* Glint that sweeps across the icon tiles */
+@keyframes dm-shine {
+  0%        { transform: translateX(-140%) skewX(-20deg); }
+  55%, 100% { transform: translateX(240%)  skewX(-20deg); }
+}
+.dm-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: dm-shine 3.6s ease-in-out infinite;
+}
+
+/* Slowly rotating recycle mark */
+@keyframes dm-spin {
+  to { transform: rotate(360deg); }
+}
+.dm-spin { animation: dm-spin 6s linear infinite; }
+
+/* Conveyor belts — two copies of the row translate -50% for a seamless loop */
+@keyframes dm-belt {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
+.dm-belt-track {
+  animation: dm-belt linear infinite;
+  will-change: transform;
+}
+.dm-belt-rev { animation-direction: reverse; }
+/* pause both tracks when the belt is hovered or a chip inside is focused */
+.dm-belt:hover .dm-belt-track,
+.dm-belt:focus-within .dm-belt-track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-reveal,
+  .dm-float,
+  .dm-float-slow,
+  .dm-draw,
+  .dm-shine::after,
+  .dm-spin,
+  .dm-belt-track {
+    animation: none !important;
+  }
+  .dm-reveal { opacity: 1; transform: none; }
+  .dm-draw   { stroke-dashoffset: 0; }
+  /* belts stop moving, so let the row scroll manually instead */
+  .dm-belt { overflow-x: auto; }
+}
+
+@layer base {
+  :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 222.2 84% 4.9%;
+        --chart-1: 12 76% 61%;
+        --chart-2: 173 58% 39%;
+        --chart-3: 197 37% 24%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 27 87% 67%;
+        --radius: 0.5rem;
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+  .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+        --sidebar-background: 240 5.9% 10%;
+        --sidebar-foreground: 240 4.8% 95.9%;
+        --sidebar-primary: 224.3 76.3% 48%;
+        --sidebar-primary-foreground: 0 0% 100%;
+        --sidebar-accent: 240 3.7% 15.9%;
+        --sidebar-accent-foreground: 240 4.8% 95.9%;
+        --sidebar-border: 240 3.7% 15.9%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+    }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+}

@@ -1,0 +1,188 @@
+// home-facility-meta.js
+// ---------------------------------------------------------------------------
+// Facility taxonomy shared by the map page, the facility detail dialog, and the
+// submit-facility dialog. Extracted verbatim from the original app/page.js so
+// every consumer keeps rendering exactly the same icons/colors it did before.
+
+import {
+  MapPin, Recycle, Truck, Heart, Cpu, Hammer, Building2, Trees, Shield,
+  AlertTriangle, DollarSign,
+} from 'lucide-react'
+
+export const FACILITY_TYPES = [
+  'Transfer Station',
+  'Recycling Center',
+  'Buy-Back Center',
+  'Donation Center',
+  'Tire Disposal',
+  'Hazardous Waste',
+  'HHW Drop-off',
+  'Scrap Metal',
+  'Green Waste',
+  'Compost',
+  'Construction Recycling',
+  'E-Waste',
+  'CRV Redemption',
+  'Landfill',
+  'Reuse Center',
+  'Other',
+]
+
+export const MATERIALS = [
+  'Metal',
+  'Aluminum',
+  'Copper',
+  'Appliances',
+  'E-waste',
+  'Cardboard',
+  'Plastic',
+  'Wood',
+  'Furniture',
+  'Mattresses',
+  'Concrete',
+  'Dirt',
+  'Green waste',
+  'Household goods',
+  'Clothing',
+  'Pallets',
+  'Fixtures',
+  'Construction debris',
+]
+
+export const TYPE_ICONS = {
+  Landfill: Truck,
+  'Transfer Station': Truck,
+  'Recycling Center': Recycle,
+  'Buy-Back Center': DollarSign,
+  'Donation Center': Heart,
+  'Tire Disposal': Cpu,
+  'Hazardous Waste': AlertTriangle,
+  'HHW Drop-off': Shield,
+  'Scrap Metal': Hammer,
+  'Green Waste': Trees,
+  'Compost': Trees,
+  'Construction Recycling': Building2,
+  'E-Waste': Cpu,
+  'CRV Redemption': Recycle,
+  'Reuse Center': Building2,
+  'Other': MapPin,
+  // Legacy aliases
+  'CRV Center': Recycle,
+  'E-Waste Center': Cpu,
+  'Construction Debris Facility': Building2,
+  'Scrap Yard': Hammer,
+}
+
+export const TYPE_COLORS = {
+  Landfill: 'bg-neutral-200 text-neutral-800',
+  'Transfer Station': 'bg-neutral-200 text-neutral-800',
+  'Recycling Center': 'bg-emerald-100 text-emerald-800',
+  'Buy-Back Center': 'bg-emerald-100 text-emerald-800',
+  'Donation Center': 'bg-sky-100 text-sky-800',
+  'Tire Disposal': 'bg-orange-100 text-orange-800',
+  'Hazardous Waste': 'bg-red-100 text-red-800',
+  'HHW Drop-off': 'bg-red-100 text-red-800',
+  'Scrap Metal': 'bg-amber-100 text-amber-800',
+  'Green Waste': 'bg-lime-100 text-lime-800',
+  'Compost': 'bg-lime-100 text-lime-800',
+  'Construction Recycling': 'bg-slate-100 text-slate-800',
+  'E-Waste': 'bg-purple-100 text-purple-800',
+  'CRV Redemption': 'bg-emerald-100 text-emerald-800',
+  'Reuse Center': 'bg-neutral-200 text-neutral-800',
+  'Other': 'bg-neutral-100 text-neutral-700',
+  'CRV Center': 'bg-brand-100 text-brand-800',
+  'E-Waste Center': 'bg-purple-100 text-purple-800',
+  'Reuse Center': 'bg-brand-100 text-brand-800',
+  'Construction Debris Facility': 'bg-orange-100 text-orange-800',
+}
+
+// Profile types catalog — used by AuthDialog onboarding and ProfileDialog.
+export const PROFILE_TYPES = [
+  {
+    key: 'hauler',
+    title: 'Contractor / Hauler',
+    icon: '🚚',
+    blurb: 'I haul debris, run jobs, and need fast dump info.',
+    color: 'border-orange-500 bg-orange-50',
+    tools: [
+      'Save favorite facilities',
+      'Post facility alerts',
+      'View wait times',
+      'See contractor-friendly facilities',
+      'Track accepted materials',
+      'Add route notes',
+      'View recent facility activity',
+      'Save common dump locations',
+      'Follow facilities',
+    ],
+  },
+  {
+    key: 'recycler',
+    title: 'Recycler',
+    icon: '♻️',
+    blurb: 'I bring metal, CRV, e-waste, and want top dollar.',
+    color: 'border-brand-500 bg-brand-50',
+    tools: [
+      'Find CRV centers',
+      'Find metal/scrap yards',
+      'Track accepted materials',
+      'Favorite recycling locations',
+      'See current user alerts',
+    ],
+  },
+  {
+    key: 'donor',
+    title: 'Donation User',
+    icon: '❤️',
+    blurb: 'I donate household goods, furniture, and clothing.',
+    color: 'border-sky-500 bg-sky-50',
+    tools: [
+      'Find donation centers',
+      'See what locations are accepting',
+      'See what items are needed',
+      'Save favorite donation spots',
+      'Submit donation availability updates',
+    ],
+  },
+  {
+    key: 'facility_owner',
+    title: 'Facility Owner / Manager',
+    icon: '🏢',
+    blurb: 'I run a facility and want to keep info current.',
+    color: 'border-purple-500 bg-purple-50',
+    tools: [
+      'Claim facility listing',
+      'Post closures',
+      'Post accepted/not accepted materials',
+      'Post "yard full" or "accepting loads"',
+      'Update wait time',
+      'Respond to reviews',
+      'Post upcoming events',
+      'Manage facility images and hours',
+    ],
+  },
+  {
+    key: 'property_manager',
+    title: 'Property Manager',
+    icon: '🏘️',
+    blurb: 'I manage properties and coordinate cleanouts, donations, and disposals.',
+    color: 'border-teal-500 bg-teal-50',
+    tools: [
+      'Schedule pickups for tenants',
+      'Track cleanout jobs',
+      'Reserve drop-off windows',
+      'Post items for donation',
+      'Mark items as disposed',
+      'Coordinate with contractors',
+      'Bulk add property locations',
+    ],
+  },
+  {
+    key: 'general',
+    title: 'General User',
+    icon: '👤',
+    blurb: 'I drop things off occasionally and want a clean app.',
+    color: 'border-neutral-400 bg-neutral-50',
+    tools: ['Search map', 'Favorite locations', 'Submit updates', 'Leave reviews'],
+  },
+]
