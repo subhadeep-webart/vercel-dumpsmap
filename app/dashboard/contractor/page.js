@@ -9,7 +9,7 @@ import DashboardShell, { KpiGrid, KpiTile, SectionHeader } from '@/components/Da
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Clock, Briefcase, ClipboardList, Receipt, DollarSign, Award, ArrowRight, Truck, MapPin } from 'lucide-react'
+import { Clock, Briefcase, ClipboardList, Receipt, CircleDollarSign, Award, ArrowRight, Truck, MapPin } from 'lucide-react'
 import { api } from '@/lib/api-client'
 
 const fmtHrs = (m) => `${((m || 0) / 60).toFixed(1)}h`
@@ -67,7 +67,7 @@ function ContractorBody({ user }) {
     <>
       <KpiGrid>
         <KpiTile icon={Clock} label="Hours this week" value={loading ? '—' : fmtHrs(summary?.week?.net)} sub={`${summary?.week?.daysWorked || 0} days worked`} loading={loading} tone="brand" />
-        <KpiTile icon={DollarSign} label="Est. earnings (week)" value={loading ? '—' : earnings} sub={summary?.settings?.defaultRate > 0 ? `@ $${summary.settings.defaultRate}/hr` : 'Set rate in Time Clock settings'} loading={loading} tone="emerald" />
+        <KpiTile icon={CircleDollarSign} label="Est. earnings (week)" value={loading ? '—' : earnings} sub={summary?.settings?.defaultRate > 0 ? `@ $${summary.settings.defaultRate}/hr` : 'Set rate in Time Clock settings'} loading={loading} tone="emerald" />
         <KpiTile icon={Award} label="Rewards balance" value={loading ? '—' : (rewards?.balance || 0).toLocaleString()} sub={`pts · lifetime ${rewards?.lifetimeEarned || 0}`} loading={loading} tone="amber" />
         <KpiTile icon={Receipt} label="Receipts (30d)" value={loading ? '—' : receipts.length} sub="Last 5 shown below" loading={loading} tone="violet" />
       </KpiGrid>
@@ -91,7 +91,7 @@ function ContractorBody({ user }) {
         </div>
       )}
 
-      <SectionHeader icon={DollarSign} title="Bounties ready to claim" subtitle="Goal-reached community cleanups" action={<Link href="/bounties" className="text-xs font-bold text-brand-700 hover:underline">View all →</Link>} />
+      <SectionHeader icon={CircleDollarSign} title="Bounties ready to claim" subtitle="Goal-reached community cleanups" action={<Link href="/bounties" className="text-xs font-bold text-brand-700 hover:underline">View all →</Link>} />
       {bounties.length === 0 ? (
         <Card><CardContent className="p-4 text-sm text-neutral-500">No bounties ready to claim yet. <Link href="/bounties" className="font-bold text-brand-700 hover:underline">Browse all →</Link></CardContent></Card>
       ) : (

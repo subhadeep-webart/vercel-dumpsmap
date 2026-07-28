@@ -6,7 +6,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { CheckCircle2, AlertTriangle, Wrench } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Wrench, X } from 'lucide-react'
 import { SectionCard } from './primitives'
 
 export default function MaterialsTab({ facility, editing, editForm, setEditForm }) {
@@ -39,7 +39,7 @@ export default function MaterialsTab({ facility, editing, editForm, setEditForm 
           <div className="flex flex-wrap gap-1.5">
             {notAccepted.map((m) => (
               <span key={m} className="inline-flex items-center gap-1 rounded-full border border-red-300 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                ✕ {m}
+                <X className="h-3 w-3 shrink-0" /> {m}
               </span>
             ))}
           </div>
@@ -52,7 +52,7 @@ export default function MaterialsTab({ facility, editing, editForm, setEditForm 
         {contractorNotes.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {contractorNotes.map((n) => (
-              <Badge key={n} variant="outline" className="border-orange-200 bg-orange-50 text-orange-800">⚠ {n}</Badge>
+              <Badge key={n} variant="outline" className="inline-flex items-center gap-1 border-orange-200 bg-orange-50 text-orange-800"><AlertTriangle className="h-3 w-3 shrink-0" /> {n}</Badge>
             ))}
           </div>
         ) : (

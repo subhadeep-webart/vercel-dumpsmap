@@ -8,9 +8,9 @@
 
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card'
 
-export function SectionCard({ icon: Icon, title, iconClass = 'text-green-600', action, children }) {
+export function SectionCard({ icon: Icon, title, iconClass = 'text-brand-600', action, children, className, style }) {
   return (
-    <Card>
+    <Card className={className} style={style}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Icon className={`h-4 w-4 ${iconClass}`} /> {title}
@@ -27,9 +27,9 @@ export function Field({ icon: Icon, label, value, link, href, placeholder }) {
   const display = isEmpty ? (placeholder || '—') : value
   let content
   if (link && !isEmpty) {
-    content = <a href={value} target="_blank" rel="noopener noreferrer" className="text-green-700 hover:underline">{value}</a>
+    content = <a href={value} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{value}</a>
   } else if (href && !isEmpty) {
-    content = <a href={href} className="text-green-700 hover:underline">{value}</a>
+    content = <a href={href} className="text-brand-700 hover:underline">{value}</a>
   } else {
     content = <span className={isEmpty && placeholder ? 'italic text-neutral-500' : ''}>{display}</span>
   }

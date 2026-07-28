@@ -21,32 +21,39 @@
 //       │ [avatar]  Name  Role │
 //       │ user chip / sign-in  │
 //       ├──────────────────────┤
-//       │ 🗺  Facilities       │
-//       │ 📣 Activity Hub      │
-//       │ 👥 Community         │
-//       │ 💬 Messages          │
-//       │ 👤 Profile           │
+//       │ Facilities           │
+//       │ Activity Hub         │
+//       │ Community            │
+//       │ Messages             │
+//       │ Profile              │
 //       ├──────────────────────┤
-//       │ ❤️ Support Our Mission │
-//       │ 🏢 For Business      │
-//       │ ⓘ About              │
-//       │ ⚙️ Settings           │
-//       │ ❓ Help & Support     │
+//       │ Support Our Mission  │
+//       │ For Business         │
+//       │ About                │
+//       │ Settings             │
+//       │ Help & Support       │
 //       └──────────────────────┘
 
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import {
-  Activity, MapPin, Users, Menu, Bell, X, Shield, LogIn, LogOut,
+  Activity, MapPin, Users, Menu, Bell, Shield, LogIn, LogOut,
   LayoutDashboard, HeartHandshake, Building2, Info, Settings, HelpCircle,
   MessageSquare, User as UserIcon, ChevronRight, ShoppingBag,
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
-import { PRIMARY_NAV } from '@/constants/layout_constants'
+import { HEADER_CONFIG } from '@/constants/layout_constants'
 import { useAuth } from '@/components/AuthContext'
 import { getFirstName, getInitial, isNavActive } from '@/lib/nav-helpers'
+
+// Icon registry — HEADER_CONFIG references icons by string name so the config
+// stays a plain (React-free) object. Resolve names to components here.
+const HEADER_ICONS = {
+  Activity, MapPin, Users, ShoppingBag, LayoutDashboard, MessageSquare,
+  UserIcon, HeartHandshake, Building2, Info, Settings, HelpCircle, Shield,
+}
 
 export default function AppHeader({ active, showSearch = false }) {
   const router = useRouter()
@@ -54,19 +61,21 @@ export default function AppHeader({ active, showSearch = false }) {
   const { user, loggedIn, isStaff, loading: authLoading, logout: onLogout } = useAuth()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  const logoHref = loggedIn ? '/activity-hub' : '/'
+  const { brand, primaryNav, cta, drawerSections } = HEADER_CONFIG
+  const logoHref = loggedIn ? brand.href.loggedIn : brand.href.guest
 
   const firstName = getFirstName(user)
   const initial = getInitial(user)
 
   const isActive = (key) => isNavActive(key, pathname, active)
+  const CtaIcon = HEADER_ICONS[cta.icon] || HeartHandshake
 
   return (
     <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white/95 backdrop-blur">
       <div className="container mx-auto flex h-14 items-center gap-2 px-3 sm:px-4">
         {/* Logo */}
-        <Link href={logoHref} className="flex shrink-0 items-center gap-2" aria-label="DumpMaps home">
-          <img src="/dumpmaps-logo.png" alt="" className="h-7 w-7 rounded-md" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+        <Link href={logoHref} className="flex shrink-0 items-center gap-2" aria-label={`${brand.name} home`}>
+          <img src={brand.logo} alt="" className="h-7 w-7 rounded-md" onError={(e) => { e.currentTarget.style.display = 'none' }} />
           <span className="text-base font-extrabold tracking-tight">
             Dump<span className="text-emerald-600">Maps</span>
           </span>
@@ -74,7 +83,7 @@ export default function AppHeader({ active, showSearch = false }) {
 
         {/* Desktop primary nav */}
         <nav className="ml-6 hidden flex-1 items-center gap-1 lg:flex">
-          {PRIMARY_NAV.map((n) => {
+          {primaryNav.map((n) => {
             const active = isActive(n.key)
             return (
               <Link
@@ -103,10 +112,10 @@ export default function AppHeader({ active, showSearch = false }) {
         <div className="flex shrink-0 items-center gap-1.5">
           {/* Support Our Mission — visible md+ */}
           <Link
-            href="/donate"
+            href={cta.href}
             className="hidden h-9 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-[13px] font-semibold text-emerald-700 hover:bg-emerald-100 md:inline-flex"
           >
-            <HeartHandshake className="h-4 w-4" /> Support Our Mission
+            <CtaIcon className="h-4 w-4" /> {cta.label}
           </Link>
 
           {authLoading ? (
@@ -209,40 +218,35 @@ export default function AppHeader({ active, showSearch = false }) {
                 )}
               </SheetHeader>
 
-              {/* ───── Section: EXPLORE (big icons, one-tap) ───── */}
-              <div className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Explore</div>
-              <nav className="flex flex-col px-2">
-                <DrawerRow icon={MapPin}      label="Facilities"     href="/facilities"    onNavigate={() => setMobileOpen(false)} active={isActive('facilities')} tint="emerald" />
-                <DrawerRow icon={Activity}    label="Activity Hub"   href="/activity-hub"  onNavigate={() => setMobileOpen(false)} active={isActive('feed')} tint="orange" />
-                <DrawerRow icon={Users}       label="Community"      href="/community"     onNavigate={() => setMobileOpen(false)} active={isActive('community')} tint="sky" />
-                <DrawerRow icon={ShoppingBag} label="Marketplace"    href="/marketplace"   onNavigate={() => setMobileOpen(false)} active={isActive('marketplace')} tint="amber" />
-              </nav>
-
-              {loggedIn && (
-                <>
-                  <div className="mt-2 border-t border-neutral-100" />
-                  <div className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-neutral-500">You</div>
-                  <nav className="flex flex-col px-2">
-                    <DrawerRow icon={LayoutDashboard} label="Dashboard" href="/dashboard" onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                    <DrawerRow icon={MessageSquare}   label="Messages"  href="/messages"  onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                    <DrawerRow icon={UserIcon}        label="Profile"   href="/profile"   onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                  </nav>
-                </>
-              )}
-
-              {/* ───── Section: SUPPORT & DISCOVER ───── */}
-              <div className="mt-2 border-t border-neutral-100" />
-              <div className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-neutral-500">More</div>
-              <nav className="flex flex-col px-2">
-                <DrawerRow icon={HeartHandshake} label="Support Our Mission" href="/donate"   onNavigate={() => setMobileOpen(false)} tint="rose" featured />
-                <DrawerRow icon={Building2}      label="For Business"        href="/business" onNavigate={() => setMobileOpen(false)} tint="emerald" />
-                <DrawerRow icon={Info}           label="About"               href="/#about"   onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                <DrawerRow icon={Settings}       label="Settings"            href="/settings" onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                <DrawerRow icon={HelpCircle}     label="Help & Support"      href="/#support" onNavigate={() => setMobileOpen(false)} tint="neutral" />
-                {isStaff && (
-                  <DrawerRow icon={Shield} label="Admin Console" href="/admin" onNavigate={() => setMobileOpen(false)} tint="amber" />
-                )}
-              </nav>
+              {/* ───── Drawer sections (config-driven from HEADER_CONFIG) ───── */}
+              {drawerSections.map((section, si) => {
+                // Whole-section auth gate (e.g. the "You" section).
+                if (section.requiresAuth && !loggedIn) return null
+                const rows = section.items.filter((it) => !it.requiresStaff || isStaff)
+                if (rows.length === 0) return null
+                return (
+                  <React.Fragment key={section.title}>
+                    {si > 0 && <div className="mt-2 border-t border-neutral-100" />}
+                    <div className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                      {section.title}
+                    </div>
+                    <nav className="flex flex-col px-2">
+                      {rows.map((it) => (
+                        <DrawerRow
+                          key={it.href + it.label}
+                          icon={HEADER_ICONS[it.icon]}
+                          label={it.label}
+                          href={it.href}
+                          onNavigate={() => setMobileOpen(false)}
+                          active={it.activeKey ? isActive(it.activeKey) : false}
+                          tint={it.tint}
+                          featured={!!it.featured}
+                        />
+                      ))}
+                    </nav>
+                  </React.Fragment>
+                )
+              })}
 
               {loggedIn && (
                 <>

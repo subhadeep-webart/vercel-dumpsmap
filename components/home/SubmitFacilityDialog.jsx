@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from 'sonner'
 import PhotoUploader, { toUrlList } from '@/components/PhotoUploader'
 import FacilityPreviewCard from '@/components/home/FacilityPreviewCard'
+import { TypeIcon, StatusIcon } from '@/lib/facility-icons'
 import {
   FACILITY_TYPE_CONFIG,
   FACILITY_TYPE_OPTIONS,
@@ -152,7 +153,11 @@ export default function SubmitFacilityDialog({ open, onOpenChange }) {
                 <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                 <SelectContent>
                   {FACILITY_TYPE_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.icon} {t.label}</SelectItem>
+                    <SelectItem key={t.value} value={t.value}>
+                      <span className="inline-flex items-center gap-2">
+                        <TypeIcon typeKey={t.value} className="h-4 w-4" /> {t.label}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -247,9 +252,9 @@ export default function SubmitFacilityDialog({ open, onOpenChange }) {
                         key={s.value}
                         type="button"
                         onClick={() => setCurrentStatus(on ? '' : s.value)}
-                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${colorMap[s.color]}`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold ${colorMap[s.color]}`}
                       >
-                        {s.icon} {s.label}
+                        <StatusIcon status={s.value} className="h-3.5 w-3.5" /> {s.label}
                       </button>
                     )
                   })}

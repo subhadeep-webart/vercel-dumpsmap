@@ -12,20 +12,38 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Users, MessageSquare, Calendar, Send, ThumbsUp, MessageCircle, Plus, ArrowLeft, Hash, X,
+  Truck, Recycle, Heart, Ban, PartyPopper, Gift, Map as MapIcon, HelpCircle, MapPin, Search, Zap,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { timeAgo } from '@/components/AlertSystem'
 
 export const COMMUNITY_CATEGORIES = [
-  { k: 'contractor', l: 'Contractor Updates', icon: '🚚' },
-  { k: 'recycling', l: 'Recycling Tips', icon: '♻️' },
-  { k: 'donation', l: 'Donation Needs', icon: '❤️' },
-  { k: 'closures', l: 'Facility Closures', icon: '🚫' },
-  { k: 'events', l: 'Events', icon: '🎉' },
-  { k: 'free_drop', l: 'Free Drop-Off Days', icon: '🆓' },
-  { k: 'route', l: 'Route Help', icon: '🗺️' },
-  { k: 'materials', l: 'Material Questions', icon: '❓' },
+  { k: 'contractor', l: 'Contractor Updates' },
+  { k: 'recycling', l: 'Recycling Tips' },
+  { k: 'donation', l: 'Donation Needs' },
+  { k: 'closures', l: 'Facility Closures' },
+  { k: 'events', l: 'Events' },
+  { k: 'free_drop', l: 'Free Drop-Off Days' },
+  { k: 'route', l: 'Route Help' },
+  { k: 'materials', l: 'Material Questions' },
 ]
+
+// Icons for the community post categories above, keyed by `k`.
+const CATEGORY_ICONS = {
+  contractor: Truck,
+  recycling: Recycle,
+  donation: Heart,
+  closures: Ban,
+  events: PartyPopper,
+  free_drop: Gift,
+  route: MapIcon,
+  materials: HelpCircle,
+}
+
+function CatIcon({ k, className = 'h-4 w-4' }) {
+  const Icon = CATEGORY_ICONS[k] || Hash
+  return <Icon className={className} />
+}
 
 const EVENT_TYPES = [
   'E-waste Drive',
@@ -86,7 +104,9 @@ export function NewPostDialog({ open, onOpenChange, scope, facilityId, onPosted,
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Pick category" /></SelectTrigger>
                 <SelectContent>
                   {COMMUNITY_CATEGORIES.map((c) => (
-                    <SelectItem key={c.k} value={c.k}>{c.icon} {c.l}</SelectItem>
+                    <SelectItem key={c.k} value={c.k}>
+                      <span className="inline-flex items-center gap-2"><CatIcon k={c.k} className="h-4 w-4" /> {c.l}</span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -135,10 +155,10 @@ function PostCard({ post, onUpvote, onOpen, onMessage, currentUserId }) {
     <div className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm hover:shadow-md">
       <div className="flex items-center gap-2 text-[11px] text-neutral-500">
         {post.scope === 'event' && post.eventDate && (
-          <Badge className="bg-brand-600 text-white">📅 {new Date(post.eventDate).toLocaleDateString()}</Badge>
+          <Badge className="inline-flex items-center gap-1 bg-brand-600 text-white"><Calendar className="h-3 w-3" /> {new Date(post.eventDate).toLocaleDateString()}</Badge>
         )}
         {post.scope === 'community' && cat && (
-          <Badge variant="outline">{cat.icon} {cat.l}</Badge>
+          <Badge variant="outline" className="inline-flex items-center gap-1"><CatIcon k={cat.k} className="h-3 w-3" /> {cat.l}</Badge>
         )}
         {post.isOfficial && <Badge className="bg-purple-600 text-white">Official</Badge>}
         {post.isAdminPost && <Badge className="bg-amber-500 text-white">Admin</Badge>}
@@ -147,7 +167,7 @@ function PostCard({ post, onUpvote, onOpen, onMessage, currentUserId }) {
       <button onClick={() => onOpen?.(post)} className="mt-1 block w-full text-left">
         <div className="font-semibold text-neutral-900">{post.title}</div>
         {post.body && <div className="mt-1 line-clamp-2 text-sm text-neutral-600">{post.body}</div>}
-        {post.eventLocation && <div className="mt-1 text-xs text-neutral-500">📍 {post.eventLocation}</div>}
+        {post.eventLocation && <div className="mt-1 flex items-center gap-1 text-xs text-neutral-500"><MapPin className="h-3 w-3" /> {post.eventLocation}</div>}
         {post.facilityName && <div className="mt-1 text-xs text-neutral-500">@ {post.facilityName}</div>}
       </button>
       <div className="mt-2 flex items-center justify-between">
@@ -210,8 +230,8 @@ function PostDetailDialog({ open, onOpenChange, postId, currentUser }) {
           <div className="text-xs text-neutral-500">by <b>{p.userName}</b> · {timeAgo(p.createdAt)}</div>
           {p.body && <div className="whitespace-pre-wrap rounded-md bg-neutral-50 p-3">{p.body}</div>}
           {p.eventDate && (
-            <div className="rounded-md border border-brand-200 bg-brand-50 p-3 text-sm">
-              📅 <b>{new Date(p.eventDate).toLocaleDateString()}</b>{p.eventLocation && <> · 📍 {p.eventLocation}</>}
+            <div className="flex items-center gap-1 rounded-md border border-brand-200 bg-brand-50 p-3 text-sm">
+              <Calendar className="h-4 w-4 shrink-0" /> <b>{new Date(p.eventDate).toLocaleDateString()}</b>{p.eventLocation && <span className="inline-flex items-center gap-1"> · <MapPin className="h-4 w-4 shrink-0" /> {p.eventLocation}</span>}
             </div>
           )}
           <div className="pt-3 font-semibold">{(data.comments || []).length} comments</div>
@@ -394,14 +414,17 @@ function MessagesPane({ currentUser, openTarget }) {
   return (
     <div className="flex h-[60vh] flex-col">
       <div className="space-y-2 border-b border-neutral-200 p-3">
-        <Input value={searchQuery} onChange={(e) => search(e.target.value)} placeholder="🔎 Find a user to message…" />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          <Input value={searchQuery} onChange={(e) => search(e.target.value)} placeholder="Find a user to message…" className="pl-8" />
+        </div>
         {searchResults.length > 0 && (
           <div className="space-y-1 rounded-md border border-neutral-200 bg-white p-1">
             {searchResults.map((u) => (
               <button key={u.id} onClick={() => { setNewTo(u); setSearchQuery(''); setSearchResults([]) }} className="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-neutral-50">
                 <div>
                   <div className="font-semibold">{u.name}</div>
-                  <div className="text-[10px] text-neutral-500">{u.primaryProfile || 'user'} · ⚡ {u.karma || 0}</div>
+                  <div className="flex items-center gap-1 text-[10px] text-neutral-500">{u.primaryProfile || 'user'} · <Zap className="h-3 w-3" /> {u.karma || 0}</div>
                 </div>
                 <Send className="h-3 w-3 text-neutral-400" />
               </button>

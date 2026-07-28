@@ -7,26 +7,24 @@
 import SafeImage from '@/components/SafeImage'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, MapPin, BadgeCheck, Gift, KeyRound } from 'lucide-react'
+import { TypeIcon, StatusIcon } from '@/lib/facility-icons'
+import { STATUS_PILL_COLORS } from '@/constants/facility_detail_constants'
 
 export default function FacilityHero({ facility, heroImg, typeCfg, statusMeta, isClaimed, onBack }) {
-  const colorMap = {
-    green: 'bg-green-100 text-green-800 border-green-300',
-    red:   'bg-red-100 text-red-800 border-red-300',
-    amber: 'bg-amber-100 text-amber-900 border-amber-300',
-    blue:  'bg-blue-100 text-blue-800 border-blue-300',
-  }
   return (
     <section className="relative">
       {/* Banner image */}
-      <div className="relative h-48 w-full overflow-hidden bg-neutral-200 sm:h-64 md:h-80">
+      <div className="relative h-56 w-full overflow-hidden bg-neutral-200 sm:h-72 md:h-96">
         <SafeImage
           src={heroImg}
           alt={facility.name}
           kind="facility"
-          className="h-full w-full object-cover"
+          className="h-full w-full scale-105 object-cover"
         />
-        {/* Dark gradient overlay for legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/10" />
+        {/* Gradient overlays: strong bottom-up for text legibility, plus a
+            subtle top vignette so the back button / status pill stay readable. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" />
         {/* Back button overlay */}
         <button
           onClick={onBack}
@@ -38,10 +36,10 @@ export default function FacilityHero({ facility, heroImg, typeCfg, statusMeta, i
         {/* Title block overlay (bottom-left) */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 sm:px-6 sm:pb-6">
           <div className="container mx-auto">
-            <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap items-end gap-3 sm:gap-4">
               {/* Logo / icon tile */}
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2 border-white bg-white text-3xl shadow-lg sm:h-16 sm:w-16 sm:text-4xl">
-                {typeCfg?.icon || '📍'}
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-neutral-800 shadow-xl ring-1 ring-black/5 backdrop-blur-sm sm:h-20 sm:w-20">
+                <TypeIcon typeKey={facility.typeKey} className="h-8 w-8 sm:h-9 sm:w-9" />
               </div>
               <div className="min-w-0 flex-1 text-white">
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -80,8 +78,8 @@ export default function FacilityHero({ facility, heroImg, typeCfg, statusMeta, i
 
         {/* Status pill (top-right) */}
         {statusMeta && (
-          <div className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold shadow ${colorMap[statusMeta.color] || colorMap.amber}`}>
-            <span>{statusMeta.icon}</span>
+          <div className={`absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold shadow ${STATUS_PILL_COLORS[statusMeta.color] || STATUS_PILL_COLORS.amber}`}>
+            <StatusIcon status={statusMeta.value} className="h-3.5 w-3.5" />
             <span>{statusMeta.label}</span>
           </div>
         )}

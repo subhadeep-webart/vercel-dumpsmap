@@ -50,7 +50,7 @@ export default function AdminAnalytics() {
           renderItem={(f) => (
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0"><div className="truncate font-medium">{f.name}</div><div className="text-[11px] text-neutral-500">{f.type}</div></div>
-              <Badge variant="outline">🔥 {f.activeAlertCount}</Badge>
+              <Badge variant="outline" className="inline-flex items-center gap-1"><Flame className="h-3 w-3" /> {f.activeAlertCount}</Badge>
             </div>
           )}
         />

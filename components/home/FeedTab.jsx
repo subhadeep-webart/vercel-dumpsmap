@@ -13,6 +13,7 @@ import {
   Flame,
   Bell,
   RefreshCw,
+  CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useHotSpots, JOB_CATEGORIES } from '@/components/Jobs'
@@ -181,7 +182,7 @@ export default function FeedTab({ onFacilityOpen, onJobs, onJobsDialog, onOpenMa
       </section>
 
       <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-        <div className="font-semibold">💳 Verified job payments — coming soon</div>
+        <div className="inline-flex items-center gap-1 font-semibold"><CreditCard className="h-4 w-4" /> Verified job payments — coming soon</div>
         <div className="mt-0.5">Pre-funded jobs and contractor instant payouts launch in the next phase.</div>
       </div>
     </div>

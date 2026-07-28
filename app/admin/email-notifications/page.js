@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { AlertTriangle } from 'lucide-react'
 
 const TRIGGERS = [
   { key: 'newFacility',     label: 'New facility submission' },
@@ -61,7 +62,7 @@ export default function AdminEmailNotifications() {
               </SelectContent>
             </Select>
             {s.provider !== 'none' && (
-              <div className="mt-1 text-[11px] text-amber-700">⚠ {s.provider.toUpperCase()} API key required in Integrations.</div>
+              <div className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-700"><AlertTriangle className="h-3 w-3" /> {s.provider.toUpperCase()} API key required in Integrations.</div>
             )}
           </div>
           <div>

@@ -18,12 +18,32 @@ import {
   Eye,
 } from 'lucide-react'
 import { FACILITY_TYPE_CONFIG, getStatusMeta } from '@/lib/facility-types'
+import { TypeIcon, StatusIcon } from '@/lib/facility-icons'
 import FacilityLiveStatusBadge from '@/components/FacilityLiveStatusBadge'
+
+// Resolve the first usable photo for a facility — mirrors MobileFacilityCard so
+// the desktop row shows the same image the mobile card does.
+function firstPhoto(f) {
+  const candidates = [
+    f?.imageUrl,
+    f?.heroImageUrl,
+    f?.photoUrl,
+    ...(Array.isArray(f?.photos) ? f.photos : []),
+    ...(Array.isArray(f?.images) ? f.images : []),
+  ].filter(Boolean)
+  const raw = candidates[0]
+  if (!raw) return null
+  if (typeof raw !== 'string') return null
+  if (raw.startsWith('/uploads/')) return `/api/files/${raw.slice('/uploads/'.length)}`
+  return raw
+}
 
 export default function FacilityRow({ f, onOpen, onQuickCheckIn }) {
   // Derive type config — prefer typeKey (new submissions) else best-effort label match
   const typeKey = f.typeKey || Object.keys(FACILITY_TYPE_CONFIG).find((k) => FACILITY_TYPE_CONFIG[k].label === f.type) || null
   const cfg = typeKey ? FACILITY_TYPE_CONFIG[typeKey] : null
+
+  const photo = firstPhoto(f)
 
   const statusMeta = f.currentStatus ? getStatusMeta(f.currentStatus) : null
   const statusColor = {
@@ -38,13 +58,22 @@ export default function FacilityRow({ f, onOpen, onQuickCheckIn }) {
       {/* Accent bar — fades/slides in on hover */}
       <span className="absolute inset-y-0 left-0 w-1 origin-top scale-y-0 bg-emerald-500 transition-transform duration-300 ease-out group-hover:scale-y-100" />
 
-      {/* Type icon */}
+      {/* Facility photo (falls back to the type icon) */}
       <button
         onClick={onOpen}
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-xl text-brand-700 transition-colors duration-300 ease-out group-hover:bg-emerald-50 group-hover:text-emerald-700 active:scale-95"
+        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-50 text-xl text-brand-700 transition-colors duration-300 ease-out group-hover:bg-emerald-50 group-hover:text-emerald-700 active:scale-95"
         aria-label={`Open ${f.name}`}
       >
-        {cfg?.icon || <MapPin className="h-5 w-5" />}
+        {photo ? (
+          <img
+            src={photo}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+        ) : (
+          <TypeIcon typeKey={typeKey} className="h-5 w-5" />
+        )}
       </button>
 
       {/* Main content */}
@@ -54,8 +83,8 @@ export default function FacilityRow({ f, onOpen, onQuickCheckIn }) {
           {f.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-brand-600" aria-label="Verified" />}
           <FacilityLiveStatusBadge facility={f} />
           {statusMeta && (
-            <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${statusColor[statusMeta.color]}`}>
-              {statusMeta.icon} {statusMeta.label}
+            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${statusColor[statusMeta.color]}`}>
+              <StatusIcon status={f.currentStatus} className="h-3 w-3" /> {statusMeta.label}
             </span>
           )}
         </div>

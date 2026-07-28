@@ -7,9 +7,8 @@
 // Mirrors the pattern established by business_constants.js.
 
 import {
-  MapPin, Activity, DollarSign, Users, HeartHandshake, Truck, Recycle, Heart,
+  MapPin, Activity, CircleDollarSign, Users, HeartHandshake, Truck, Recycle, Heart,
   Cpu, AlertTriangle, Shield, Hammer, Trees, Building2,
-  CircleDollarSign,
 } from 'lucide-react'
 
 // ── Hero ──────────────────────────────────────────────────────────────────

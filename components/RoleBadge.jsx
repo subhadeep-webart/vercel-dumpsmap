@@ -1,6 +1,8 @@
 'use client'
 
+import { Check } from 'lucide-react'
 import { PROFILE_TYPE_BY_KEY, resolveProfileType } from '@/lib/community-categories'
+import { ProfileTypeIcon } from '@/lib/community-icons'
 
 const COLOR_CLASS = {
   neutral: 'bg-neutral-100 text-neutral-700 border-neutral-200',
@@ -39,9 +41,9 @@ export default function RoleBadge({ user, profileType, size = 'xs', showLabel = 
     : 'px-1.5 py-[1px] text-[10px] gap-0.5'
   return (
     <span className={`inline-flex items-center rounded-full border font-semibold uppercase tracking-wide ${cls} ${sizeCls} ${className}`} title={meta.label}>
-      <span className="text-[11px] leading-none">{meta.icon}</span>
+      <ProfileTypeIcon profileKey={key} className="h-3 w-3" />
       {showLabel && <span>{meta.label}</span>}
-      {isVerified && <span className="ml-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full bg-blue-500 text-[8px] font-bold text-white" title="Verified">✓</span>}
+      {isVerified && <span className="ml-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full bg-blue-500 text-white" title="Verified"><Check className="h-2 w-2" strokeWidth={3} /></span>}
     </span>
   )
 }

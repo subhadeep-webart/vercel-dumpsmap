@@ -17,7 +17,7 @@ import React, { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Camera, AlertTriangle, DollarSign, Lock, X } from 'lucide-react'
+import { Loader2, Camera, AlertTriangle, CircleDollarSign, Lock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import MediaUploader from '@/components/MediaUploader'
 
@@ -40,7 +40,7 @@ const WAIT_LEVELS = [
 const ISSUE_FLAGS = [
   { key: 'scale_issue',   label: 'Scale Closed',         icon: AlertTriangle },
   { key: 'gate_closed',   label: 'Gate Closed',          icon: Lock },
-  { key: 'price_update',  label: 'Price Update',         icon: DollarSign },
+  { key: 'price_update',  label: 'Price Update',         icon: CircleDollarSign },
   { key: 'not_accepting', label: 'Material Restriction', icon: X },
 ]
 

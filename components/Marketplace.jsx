@@ -26,6 +26,11 @@ import {
   X,
   ImageOff,
   Inbox as InboxIcon,
+  Star,
+  CreditCard,
+  User,
+  Hand,
+  Building,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -148,8 +153,8 @@ export function MarketplaceTab({ user, onLogin }) {
         </Button>
       </div>
       <div className="flex gap-1.5">
-        <SegmentPill active={segment === 'residential'} onClick={() => setSegment('residential')} label="🏠 Residential" />
-        <SegmentPill active={segment === 'commercial'} onClick={() => setSegment('commercial')} label="🏢 Commercial" />
+        <SegmentPill active={segment === 'residential'} onClick={() => setSegment('residential')} icon={Home} label="Residential" />
+        <SegmentPill active={segment === 'commercial'} onClick={() => setSegment('commercial')} icon={Building} label="Commercial" />
       </div>
       <MarketplaceFeed key={segment} segment={segment} user={user} onOpen={setDetailId} />
 
@@ -159,14 +164,15 @@ export function MarketplaceTab({ user, onLogin }) {
   )
 }
 
-function SegmentPill({ active, onClick, label }) {
+function SegmentPill({ active, onClick, label, icon: Icon }) {
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-4 py-1.5 text-sm font-semibold ${
+      className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-semibold ${
         active ? 'border-brand-600 bg-brand-600 text-white' : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'
       }`}
     >
+      {Icon && <Icon className="h-4 w-4" />}
       {label}
     </button>
   )
@@ -290,7 +296,7 @@ function ListingCard({ listing, onOpen }) {
         )}
         <div className="absolute left-1.5 top-1.5 flex flex-col gap-1">
           <Badge className={`border text-[10px] ${k.color}`}>{k.label}</Badge>
-          {listing.featured && <Badge className="border bg-amber-100 text-[10px] text-amber-800">⭐ Featured</Badge>}
+          {listing.featured && <Badge className="inline-flex items-center gap-1 border bg-amber-100 text-[10px] text-amber-800"><Star className="h-3 w-3" /> Featured</Badge>}
         </div>
         {listing.sold && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40">
@@ -402,8 +408,8 @@ export function MarketplacePostDialog({ open, onOpenChange, user, defaultSegment
             <div>
               <Label className="text-xs">Marketplace</Label>
               <div className="mt-1 flex gap-1.5">
-                <SegmentPill active={segment === 'residential'} onClick={() => setSegment('residential')} label="🏠 Residential" />
-                <SegmentPill active={segment === 'commercial'} onClick={() => setSegment('commercial')} label="🏢 Commercial" />
+                <SegmentPill active={segment === 'residential'} onClick={() => setSegment('residential')} icon={Home} label="Residential" />
+                <SegmentPill active={segment === 'commercial'} onClick={() => setSegment('commercial')} icon={Building} label="Commercial" />
               </div>
             </div>
             <div>
@@ -524,7 +530,7 @@ export function MarketplacePostDialog({ open, onOpenChange, user, defaultSegment
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
-                  <div className="font-semibold">💳 Secure marketplace payments — coming soon</div>
+                  <div className="inline-flex items-center gap-1 font-semibold"><CreditCard className="h-4 w-4" /> Secure marketplace payments — coming soon</div>
                   <div className="mt-0.5">For now, arrange payment offline. Buyer protection &amp; in-app payments launch in a future phase.</div>
                 </div>
               </div>
@@ -688,7 +694,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
                       {data.seller.avatarUrl ? (
                         <img src={data.seller.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                       ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-200">👤</div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-200 text-neutral-500"><User className="h-4 w-4" /></div>
                       )}
                       <div>
                         <div className="font-semibold">{data.seller.name}</div>
@@ -710,7 +716,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
                   <div className="space-y-3">
                     <div className="space-y-2">
                       {messages.length === 0 && (
-                        <div className="text-center text-xs text-neutral-500">No messages yet — say hi 👋 (messages auto-refresh every 5s)</div>
+                        <div className="inline-flex w-full items-center justify-center gap-1 text-center text-xs text-neutral-500">No messages yet — say hi <Hand className="h-3.5 w-3.5" /> (messages auto-refresh every 5s)</div>
                       )}
                       {messages.map((m) => (
                         <div key={m.id} className={`flex ${m.senderId === user.id ? 'justify-end' : 'justify-start'}`}>

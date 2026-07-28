@@ -1,6 +1,8 @@
 import './globals.css'
+import { Suspense } from 'react'
 import { Poppins } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import TopProgressBar from '@/components/TopProgressBar'
 import GlobalNotificationsMount from '@/components/messaging/GlobalNotificationsMount'
 import { ViewModeProvider } from '@/lib/view-mode'
 import { LayoutModeProvider } from '@/lib/layout-mode'
@@ -104,6 +106,12 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
       </head>
       <body className="bg-background text-foreground antialiased">
+        {/* Global top navigation progress bar. Wrapped in Suspense because it
+            reads useSearchParams(), which would otherwise force the whole tree
+            into client-side rendering. */}
+        <Suspense fallback={null}>
+          <TopProgressBar />
+        </Suspense>
         <AuthProvider>
           <ViewModeProvider>
             <LayoutModeProvider>

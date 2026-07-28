@@ -25,7 +25,7 @@ import {
   Package,
   Zap,
   CheckCircle2,
-  DollarSign,
+  CircleDollarSign,
   PartyPopper,
   Megaphone,
   XCircle,
@@ -35,21 +35,22 @@ import {
   Activity,
   Navigation,
   MapPin,
+  Flag,
 } from 'lucide-react'
 
 export const ALERT_TYPES = {
-  WAIT_TIME:     { label: 'Wait Time',       severity: 'warn', icon: '⏰', Icon: Clock,        color: 'bg-amber-500', hours: 2 },
-  LONG_LINE:     { label: 'Long Line',       severity: 'warn', icon: '🚛', Icon: Truck,        color: 'bg-amber-500', hours: 6 },
-  FAST_MOVING:   { label: 'Fast Moving',     severity: 'good', icon: '⚡', Icon: Zap,          color: 'bg-brand-600', hours: 6 },
-  CLOSED:        { label: 'Facility Closed', severity: 'bad',  icon: '🚫', Icon: Ban,          color: 'bg-red-600',   hours: 24 },
-  NOT_ACCEPTING: { label: 'Not Accepting',   severity: 'warn', icon: '🚷', Icon: AlertTriangle,color: 'bg-amber-500', hours: 12 },
-  ACCEPTING_NOW: { label: 'Accepting Now',   severity: 'good', icon: '✅', Icon: CheckCircle2, color: 'bg-brand-600', hours: 12 },
-  YARD_FULL:     { label: 'Yard Full',       severity: 'bad',  icon: '📦', Icon: Package,      color: 'bg-red-600',   hours: 6 },
-  SCALE_ISSUE:   { label: 'Scale Issue',     severity: 'bad',  icon: '⚖️', Icon: Scale,        color: 'bg-red-600',   hours: 6 },
-  PRICE_UPDATE:  { label: 'Price Update',    severity: 'info', icon: '💵', Icon: DollarSign,   color: 'bg-sky-500',   hours: 12 },
-  DONATION_NEED: { label: 'Donation Need',   severity: 'info', icon: '📢', Icon: Megaphone,    color: 'bg-sky-500',   hours: 12 },
-  EVENT:         { label: 'Event',           severity: 'good', icon: '🎉', Icon: PartyPopper,  color: 'bg-brand-600', hours: 24 },
-  GENERAL_NOTE:  { label: 'General Note',    severity: 'info', icon: '📝', Icon: XCircle,      color: 'bg-neutral-500', hours: 6 },
+  WAIT_TIME:     { label: 'Wait Time',       severity: 'warn', Icon: Clock,        color: 'bg-amber-500', hours: 2 },
+  LONG_LINE:     { label: 'Long Line',       severity: 'warn', Icon: Truck,        color: 'bg-amber-500', hours: 6 },
+  FAST_MOVING:   { label: 'Fast Moving',     severity: 'good', Icon: Zap,          color: 'bg-brand-600', hours: 6 },
+  CLOSED:        { label: 'Facility Closed', severity: 'bad',  Icon: Ban,          color: 'bg-red-600',   hours: 24 },
+  NOT_ACCEPTING: { label: 'Not Accepting',   severity: 'warn', Icon: AlertTriangle,color: 'bg-amber-500', hours: 12 },
+  ACCEPTING_NOW: { label: 'Accepting Now',   severity: 'good', Icon: CheckCircle2, color: 'bg-brand-600', hours: 12 },
+  YARD_FULL:     { label: 'Yard Full',       severity: 'bad',  Icon: Package,      color: 'bg-red-600',   hours: 6 },
+  SCALE_ISSUE:   { label: 'Scale Issue',     severity: 'bad',  Icon: Scale,        color: 'bg-red-600',   hours: 6 },
+  PRICE_UPDATE:  { label: 'Price Update',    severity: 'info', Icon: CircleDollarSign,   color: 'bg-sky-500',   hours: 12 },
+  DONATION_NEED: { label: 'Donation Need',   severity: 'info', Icon: Megaphone,    color: 'bg-sky-500',   hours: 12 },
+  EVENT:         { label: 'Event',           severity: 'good', Icon: PartyPopper,  color: 'bg-brand-600', hours: 24 },
+  GENERAL_NOTE:  { label: 'General Note',    severity: 'info', Icon: XCircle,      color: 'bg-neutral-500', hours: 6 },
 }
 
 export const SEVERITY_RING = {
@@ -347,7 +348,7 @@ export function AlertCard({ alert, onVote, onJump, onFlag, showFacilityName = fa
                   className="rounded-md border border-neutral-200 px-1.5 py-0.5 text-[11px] text-neutral-500 hover:bg-neutral-50"
                   title="Flag this alert"
                 >
-                  ⚐
+                  <Flag className="h-3 w-3" />
                 </button>
               )}
             </div>
@@ -522,6 +523,7 @@ export function AlertChipRow({ facility, onClick }) {
   }
   const top = facility.activeAlerts?.[0]
   const topMeta = top ? ALERT_TYPES[top.type] : null
+  const TopIcon = topMeta?.Icon || AlertTriangle
   return (
     <button
       onClick={(e) => {
@@ -530,7 +532,7 @@ export function AlertChipRow({ facility, onClick }) {
       }}
       className={`mt-2 flex w-full items-center gap-1.5 rounded-md border px-2 py-1 text-left text-[11px] font-semibold ${colorMap[sev]}`}
     >
-      <span className="flex h-4 w-4 items-center justify-center text-[10px]">{topMeta?.icon || '⚠'}</span>
+      <TopIcon className="h-4 w-4 shrink-0" />
       <span className="truncate">
         {topMeta?.label || 'Alert'} · {facility.activeAlertCount} live · {timeAgo(facility.lastAlertAt)}
       </span>

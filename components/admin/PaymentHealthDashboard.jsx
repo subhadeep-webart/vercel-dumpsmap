@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   Activity, AlertTriangle, CheckCircle2, XCircle, RefreshCw, Webhook, Heart,
-  TrendingUp, DollarSign, Users, Target, ShieldCheck, KeyRound, Wifi, WifiOff,
+  TrendingUp, CircleDollarSign, Users, Target, ShieldCheck, KeyRound, Wifi, WifiOff,
   Loader2, Copy, Info, Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -201,7 +201,7 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
               ok={s.environment === 'test'}
               icon={s.environment === 'live' ? AlertTriangle : ShieldCheck}
               label={s.environment === 'live' ? 'LIVE MODE' : 'TEST MODE'}
-              sublabel={s.environment === 'live' ? '⚠ Real charges' : 'Safe — test keys only'}
+              sublabel={s.environment === 'live' ? 'Real charges' : 'Safe — test keys only'}
             />
             <StatusPill
               ok={!data.failures.failedTransactions && !data.failures.failedWebhooks}
@@ -293,7 +293,7 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
               <div className="flex items-start gap-2">
                 {testResult.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-700" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />}
                 <div className="flex-1">
-                  <div className="font-bold">{testResult.ok ? '✅ Connected' : '❌ ' + (testResult.status || 'Failed')}</div>
+                  <div className="inline-flex items-center gap-1 font-bold">{testResult.ok ? <><CheckCircle2 className="h-3.5 w-3.5" /> Connected</> : <><XCircle className="h-3.5 w-3.5" /> {testResult.status || 'Failed'}</>}</div>
                   <div className="mt-0.5 opacity-80">{testResult.message}</div>
                   {testResult.keyEnvironment && <div className="mt-0.5 text-[10px] opacity-60">Key environment: {testResult.keyEnvironment}</div>}
                 </div>
@@ -309,15 +309,15 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
                 <div key={c.key} className="flex items-center justify-between">
                   <span className="font-semibold text-neutral-700">{c.label}</span>
                   {!c.present
-                    ? <Badge variant="outline" className="border-red-300 bg-red-50 text-red-700">❌ Missing</Badge>
+                    ? <Badge variant="outline" className="inline-flex items-center gap-1 border-red-300 bg-red-50 text-red-700"><XCircle className="h-3 w-3" /> Missing</Badge>
                     : !c.ok
-                      ? <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">⚠ Invalid shape</Badge>
-                      : <Badge variant="outline" className="border-brand-300 bg-brand-50 text-brand-800">✅ OK ({c.environment || 'n/a'})</Badge>}
+                      ? <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-700"><AlertTriangle className="h-3 w-3" /> Invalid shape</Badge>
+                      : <Badge variant="outline" className="inline-flex items-center gap-1 border-brand-300 bg-brand-50 text-brand-800"><CheckCircle2 className="h-3 w-3" /> OK ({c.environment || 'n/a'})</Badge>}
                 </div>
               ))}
               {verifyResult.environmentMismatch && (
-                <div className="mt-1 rounded border border-red-300 bg-red-50 p-1.5 text-red-800">
-                  ⚠ Publishable and Secret keys belong to different environments. Use both <code>pk_test_</code>+<code>sk_test_</code> OR both <code>pk_live_</code>+<code>sk_live_</code>.
+                <div className="mt-1 flex items-start gap-1 rounded border border-red-300 bg-red-50 p-1.5 text-red-800">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /> <span>Publishable and Secret keys belong to different environments. Use both <code>pk_test_</code>+<code>sk_test_</code> OR both <code>pk_live_</code>+<code>sk_live_</code>.</span>
                 </div>
               )}
             </div>
@@ -328,7 +328,7 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
             <div className="flex-1 min-w-[200px] rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">
               <div className="flex items-center gap-1 font-bold text-neutral-700"><Webhook className="h-3 w-3" /> Last Webhook</div>
               <div className="mt-0.5 text-neutral-600">{w.lastReceivedAt ? `${fmtDate(w.lastReceivedAt)} · ${w.lastReceivedType || 'event'}` : 'None received yet'}</div>
-              {w.failedCount > 0 && <div className="mt-0.5 text-red-700">⚠ {w.failedCount} failed webhook{w.failedCount === 1 ? '' : 's'}</div>}
+              {w.failedCount > 0 && <div className="mt-0.5 inline-flex items-center gap-1 text-red-700"><AlertTriangle className="h-3 w-3" /> {w.failedCount} failed webhook{w.failedCount === 1 ? '' : 's'}</div>}
             </div>
             <div className="flex-1 min-w-[200px] rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs">
               <div className="flex items-center gap-1 font-bold text-neutral-700"><Heart className="h-3 w-3" /> Last Donation</div>
@@ -340,9 +340,9 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
 
           {/* Volumes */}
           <div className="flex flex-wrap gap-2">
-            <Metric label="Total Donations" value={fmtMoney(d.lifetimeAmount)} sublabel={`${d.lifetimeCount} donations`} icon={DollarSign} tone="brand" />
-            <Metric label="Marketplace Volume" value={fmtMoney(data.marketplace.volume)} sublabel={`${data.marketplace.count} orders`} icon={DollarSign} />
-            <Metric label="Job Payment Volume" value={fmtMoney(data.jobs.volume)} sublabel={`${data.jobs.count} jobs`} icon={DollarSign} />
+            <Metric label="Total Donations" value={fmtMoney(d.lifetimeAmount)} sublabel={`${d.lifetimeCount} donations`} icon={CircleDollarSign} tone="brand" />
+            <Metric label="Marketplace Volume" value={fmtMoney(data.marketplace.volume)} sublabel={`${data.marketplace.count} orders`} icon={CircleDollarSign} />
+            <Metric label="Job Payment Volume" value={fmtMoney(data.jobs.volume)} sublabel={`${data.jobs.count} jobs`} icon={CircleDollarSign} />
             <Metric label="Failed Transactions" value={data.failures.failedTransactions} icon={XCircle} tone={data.failures.failedTransactions ? 'red' : 'neutral'} />
             <Metric label="Failed Webhooks" value={data.failures.failedWebhooks} icon={XCircle} tone={data.failures.failedWebhooks ? 'red' : 'neutral'} />
           </div>
@@ -362,8 +362,8 @@ export default function PaymentHealthDashboard({ paymentSettings, onSettingsChan
             <Metric label="Lifetime Donations" value={fmtMoney(d.lifetimeAmount)} sublabel={`${d.lifetimeCount} total`} icon={Heart} tone="brand" />
             <Metric label="This Month" value={fmtMoney(d.thisMonthAmount)} sublabel={`${d.thisMonthCount} donations`} icon={TrendingUp} />
             <Metric label="Active Donors (90d)" value={d.activeDonors90d} sublabel={`${d.uniqueDonors} unique lifetime`} icon={Users} />
-            <Metric label="Largest Donation" value={d.largestDonation ? fmtMoney(d.largestDonation.amount) : '—'} sublabel={d.largestDonation?.email || ''} icon={DollarSign} />
-            <Metric label="Average Donation" value={fmtMoney(d.averageDonation)} icon={DollarSign} />
+            <Metric label="Largest Donation" value={d.largestDonation ? fmtMoney(d.largestDonation.amount) : '—'} sublabel={d.largestDonation?.email || ''} icon={CircleDollarSign} />
+            <Metric label="Average Donation" value={fmtMoney(d.averageDonation)} icon={CircleDollarSign} />
             <Metric label="Pending Intents" value={d.intentCount} sublabel="queued / not paid" icon={Info} />
           </div>
 

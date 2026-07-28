@@ -101,7 +101,7 @@ function ConnectForm({ integration, onClose }) {
   const submit = () => {
     // Stub — in production, POST to a future /api/integrations/connect endpoint that
     // stores credentials securely in the backend (KMS/Secrets Manager).
-    toast.info('🔐 Saved locally for preview. Backend wiring will land once we go live.')
+    toast.info('Saved locally for preview. Backend wiring will land once we go live.', { icon: <Lock className="h-4 w-4" /> })
     onClose?.()
   }
   return (

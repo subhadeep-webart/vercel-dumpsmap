@@ -8,7 +8,7 @@ import DashboardShell, { KpiGrid, KpiTile, SectionHeader } from '@/components/Da
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ShieldCheck, Users, AlertTriangle, Activity, ToggleRight, BarChart3, ArrowRight } from 'lucide-react'
+import { ShieldCheck, Users, AlertTriangle, Activity, ToggleRight, BarChart3, ArrowRight, PartyPopper } from 'lucide-react'
 import { api } from '@/lib/api-client'
 
 export default function AdminDashboard() {
@@ -83,7 +83,7 @@ function AdminBody() {
                   <Badge className={`text-[10px] uppercase ${f.globalStatus === 'paused' ? 'bg-amber-100 text-amber-800' : f.globalStatus === 'not_active' ? 'bg-neutral-200 text-neutral-700' : 'bg-violet-100 text-violet-800'}`}>{f.globalStatus.replace('_', ' ')}</Badge>
                 </li>
               ))}
-              {flags.filter((f) => ['paused', 'not_active', 'demo'].includes(f.globalStatus)).length === 0 && <li className="p-3 text-sm text-neutral-500">All features live 🎉</li>}
+              {flags.filter((f) => ['paused', 'not_active', 'demo'].includes(f.globalStatus)).length === 0 && <li className="inline-flex items-center gap-1 p-3 text-sm text-neutral-500"><PartyPopper className="h-4 w-4" /> All features live</li>}
             </ul>
           </div>
           <div>

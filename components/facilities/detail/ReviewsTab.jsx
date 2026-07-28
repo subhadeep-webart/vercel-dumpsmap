@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Star } from 'lucide-react'
 
-export default function ReviewsTab({ facility, reviews }) {
+export default function ReviewsTab({ facility, reviews, onWriteReview }) {
   const list = Array.isArray(reviews) ? reviews : []
   return (
     <div className="space-y-4">
@@ -26,7 +26,7 @@ export default function ReviewsTab({ facility, reviews }) {
               <div className="text-xs text-neutral-500">{facility.reviewCount || list.length || 0} reviews</div>
             </div>
           </div>
-          <Button variant="outline">
+          <Button variant="outline" onClick={onWriteReview}>
             <Star className="mr-1.5 h-4 w-4" /> Write a review
           </Button>
         </CardContent>
@@ -40,6 +40,9 @@ export default function ReviewsTab({ facility, reviews }) {
             </div>
             <h3 className="text-base font-bold text-neutral-800">No reviews yet</h3>
             <p className="text-sm text-neutral-600">Be the first to share your experience.</p>
+            <Button onClick={onWriteReview} className="mt-1 bg-brand-600 hover:bg-brand-700">
+              <Star className="mr-1.5 h-4 w-4" /> Write a review
+            </Button>
           </CardContent>
         </Card>
       ) : (

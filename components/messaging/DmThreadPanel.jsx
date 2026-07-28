@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Send } from 'lucide-react'
+import { Send, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import { timeAgo } from '@/lib/community-categories'
 import { api } from '@/lib/api-client'
@@ -77,7 +77,7 @@ export default function DmThreadPanel({ threadId, token, currentUser, otherUser,
         {loading && <div className="py-8 text-center text-sm text-neutral-500">Loading messages…</div>}
         {!loading && messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-neutral-500">
-            <p className="text-2xl">✉️</p>
+            <Mail className="h-7 w-7 text-neutral-400" />
             <p className="mt-1">Say hi to {otherUser?.otherUserName || otherUser?.name || 'this user'}.</p>
           </div>
         )}

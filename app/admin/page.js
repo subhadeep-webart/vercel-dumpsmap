@@ -5,7 +5,7 @@ import { useAdmin } from '@/components/admin/AdminContext'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Users, MapPin, Store, Briefcase, Activity, Flag,
-  CheckCircle2, AlertTriangle, XCircle, TrendingUp, Clock,
+  CheckCircle2, AlertTriangle, XCircle, TrendingUp, Clock, Hand,
 } from 'lucide-react'
 import Link from 'next/link'
 import NeedsAttentionWidget from '@/components/admin/NeedsAttentionWidget'
@@ -52,7 +52,7 @@ export default function AdminOverview() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Welcome, {user?.name?.split(' ')[0] || 'admin'} 👋</h1>
+        <h1 className="inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight">Welcome, {user?.name?.split(' ')[0] || 'admin'} <Hand className="h-5 w-5 text-amber-500" /></h1>
         <p className="text-sm text-neutral-500">Platform pulse, moderation queue and activity at a glance.</p>
       </div>
 

@@ -168,18 +168,18 @@ if (!JWT_SECRET) {
 
 // ---------- Alert constants ----------
 const ALERT_TYPES = {
-  WAIT_TIME:      { label: 'Wait Time',       severity: 'warn', icon: '⏰', expiryHours: 2 },
-  LONG_LINE:      { label: 'Long Line',       severity: 'warn', icon: '🚛', expiryHours: 6 },
-  FAST_MOVING:    { label: 'Fast Moving',     severity: 'good', icon: '⚡', expiryHours: 6 },
-  CLOSED:         { label: 'Facility Closed', severity: 'bad',  icon: '🚫', expiryHours: 24 },
-  NOT_ACCEPTING:  { label: 'Not Accepting',   severity: 'warn', icon: '🚷', expiryHours: 12 },
-  ACCEPTING_NOW:  { label: 'Accepting Now',   severity: 'good', icon: '✅', expiryHours: 12 },
-  YARD_FULL:      { label: 'Yard Full',       severity: 'bad',  icon: '📦', expiryHours: 6 },
-  SCALE_ISSUE:    { label: 'Scale Issue',     severity: 'bad',  icon: '⚖️', expiryHours: 6 },
-  PRICE_UPDATE:   { label: 'Price Update',    severity: 'info', icon: '💵', expiryHours: 12 },
-  DONATION_NEED:  { label: 'Donation Need',   severity: 'info', icon: '📢', expiryHours: 12 },
-  EVENT:          { label: 'Event',           severity: 'good', icon: '🎉', expiryHours: 24 },
-  GENERAL_NOTE:   { label: 'General Note',    severity: 'info', icon: '📝', expiryHours: 6 },
+  WAIT_TIME:      { label: 'Wait Time',       severity: 'warn', expiryHours: 2 },
+  LONG_LINE:      { label: 'Long Line',       severity: 'warn', expiryHours: 6 },
+  FAST_MOVING:    { label: 'Fast Moving',     severity: 'good', expiryHours: 6 },
+  CLOSED:         { label: 'Facility Closed', severity: 'bad',  expiryHours: 24 },
+  NOT_ACCEPTING:  { label: 'Not Accepting',   severity: 'warn', expiryHours: 12 },
+  ACCEPTING_NOW:  { label: 'Accepting Now',   severity: 'good', expiryHours: 12 },
+  YARD_FULL:      { label: 'Yard Full',       severity: 'bad',  expiryHours: 6 },
+  SCALE_ISSUE:    { label: 'Scale Issue',     severity: 'bad',  expiryHours: 6 },
+  PRICE_UPDATE:   { label: 'Price Update',    severity: 'info', expiryHours: 12 },
+  DONATION_NEED:  { label: 'Donation Need',   severity: 'info', expiryHours: 12 },
+  EVENT:          { label: 'Event',           severity: 'good', expiryHours: 24 },
+  GENERAL_NOTE:   { label: 'General Note',    severity: 'info', expiryHours: 6 },
 }
 
 const SEVERITY_RANK = { bad: 3, warn: 2, info: 1, good: 0 }
@@ -1066,8 +1066,8 @@ async function handleRoute(request, { params }) {
             return { facility: f, score: -999, ...score }
           }
           score.breakdown.material = exact ? 15 : 8
-          if (exact) score.reasons.push(`✅ Accepts ${material}`)
-          else score.reasons.push(`≈ Accepts similar material (${material})`)
+          if (exact) score.reasons.push(`Accepts ${material}`)
+          else score.reasons.push(`Accepts similar material (${material})`)
         } else {
           score.breakdown.material = 0
         }
@@ -1075,29 +1075,29 @@ async function handleRoute(request, { params }) {
         // Proximity (max 30)
         const prox = f.distanceKm <= 5 ? 30 : Math.max(0, 30 - ((f.distanceKm - 5) / 45) * 30)
         score.breakdown.proximity = Math.round(prox)
-        if (f.distanceKm <= 5) score.reasons.push(`📍 Only ${f.distanceKm.toFixed(1)} km away`)
-        else if (f.distanceKm <= 15) score.reasons.push(`📍 ${f.distanceKm.toFixed(1)} km away`)
+        if (f.distanceKm <= 5) score.reasons.push(`Only ${f.distanceKm.toFixed(1)} km away`)
+        else if (f.distanceKm <= 15) score.reasons.push(`${f.distanceKm.toFixed(1)} km away`)
 
         // Open status from active alerts
         const alerts = f.activeAlerts || []
         const closed = alerts.find((a) => a.type === 'CLOSED')
         const acceptingNow = alerts.find((a) => a.type === 'ACCEPTING_NOW')
         let openScore = 8 // default assumed open
-        if (closed) { openScore = -30; score.penalties.push('🚫 Reported closed') }
-        else if (acceptingNow) { openScore = 15; score.reasons.push('✅ Actively accepting now') }
+        if (closed) { openScore = -30; score.penalties.push('Reported closed') }
+        else if (acceptingNow) { openScore = 15; score.reasons.push('Actively accepting now') }
         score.breakdown.open = openScore
 
         // Wait time signal
         const waitAlert = alerts.find((a) => /WAIT_TIME|LONG_LINE|YARD_FULL/.test(a.type))
         const fastAlert = alerts.find((a) => a.type === 'FAST_MOVING')
         let waitScore = 8
-        if (waitAlert) { waitScore = -15; score.penalties.push(`⏰ ${ALERT_TYPES[waitAlert.type]?.label || 'Delay'} reported`) }
-        else if (fastAlert) { waitScore = 15; score.reasons.push('⚡ Fast moving line') }
+        if (waitAlert) { waitScore = -15; score.penalties.push(`${ALERT_TYPES[waitAlert.type]?.label || 'Delay'} reported`) }
+        else if (fastAlert) { waitScore = 15; score.reasons.push('Fast moving line') }
         score.breakdown.wait = waitScore
 
         // Contractor-friendly bonus
         if (userIsContractor && f.contractorFriendly) {
-          score.breakdown.contractor = 5; score.reasons.push('🔧 Contractor-friendly')
+          score.breakdown.contractor = 5; score.reasons.push('Contractor-friendly')
         } else { score.breakdown.contractor = 0 }
 
         // Recent community signals (last 6h)
@@ -1105,28 +1105,28 @@ async function handleRoute(request, { params }) {
         const recentNegative = alerts.filter((a) => new Date(a.createdAt).getTime() >= since6h && /WAIT_TIME|LONG_LINE|YARD_FULL|CLOSED/.test(a.type)).length
         const commScore = Math.max(-10, Math.min(10, (recentPositive - recentNegative) * 3))
         score.breakdown.community = commScore
-        if (commScore >= 6) score.reasons.push(`👥 ${recentPositive} positive report${recentPositive === 1 ? '' : 's'} (6h)`)
+        if (commScore >= 6) score.reasons.push(`${recentPositive} positive report${recentPositive === 1 ? '' : 's'} (6h)`)
 
         // Reviews / ratings
         const facReviews = reviewsByFac[f.id] || []
         const avgRating = facReviews.length ? facReviews.reduce((s, r) => s + (r.rating || 0), 0) / facReviews.length : 0
         let reviewScore = 0
-        if (avgRating >= 4) { reviewScore = 5; score.reasons.push(`⭐ ${avgRating.toFixed(1)} avg (${facReviews.length} review${facReviews.length === 1 ? '' : 's'})`) }
+        if (avgRating >= 4) { reviewScore = 5; score.reasons.push(`${avgRating.toFixed(1)} avg (${facReviews.length} review${facReviews.length === 1 ? '' : 's'})`) }
         else if (avgRating >= 3) reviewScore = 2
-        else if (avgRating > 0 && avgRating < 2) { reviewScore = -3; score.penalties.push(`⭐ Low rating (${avgRating.toFixed(1)})`) }
+        else if (avgRating > 0 && avgRating < 2) { reviewScore = -3; score.penalties.push(`Low rating (${avgRating.toFixed(1)})`) }
         score.breakdown.reviews = reviewScore
 
         // Active hazards (SCALE_ISSUE / NOT_ACCEPTING)
         const hazardAlert = alerts.find((a) => /SCALE_ISSUE|NOT_ACCEPTING/.test(a.type))
         let hazardScore = 0
-        if (hazardAlert) { hazardScore = -10; score.penalties.push(`⚠ ${ALERT_TYPES[hazardAlert.type]?.label || 'Issue'} reported`) }
+        if (hazardAlert) { hazardScore = -10; score.penalties.push(`${ALERT_TYPES[hazardAlert.type]?.label || 'Issue'} reported`) }
         score.breakdown.hazards = hazardScore
 
         // Pricing transparency
         const hasPricing = (typeof f.pricing === 'string' && f.pricing) ||
                           (f.pricing && typeof f.pricing === 'object' && Object.values(f.pricing).some((v) => v))
         score.breakdown.pricing = hasPricing ? 3 : 0
-        if (hasPricing) score.reasons.push('💰 Pricing posted')
+        if (hasPricing) score.reasons.push('Pricing posted')
 
         // Hot-spot density nearby
         score.breakdown.hotspots = nearbyJobCount > 0 ? 2 : 0
@@ -1676,7 +1676,6 @@ async function handleRoute(request, { params }) {
         type: body.type,
         label: meta.label,
         severity: meta.severity,
-        icon: meta.icon,
         text: body.text || '',
         waitMinutes: body.waitMinutes ? parseInt(body.waitMinutes) : null,
         truckCount: body.truckCount ? parseInt(body.truckCount) : null,

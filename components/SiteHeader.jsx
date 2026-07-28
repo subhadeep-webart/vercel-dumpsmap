@@ -54,7 +54,7 @@ export default function SiteHeader({
     { key: 'facilities',  label: 'Facilities',  onClick: () => router.push('/facilities'),  match: 'facilities' },
     { key: 'community',   label: 'Community',   onClick: () => router.push('/community'),   match: 'community' },
     { key: 'marketplace', label: 'Marketplace', onClick: () => router.push('/marketplace'), match: 'marketplace' },
-    { key: 'business',    label: 'Business',    onClick: () => router.push('/business'),    match: 'business' },
+    { key: 'business',    label: 'Business',    onClick: () => window.open('/business', '_blank', 'noopener,noreferrer'), match: 'business' },
     { key: 'donate',      label: 'Donate',      onClick: () => router.push('/donate'),      match: 'donate' },
     { key: 'about',       label: 'About',       onClick: () => router.push('/#about'),      match: 'about' },
   ]

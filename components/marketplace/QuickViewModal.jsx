@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, MapPin, Clock, ExternalLink, MessageSquare, BadgeCheck, Heart, Share2, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, Clock, ExternalLink, MessageSquare, BadgeCheck, Heart, Share2, X, ImageOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export default function QuickViewModal({ open, onOpenChange, listing, onContactSeller, onSave, isSaved, viewerIsOwner }) {
@@ -55,7 +55,7 @@ export default function QuickViewModal({ open, onOpenChange, listing, onContactS
             ) : (
               <div className="grid h-full w-full place-items-center text-neutral-400">
                 <div className="text-center">
-                  <div className="text-4xl">🖼️</div>
+                  <ImageOff className="mx-auto h-10 w-10" />
                   <div className="mt-2 text-xs">No photos</div>
                 </div>
               </div>

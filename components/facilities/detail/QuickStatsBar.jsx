@@ -6,7 +6,7 @@
 
 import { Clock, Activity, Star, TrendingUp } from 'lucide-react'
 
-export default function QuickStatsBar({ facility, statusMeta }) {
+export default function QuickStatsBar({ facility, statusMeta, bare = false }) {
   const waitAlert = (facility.activeAlerts || []).find((a) => /wait/i.test(a.type) || a.waitMinutes != null)
   const openColor =
     statusMeta?.color === 'green' ? 'green' :
@@ -14,9 +14,13 @@ export default function QuickStatsBar({ facility, statusMeta }) {
     statusMeta?.color === 'amber' ? 'amber' :
     facility.openNow === false ? 'red' : 'green'
 
+  // `bare` drops the section's own border/background/container so the bar can be
+  // embedded inside another card (e.g. the Maps-style info panel) without a
+  // doubled border or nested container width.
+  const Wrapper = bare ? 'div' : 'section'
   return (
-    <section className="border-b border-neutral-200 bg-white">
-      <div className="container mx-auto flex flex-wrap items-center gap-2 px-4 py-3 text-xs sm:gap-3">
+    <Wrapper className={bare ? '' : 'border-b border-neutral-200 bg-white'}>
+      <div className={`flex flex-wrap items-center gap-2 px-4 py-3 text-xs sm:gap-3 ${bare ? '' : 'container mx-auto'}`}>
         {/* Open / Closed pill */}
         <Stat
           tone={openColor}
@@ -49,7 +53,7 @@ export default function QuickStatsBar({ facility, statusMeta }) {
           <Stat tone="green" icon={<TrendingUp className="h-3.5 w-3.5" />} label={`${facility.diversionRate}% diversion`} />
         )}
       </div>
-    </section>
+    </Wrapper>
   )
 }
 

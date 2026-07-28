@@ -15,6 +15,7 @@ import {
 import FieldFrame from '@/components/field/FieldFrame'
 import ReportButton from '@/components/ReportButton'
 import { CATEGORY_BY_KEY, REACTION_TYPES, categoryColor, timeAgo } from '@/lib/community-categories'
+import { ReactionIcon } from '@/lib/community-icons'
 
 function authHeaders() {
   if (typeof window === 'undefined') return {}
@@ -183,7 +184,7 @@ export default function CommunityPostDetailPage() {
               const isMine = post.myReaction === (r.key || r)
               return (
                 <button key={r.key || r} onClick={() => react(r.key || r)} className={`flex flex-1 flex-col items-center gap-0.5 rounded-md py-2 text-xs ${isMine ? 'bg-brand-50 text-brand-700' : 'text-neutral-600 hover:bg-neutral-50'}`}>
-                  <span className="text-base leading-none">{r.emoji || '👍'}</span>
+                  <ReactionIcon reactionKey={r.key || r} className="h-4 w-4" />
                   <span className="text-[10px] font-semibold">{r.label || (r.key || r)}</span>
                 </button>
               )

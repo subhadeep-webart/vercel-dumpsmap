@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import {
   MapPin, Search, Locate, Star, Navigation, BadgeCheck, Filter as FilterIcon,
   Plus, Heart, X, ChevronRight, ArrowLeft, Users, Activity, Bell,
-  User as UserIcon,
+  User as UserIcon, Flame,
 } from 'lucide-react'
 import MapView from '@/components/MapView'
 import { AlertPostDialog, LiveFeed, AlertChipRow } from '@/components/AlertSystem'
@@ -355,7 +355,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
 
             <div className="grid grid-cols-2 gap-2 pt-1">
               {[
-                { id: 'alerts', label: '🔥 Has live alerts', val: hasAlertsOnly, set: setHasAlertsOnly },
+                { id: 'alerts', label: 'Has live alerts', Icon: Flame, val: hasAlertsOnly, set: setHasAlertsOnly },
                 { id: 'verified', label: 'Verified only', val: verifiedOnly, set: setVerifiedOnly },
                 { id: 'free', label: 'Free drop-off', val: freeOnly, set: setFreeOnly },
                 { id: 'paid', label: 'Paid disposal', val: paidOnly, set: setPaidOnly },
@@ -364,7 +364,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
               ].map((c) => (
                 <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-2 py-1.5 text-sm hover:bg-neutral-50">
                   <Checkbox checked={c.val} onCheckedChange={(v) => c.set(!!v)} />
-                  <span>{c.label}</span>
+                  <span className="inline-flex items-center gap-1">{c.Icon && <c.Icon className="h-3.5 w-3.5 text-orange-500" />} {c.label}</span>
                 </label>
               ))}
             </div>
@@ -690,7 +690,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'alerts', label: '🔥 Has live alerts', val: hasAlertsOnly, set: setHasAlertsOnly },
+                { id: 'alerts', label: 'Has live alerts', Icon: Flame, val: hasAlertsOnly, set: setHasAlertsOnly },
                 { id: 'verified', label: 'Verified only', val: verifiedOnly, set: setVerifiedOnly },
                 { id: 'free', label: 'Free drop-off', val: freeOnly, set: setFreeOnly },
                 { id: 'paid', label: 'Paid disposal', val: paidOnly, set: setPaidOnly },
@@ -699,7 +699,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
               ].map((c) => (
                 <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-3 py-2.5 text-sm active:bg-neutral-50">
                   <Checkbox checked={c.val} onCheckedChange={(v) => c.set(!!v)} />
-                  <span>{c.label}</span>
+                  <span className="inline-flex items-center gap-1">{c.Icon && <c.Icon className="h-3.5 w-3.5 text-orange-500" />} {c.label}</span>
                 </label>
               ))}
             </div>
@@ -769,7 +769,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                       <span>· {f.reviewsCount || 0} reviews</span>
                       {f.distanceKm != null && <span>· {f.distanceKm.toFixed(1)} km</span>}
                       {f.activeAlertCount > 0 && (
-                        <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">🔥 {f.activeAlertCount} live</span>
+                        <span className="inline-flex items-center gap-1 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700"><Flame className="h-3 w-3" /> {f.activeAlertCount} live</span>
                       )}
                     </div>
                   </div>

@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, ArrowLeft, BadgeCheck, MapPin, MessageCircle } from 'lucide-react'
+import { Star, ArrowLeft, BadgeCheck, MapPin, MessageCircle, PenLine } from 'lucide-react'
 import ContractorReviewDialog from '@/components/recommendations/ContractorReviewDialog'
 import StartDmButton from '@/components/messaging/StartDmButton'
 import { timeAgo } from '@/lib/community-categories'
@@ -113,7 +113,7 @@ export default function ContractorProfilePage() {
               </div>
             )}
             {data.reviews.length === 0 && (
-              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-neutral-500">No reviews yet. Be the first 📝</div>
+              <div className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-dashed p-6 text-center text-sm text-neutral-500">No reviews yet. Be the first <PenLine className="h-3.5 w-3.5" /></div>
             )}
             <div className="space-y-2">
               {data.reviews.map((r) => (

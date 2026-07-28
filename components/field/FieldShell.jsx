@@ -10,7 +10,7 @@ import FieldQuickPostForms from './FieldQuickPostForms'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Search, Camera, Image as ImageIcon, AlertCircle } from 'lucide-react'
+import { Search, Camera, Image as ImageIcon, AlertCircle, Hand } from 'lucide-react'
 import { useViewMode } from '@/lib/view-mode'
 import { useLogout } from '@/hooks/use-logout'
 
@@ -397,7 +397,7 @@ function FieldProfile({ user, onSwitchStandard, onOpenLogin }) {
   const logout = useLogout()
   if (!user) return (
     <div className="p-6 text-center">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-2xl">👋</div>
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 text-neutral-600"><Hand className="h-7 w-7" /></div>
       <p className="mt-2 text-sm font-semibold">Welcome to DumpMaps</p>
       <p className="mt-1 text-xs text-neutral-500">Sign in to post, message, and track activity.</p>
       <Button onClick={onOpenLogin} className="mt-3 bg-brand-600 hover:bg-brand-700">Sign in</Button>

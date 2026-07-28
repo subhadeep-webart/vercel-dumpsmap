@@ -5,8 +5,9 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Star, ArrowLeft, MapPin, Search } from 'lucide-react'
-import { FACILITY_TYPE_CONFIG as FACILITY_TYPES } from '@/lib/facility-types'
+import { Star, ArrowLeft, MapPin, Search, Sparkles } from 'lucide-react'
+import { FACILITY_TYPE_CONFIG } from '@/lib/facility-types'
+import { TypeIcon } from '@/lib/facility-icons'
 import PageShell from '@/components/PageShell'
 
 export default function TopFacilitiesPage() {
@@ -43,12 +44,12 @@ export default function TopFacilitiesPage() {
           </div>
           <div className="flex flex-wrap gap-1">
             <button onClick={() => setTypeKey('')} className={`rounded-full border px-2 py-0.5 text-[11px] ${!typeKey ? 'border-brand-400 bg-brand-50 text-brand-800' : 'border-neutral-200 bg-white text-neutral-600'}`}>All types</button>
-            {Object.entries(FACILITY_TYPES || {}).slice(0, 8).map(([k, v]) => (
-              <button key={k} onClick={() => setTypeKey(k)} className={`rounded-full border px-2 py-0.5 text-[11px] ${typeKey === k ? 'border-brand-400 bg-brand-50 text-brand-800' : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'}`}>{v.icon} {v.label}</button>
+            {Object.entries(FACILITY_TYPE_CONFIG || {}).slice(0, 8).map(([k, v]) => (
+              <button key={k} onClick={() => setTypeKey(k)} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${typeKey === k ? 'border-brand-400 bg-brand-50 text-brand-800' : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'}`}><TypeIcon typeKey={k} className="h-3.5 w-3.5" /> {v.label}</button>
             ))}
           </div>
         </div>
-        <p className="mb-2 text-[11px] text-neutral-500">{loading ? 'Loading…' : `${facilities.length} facility${facilities.length === 1 ? '' : 'ies'} rated 3.5★ or higher`}</p>
+        <p className="mb-2 flex items-center gap-1 text-[11px] text-neutral-500">{loading ? 'Loading…' : <>{`${facilities.length} facility${facilities.length === 1 ? '' : 'ies'} rated 3.5`}<Star className="h-3 w-3 fill-amber-500 text-amber-500" />{' or higher'}</>}</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {facilities.map((f) => (
             <Link key={f.id} href={`/facilities/${f.id}`} className="block">
@@ -78,8 +79,8 @@ export default function TopFacilitiesPage() {
         </div>
         {!loading && facilities.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-2xl">✨</p>
-            <p className="mt-2 text-sm text-neutral-600">No facilities meet the 3.5★ bar yet.</p>
+            <Sparkles className="mx-auto h-7 w-7 text-neutral-400" />
+            <p className="mt-2 flex items-center justify-center gap-1 text-sm text-neutral-600">No facilities meet the 3.5<Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> bar yet.</p>
             <p className="mt-1 text-xs text-neutral-500">Review a facility you’ve used — it helps the whole community.</p>
           </div>
         )}

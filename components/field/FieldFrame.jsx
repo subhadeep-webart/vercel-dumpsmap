@@ -9,10 +9,14 @@ import AppHeader from '@/components/AppHeader'
 /**
  * FieldFrame — interior detail-page shell.
  *
- * Now unified with the rest of the app: renders the canonical <AppHeader />
- * at the top (Priority 1: single AppHeader everywhere) and adds a compact
- * sub-strip with a Back button + page title + optional right slot. The global
+ * Renders a compact sub-strip with a Back button + page title + optional right
+ * slot, and (by default) the canonical <AppHeader /> at the top. The global
  * <GlobalMobileNav /> mounted in app/layout.js provides the bottom nav.
+ *
+ * When the page already lives under a layout that supplies <AppHeader /> (e.g.
+ * the app/(app) route group), pass `hideHeader` so the header isn't rendered
+ * twice — FieldFrame then contributes only its sub-strip. The sub-strip sticks
+ * below the header when present, and to the top otherwise.
  *
  * Props:
  *   title          — page title shown in the sub-strip
@@ -21,6 +25,7 @@ import AppHeader from '@/components/AppHeader'
  *   right          — optional ReactNode in the top-right of the sub-strip
  *   bodyClassName  — extra classes for the scrollable body
  *   noBackButton   — hide the back button
+ *   hideHeader     — skip the internal <AppHeader /> (an ancestor layout renders it)
  *   active         — nav highlight key forwarded to AppHeader
  */
 export default function FieldFrame({
@@ -31,15 +36,16 @@ export default function FieldFrame({
   className = '',
   bodyClassName = '',
   noBackButton = false,
+  hideHeader = false,
   active,
 }) {
   const goBack = useFieldBack(typeof back === 'string' ? back : null)
   return (
     <div className={`flex min-h-[100dvh] flex-col bg-neutral-50 ${className}`}>
-      <AppHeader active={active} />
+      {!hideHeader && <AppHeader active={active} />}
 
       {(title || !noBackButton || right) && (
-        <div className="sticky top-14 z-20 flex h-11 flex-none items-center gap-2 border-b border-neutral-200 bg-white/95 px-3 backdrop-blur">
+        <div className={`sticky ${hideHeader ? 'top-0' : 'top-14'} z-20 flex h-11 flex-none items-center gap-2 border-b border-neutral-200 bg-white/95 px-3 backdrop-blur`}>
           {!noBackButton && (
             <button
               onClick={goBack}

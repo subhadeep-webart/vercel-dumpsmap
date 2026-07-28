@@ -9,8 +9,9 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
-  Truck, Building2, Package, Scale, DollarSign, CheckCircle2,
+  Truck, Building2, Package, Scale, CircleDollarSign, CheckCircle2,
   CreditCard, Receipt, MapPin, Flag, Sparkles, ArrowRight, Lock,
+  Construction, Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -19,7 +20,7 @@ const STEPS = [
   { n: 2, title: 'Select facility', desc: 'Pick the facility you\u2019re at (auto-detected via GPS).', icon: Building2 },
   { n: 3, title: 'Select material / load type', desc: 'Pick what\u2019s in your truck \u2014 mixed debris, concrete, wood, mattresses, etc.', icon: Package },
   { n: 4, title: 'Scale in weight', desc: 'Drive onto the scale. Weight is captured automatically by the facility.', icon: Scale },
-  { n: 5, title: 'Estimate tonnage and pricing', desc: 'DumpMaps shows tonnage \u00d7 per-ton rate + material-specific surcharges before you pay.', icon: DollarSign },
+  { n: 5, title: 'Estimate tonnage and pricing', desc: 'DumpMaps shows tonnage \u00d7 per-ton rate + material-specific surcharges before you pay.', icon: CircleDollarSign },
   { n: 6, title: 'Confirm disposal details', desc: 'Review the load, weight, and itemized cost on your screen.', icon: CheckCircle2 },
   { n: 7, title: 'Pay online', desc: 'Pay with card, account billing, or saved payment method \u2014 from your vehicle.', icon: CreditCard },
   { n: 8, title: 'Receive digital receipt', desc: 'Receipt is emailed and stored under your DumpMaps account.', icon: Receipt },
@@ -56,7 +57,7 @@ export function ScaleWorkflowDialog({ open, onOpenChange, facility }) {
           <DialogTitle className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-brand-600" />
             Scale-In / Scale-Out Workflow
-            <Badge className="bg-sky-100 text-sky-900 hover:bg-sky-100">🚧 Coming Soon</Badge>
+            <Badge className="inline-flex items-center gap-1 bg-sky-100 text-sky-900 hover:bg-sky-100"><Construction className="h-3.5 w-3.5" /> Coming Soon</Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -110,7 +111,7 @@ export function ScaleWorkflowDialog({ open, onOpenChange, facility }) {
           <Card className="border-amber-200">
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center gap-2 font-semibold">
-                <DollarSign className="h-4 w-4 text-amber-600" /> Estimate Load Cost
+                <CircleDollarSign className="h-4 w-4 text-amber-600" /> Estimate Load Cost
                 <span className="text-[10px] font-normal text-neutral-500">(preview — uses facility pricing)</span>
               </div>
               {facility ? (
@@ -170,7 +171,7 @@ export function ScaleWorkflowDialog({ open, onOpenChange, facility }) {
                 toast.success(`Estimate: $${cost?.toFixed(2)}`)
               }}
             >
-              <DollarSign className="mr-1 h-4 w-4" /> Estimate Load Cost
+              <CircleDollarSign className="mr-1 h-4 w-4" /> Estimate Load Cost
             </Button>
             <Button
               disabled
@@ -260,7 +261,7 @@ function PaymentPilotDialog({ open, onOpenChange, facilityName = '', variant = '
         </DialogHeader>
         {done ? (
           <div className="space-y-3 pt-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-2xl">✓</div>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-700"><Check className="h-6 w-6" /></div>
             <div className="font-semibold">You&apos;re on the list!</div>
             <p className="text-sm text-neutral-600">
               {isFacility
@@ -271,8 +272,8 @@ function PaymentPilotDialog({ open, onOpenChange, facilityName = '', variant = '
           </div>
         ) : (
           <div className="space-y-3 pt-2">
-            <Badge className={isFacility ? 'bg-purple-100 text-purple-900 hover:bg-purple-100' : 'bg-sky-100 text-sky-900 hover:bg-sky-100'}>
-              🚧 Phase 2 pilot
+            <Badge className={`inline-flex items-center gap-1 ${isFacility ? 'bg-purple-100 text-purple-900 hover:bg-purple-100' : 'bg-sky-100 text-sky-900 hover:bg-sky-100'}`}>
+              <Construction className="h-3.5 w-3.5" /> Phase 2 pilot
             </Badge>
             <p className="text-sm text-neutral-700">
               {isFacility

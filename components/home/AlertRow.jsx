@@ -3,7 +3,7 @@
 // Single live-community-alert row in the Feed tab.
 // Extracted from HomeShell.jsx.
 
-import { BadgeCheck, Bell, ChevronRight } from 'lucide-react'
+import { BadgeCheck, Bell, ChevronRight, Clock, Truck, Recycle } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { ALERT_TYPE_LABEL } from '@/constants/facility_constants'
 
@@ -41,9 +41,9 @@ export default function AlertRow({ alert, onFacilityOpen }) {
         <div className="mt-1 text-sm font-semibold text-neutral-900">{alert.facilityName || 'Facility'}</div>
         <div className="mt-0.5 line-clamp-2 text-xs text-neutral-700">{alert.text || ''}</div>
         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
-          {alert.waitMinutes != null && <span>⏱ ~{alert.waitMinutes} min wait</span>}
-          {alert.truckCount != null && <span>🚚 {alert.truckCount} trucks</span>}
-          {alert.material && <span>♻ {alert.material}</span>}
+          {alert.waitMinutes != null && <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" /> ~{alert.waitMinutes} min wait</span>}
+          {alert.truckCount != null && <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3" /> {alert.truckCount} trucks</span>}
+          {alert.material && <span className="inline-flex items-center gap-1"><Recycle className="h-3 w-3" /> {alert.material}</span>}
           {alert.user?.name && <span>· by {alert.user.name}</span>}
         </div>
       </div>

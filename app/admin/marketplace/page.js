@@ -164,9 +164,9 @@ export default function AdminMarketplacePage() {
                       <div className="text-xs text-neutral-500">{l.segment} · {l.category} · ${l.price ?? '—'} · seller {l.sellerId?.slice(0, 8)}</div>
                       {l.description && <div className="mt-1 line-clamp-2 text-xs text-neutral-600">{l.description}</div>}
                       <div className="mt-1 flex flex-wrap gap-3 text-[11px] text-neutral-500">
-                        <span>👀 {l.viewCount || 0} views</span>
-                        <span>💬 {l.messageCount || 0} msgs</span>
-                        {l.reportCount > 0 && <span className="font-semibold text-red-700">🚩 {l.reportCount} flags</span>}
+                        <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {l.viewCount || 0} views</span>
+                        <span className="inline-flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {l.messageCount || 0} msgs</span>
+                        {l.reportCount > 0 && <span className="inline-flex items-center gap-1 font-semibold text-red-700"><Flag className="h-3 w-3" /> {l.reportCount} flags</span>}
                       </div>
                     </div>
                   </div>

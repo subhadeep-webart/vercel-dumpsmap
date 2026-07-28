@@ -6,7 +6,7 @@
 
 import {
   MapPin, Recycle, Truck, Heart, Cpu, Hammer, Building2, Trees, Shield,
-  AlertTriangle, DollarSign,
+  AlertTriangle, CircleDollarSign, Building, User,
 } from 'lucide-react'
 
 export const FACILITY_TYPES = [
@@ -53,7 +53,7 @@ export const TYPE_ICONS = {
   Landfill: Truck,
   'Transfer Station': Truck,
   'Recycling Center': Recycle,
-  'Buy-Back Center': DollarSign,
+  'Buy-Back Center': CircleDollarSign,
   'Donation Center': Heart,
   'Tire Disposal': Cpu,
   'Hazardous Waste': AlertTriangle,
@@ -101,7 +101,7 @@ export const PROFILE_TYPES = [
   {
     key: 'hauler',
     title: 'Contractor / Hauler',
-    icon: '🚚',
+    icon: Truck,
     blurb: 'I haul debris, run jobs, and need fast dump info.',
     color: 'border-orange-500 bg-orange-50',
     tools: [
@@ -119,7 +119,7 @@ export const PROFILE_TYPES = [
   {
     key: 'recycler',
     title: 'Recycler',
-    icon: '♻️',
+    icon: Recycle,
     blurb: 'I bring metal, CRV, e-waste, and want top dollar.',
     color: 'border-brand-500 bg-brand-50',
     tools: [
@@ -133,7 +133,7 @@ export const PROFILE_TYPES = [
   {
     key: 'donor',
     title: 'Donation User',
-    icon: '❤️',
+    icon: Heart,
     blurb: 'I donate household goods, furniture, and clothing.',
     color: 'border-sky-500 bg-sky-50',
     tools: [
@@ -147,7 +147,7 @@ export const PROFILE_TYPES = [
   {
     key: 'facility_owner',
     title: 'Facility Owner / Manager',
-    icon: '🏢',
+    icon: Building2,
     blurb: 'I run a facility and want to keep info current.',
     color: 'border-purple-500 bg-purple-50',
     tools: [
@@ -164,7 +164,7 @@ export const PROFILE_TYPES = [
   {
     key: 'property_manager',
     title: 'Property Manager',
-    icon: '🏘️',
+    icon: Building,
     blurb: 'I manage properties and coordinate cleanouts, donations, and disposals.',
     color: 'border-teal-500 bg-teal-50',
     tools: [
@@ -180,7 +180,7 @@ export const PROFILE_TYPES = [
   {
     key: 'general',
     title: 'General User',
-    icon: '👤',
+    icon: User,
     blurb: 'I drop things off occasionally and want a clean app.',
     color: 'border-neutral-400 bg-neutral-50',
     tools: ['Search map', 'Favorite locations', 'Submit updates', 'Leave reviews'],

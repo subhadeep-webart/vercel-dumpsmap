@@ -199,6 +199,36 @@ code {
   animation: dm-reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+/* ------------------------------------------------------------------
+   Facility detail motion — tab switching + card reveal.
+   Pure CSS, GPU-friendly (opacity/transform only), and fully disabled
+   under prefers-reduced-motion (see the media query below).
+   ------------------------------------------------------------------ */
+
+/* Tab panel: soft fade + tiny upward slide. Re-triggers on every tab
+   change because the panel is keyed by the active tab in React, so the
+   node remounts and the animation replays. */
+@keyframes dm-tab-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dm-tab-panel {
+  animation: dm-tab-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Card reveal: gentle fade + slide in from the LEFT with a per-card stagger.
+   Set the index inline via style={{ '--dm-i': n }} so cards cascade in
+   sequence, each entering from the left a beat after the previous. */
+@keyframes dm-card-in {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.dm-card-in {
+  opacity: 0;
+  animation: dm-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--dm-i, 0) * 70ms);
+}
+
 /* Slow drifting background blobs */
 @keyframes dm-float {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
@@ -256,6 +286,8 @@ code {
 
 @media (prefers-reduced-motion: reduce) {
   .dm-reveal,
+  .dm-tab-panel,
+  .dm-card-in,
   .dm-float,
   .dm-float-slow,
   .dm-draw,
@@ -265,6 +297,8 @@ code {
     animation: none !important;
   }
   .dm-reveal { opacity: 1; transform: none; }
+  .dm-tab-panel,
+  .dm-card-in { opacity: 1; transform: none; }
   .dm-draw   { stroke-dashoffset: 0; }
   /* belts stop moving, so let the row scroll manually instead */
   .dm-belt { overflow-x: auto; }

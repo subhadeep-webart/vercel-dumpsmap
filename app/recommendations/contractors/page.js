@@ -85,7 +85,7 @@ export default function ContractorsDirectoryPage() {
         </div>
         {!loading && contractors.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-2xl">🔍</p>
+            <Search className="mx-auto h-8 w-8 text-neutral-400" />
             <p className="mt-2 text-sm text-neutral-600">No contractors match your search yet.</p>
             <p className="mt-1 text-xs text-neutral-500">Tip: contractors appear here once they complete jobs and receive reviews.</p>
           </div>

@@ -37,9 +37,8 @@
 //   </PageShell>
 
 import React from 'react'
-import Link from 'next/link'
-import { ChevronRight, Home } from 'lucide-react'
 import AppHeader from '@/components/AppHeader'
+import Breadcrumbs from '@/components/Breadcrumbs'
 
 export default function PageShell({
   children,
@@ -81,41 +80,3 @@ export default function PageShell({
   )
 }
 
-function inferActiveBottom(active) {
-  if (active === 'feed' || active === 'home' || active === 'dashboard') return 'home'
-  if (active === 'community') return 'community'
-  if (active === 'jobs') return 'jobs'
-  if (active === 'alerts' || active === 'inbox') return 'alerts'
-  if (active === 'profile' || active === 'settings' || active === 'messages') return 'profile'
-  return null
-}
-
-function Breadcrumbs({ items, maxWidth }) {
-  const wrap = maxWidth ? `container mx-auto ${maxWidth}` : 'w-full'
-  return (
-    <div className="border-b border-neutral-200 bg-white">
-      <div className={`${wrap} flex items-center gap-1 overflow-x-auto px-4 py-2 text-xs text-neutral-600`}>
-        <Link href="/dashboard" className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 hover:bg-neutral-100 hover:text-neutral-900" aria-label="Home">
-          <Home className="h-3 w-3" />
-        </Link>
-        {items.map((it, i) => {
-          const last = i === items.length - 1
-          return (
-            <React.Fragment key={`${it.label}-${i}`}>
-              <ChevronRight className="h-3 w-3 shrink-0 text-neutral-400" />
-              {it.href && !last ? (
-                <Link href={it.href} className="shrink-0 truncate rounded px-1.5 py-0.5 hover:bg-neutral-100 hover:text-neutral-900">
-                  {it.label}
-                </Link>
-              ) : (
-                <span className={`shrink-0 truncate rounded px-1.5 py-0.5 ${last ? 'font-bold text-neutral-900' : ''}`}>
-                  {it.label}
-                </span>
-              )}
-            </React.Fragment>
-          )
-        })}
-      </div>
-    </div>
-  )
-}

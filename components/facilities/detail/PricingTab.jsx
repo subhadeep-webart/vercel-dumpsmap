@@ -4,7 +4,7 @@
 // material-specific rates. Extracted from app/facilities/[id]/page.js.
 
 import { Card, CardContent } from '@/components/ui/card'
-import { DollarSign } from 'lucide-react'
+import { CircleDollarSign, AlertTriangle } from 'lucide-react'
 import { SectionCard, KV } from './primitives'
 
 export default function PricingTab({ facility }) {
@@ -31,12 +31,12 @@ export default function PricingTab({ facility }) {
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
+            <CircleDollarSign className="h-5 w-5 text-green-600" />
             <span className="text-sm font-bold uppercase tracking-wide text-neutral-700">Pricing</span>
           </div>
           {pricingUnknown ? (
-            <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              ⚠ Pricing not posted. Call ahead to confirm rates before arrival.
+            <p className="mt-3 flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <AlertTriangle className="h-4 w-4 shrink-0" /> Pricing not posted. Call ahead to confirm rates before arrival.
             </p>
           ) : headlinePrice ? (
             <div className="mt-3 flex items-baseline gap-1">
@@ -72,7 +72,7 @@ export default function PricingTab({ facility }) {
       </Card>
 
       {materialRates && (
-        <SectionCard icon={DollarSign} title="Material-specific rates">
+        <SectionCard icon={CircleDollarSign} title="Material-specific rates">
           <p className="whitespace-pre-line text-sm leading-relaxed text-neutral-700">{materialRates}</p>
         </SectionCard>
       )}

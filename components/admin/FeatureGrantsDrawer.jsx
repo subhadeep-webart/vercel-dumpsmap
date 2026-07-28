@@ -271,7 +271,7 @@ function GrantPicker({ featureKey, trialDefault, trialEligible, onPick }) {
         <Button size="sm" onClick={() => onPick({ status: 'trial', trialDays })} className="h-7 bg-amber-600 px-2 text-xs hover:bg-amber-700">
           <Hourglass className="mr-1 h-3 w-3" /> Start
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setShowTrial(false)} className="h-7 px-1 text-xs">✕</Button>
+        <Button size="sm" variant="ghost" onClick={() => setShowTrial(false)} className="h-7 px-1 text-xs"><X className="h-3.5 w-3.5" /></Button>
       </div>
     )
   }
@@ -309,7 +309,7 @@ function TrialActions({ featureKey, defaultDays, onExtend, onConvert, onEnd, onP
         <Button size="sm" onClick={() => { onExtend(extendDays); setShowExtend(false) }} className="h-7 bg-amber-600 px-2 text-xs hover:bg-amber-700">
           <Plus className="mr-1 h-3 w-3" /> Extend
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setShowExtend(false)} className="h-7 px-1 text-xs">✕</Button>
+        <Button size="sm" variant="ghost" onClick={() => setShowExtend(false)} className="h-7 px-1 text-xs"><X className="h-3.5 w-3.5" /></Button>
       </div>
     )
   }
@@ -351,7 +351,7 @@ function ExpiredActions({ featureKey, defaultDays, onRenew, onConvert, onRevoke 
         <Button size="sm" onClick={() => { onRenew(renewDays); setShowRenew(false) }} className="h-7 bg-amber-600 px-2 text-xs hover:bg-amber-700">
           <RotateCcw className="mr-1 h-3 w-3" /> Renew
         </Button>
-        <Button size="sm" variant="ghost" onClick={() => setShowRenew(false)} className="h-7 px-1 text-xs">✕</Button>
+        <Button size="sm" variant="ghost" onClick={() => setShowRenew(false)} className="h-7 px-1 text-xs"><X className="h-3.5 w-3.5" /></Button>
       </div>
     )
   }

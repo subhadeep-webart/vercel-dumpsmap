@@ -6,31 +6,33 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Navigation, Phone, Gift, Save, Share2, KeyRound, Edit3, ShieldAlert } from 'lucide-react'
+import { Navigation, Phone, Gift, Save, Share2, KeyRound, Edit3, ShieldAlert, Loader2 } from 'lucide-react'
 
-export default function PrimaryActionBar({ facility, directionsUrl, isClaimed, isOwner, isStaffUser, token, editing, onShare, onSave, onClaim, onToggleEdit }) {
+export default function PrimaryActionBar({ facility, directionsUrl, isClaimed, isOwner, isStaffUser, token, editing, onShare, onSave, saving, onClaim, onToggleEdit, onCheckIn }) {
   return (
     <section className="border-b border-neutral-200 bg-white">
       <div className="container mx-auto flex flex-wrap items-center gap-2 px-4 py-3">
-        <Button asChild className="bg-green-700 hover:bg-green-800">
+        <Button asChild className="bg-brand-600 hover:bg-brand-700">
           <a href={directionsUrl} target="_blank" rel="noopener noreferrer">
             <Navigation className="mr-1.5 h-4 w-4" /> Directions
           </a>
         </Button>
         {facility.phone && (
-          <Button asChild variant="outline" className="border-green-300 text-green-800 hover:bg-green-50">
+          <Button asChild variant="outline" className="border-brand-300 text-brand-700 hover:bg-brand-50">
             <a href={`tel:${facility.phone}`}>
               <Phone className="mr-1.5 h-4 w-4" /> Call
             </a>
           </Button>
         )}
         {facility.rewardsPartner && (
-          <Button className="bg-green-600 hover:bg-green-700">
+          <Button className="bg-green-600 hover:bg-green-700" onClick={onCheckIn}>
             <Gift className="mr-1.5 h-4 w-4" /> Check In & Earn
           </Button>
         )}
-        <Button variant="outline" onClick={onSave}>
-          <Save className="mr-1.5 h-4 w-4" /> Save
+        <Button variant="outline" onClick={onSave} disabled={saving}>
+          {saving
+            ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</>
+            : <><Save className="mr-1.5 h-4 w-4" /> Save</>}
         </Button>
         <Button variant="outline" onClick={onShare}>
           <Share2 className="mr-1.5 h-4 w-4" /> Share

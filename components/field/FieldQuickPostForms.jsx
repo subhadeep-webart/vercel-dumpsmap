@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import PhotoUploader from '@/components/PhotoUploader'
-import { AlertTriangle, Briefcase, Gift, ShoppingBag, Recycle, Megaphone, ArrowLeft, Loader2, Camera } from 'lucide-react'
+import { AlertTriangle, Briefcase, Gift, ShoppingBag, Recycle, Megaphone, ArrowLeft, Loader2, Camera, MapPin } from 'lucide-react'
 
 /* -------------------------------------------------------------------------- */
 /* Option chooser (step 1)                                                    */
@@ -163,7 +163,7 @@ function HotSpotForm({ onDone, onBack, user }) {
           <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="h-11" />
           <Input value={zip} onChange={(e) => setZip(e.target.value)} placeholder="ZIP" className="h-11 w-24" inputMode="numeric" />
         </div>
-        {coords && <p className="text-[11px] text-neutral-500">📍 Using your current location ({coords.lat.toFixed(3)}, {coords.lng.toFixed(3)})</p>}
+        {coords && <p className="inline-flex items-center gap-1 text-[11px] text-neutral-500"><MapPin className="h-3.5 w-3.5" /> Using your current location ({coords.lat.toFixed(3)}, {coords.lng.toFixed(3)})</p>}
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-neutral-700">What did you see?</Label>

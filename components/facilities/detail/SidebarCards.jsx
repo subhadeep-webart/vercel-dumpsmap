@@ -18,7 +18,7 @@ export function SidebarContactCard({ facility, editing, editForm, setEditForm })
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-green-600" /> Contact</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm"><Phone className="h-4 w-4 text-brand-600" /> Contact</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {editing ? (
@@ -42,7 +42,7 @@ export function SidebarHoursCard({ facility, editing, editForm, setEditForm }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-green-600" /> Hours</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm"><Clock className="h-4 w-4 text-brand-600" /> Hours</CardTitle>
       </CardHeader>
       <CardContent className="text-sm">
         {editing ? (
@@ -64,18 +64,20 @@ export function SidebarHoursCard({ facility, editing, editForm, setEditForm }) {
 
 // Maps-style location panel — real interactive OpenStreetMap (Leaflet). The
 // directions CTA lives inside the map overlay, so no separate button is needed.
-export function SidebarMapCard({ facility, directionsUrl }) {
+// `mapClassName` lets callers control the map height (e.g. a taller map in the
+// sticky desktop rail vs. a compact one inline on mobile).
+export function SidebarMapCard({ facility, directionsUrl, mapClassName = 'h-64' }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
-          <MapPin className="h-4 w-4 text-green-600" /> Location
+          <MapPin className="h-4 w-4 text-brand-600" /> Location
         </div>
         {facility.address && (
           <span className="max-w-[60%] truncate text-[11px] text-neutral-500">{facility.address}</span>
         )}
       </div>
-      <FacilityMap facility={facility} directionsUrl={directionsUrl} className="h-64" />
+      <FacilityMap facility={facility} directionsUrl={directionsUrl} className={mapClassName} />
     </div>
   )
 }
@@ -86,7 +88,7 @@ export function SidebarPhotosCard({ facility }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm"><ImageIcon className="h-4 w-4 text-green-600" /> Photos</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm"><ImageIcon className="h-4 w-4 text-brand-600" /> Photos</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-1.5">
@@ -103,7 +105,7 @@ export function SidebarOwnershipCard({ facility, isClaimed, isStaffUser, user, t
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm"><Users className="h-4 w-4 text-green-600" /> Ownership</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-sm"><Users className="h-4 w-4 text-brand-600" /> Ownership</CardTitle>
       </CardHeader>
       <CardContent>
         {isClaimed && facility.owner ? (

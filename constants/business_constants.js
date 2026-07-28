@@ -9,8 +9,8 @@
 
 import {
   TrendingUp, Users, ShieldCheck, MapPin, Recycle, Heart, Truck, Cpu, Hammer,
-  Trees, Building2, AlertTriangle, DollarSign, Sparkles, HeartHandshake, Leaf,
-  CircleDollarSign, UserPlus, BadgeCheck, Gift,
+  Trees, Building2, AlertTriangle, CircleDollarSign, Sparkles, HeartHandshake, Leaf,
+  UserPlus, BadgeCheck, Gift,
 } from 'lucide-react'
 
 // Hero — bullet checklist under the headline.

@@ -9,22 +9,23 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Users, Search, MapPin, Star, Shield, BadgeCheck, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Search, MapPin, Star, Shield, BadgeCheck, ChevronRight, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import PhotoUploader from '@/components/PhotoUploader'
 import PageShell from '@/components/PageShell'
+import { GroupCategoryIcon } from '@/lib/community-icons'
 
 const GROUP_CATEGORIES = [
-  { key: 'haulers',     label: 'Haulers',          icon: '🚚' },
-  { key: 'cleanup',     label: 'Cleanup Crew',     icon: '🧹' },
-  { key: 'reuse',       label: 'Reuse / Free',     icon: '🆓' },
-  { key: 'contractors', label: 'Contractors',      icon: '👷' },
-  { key: 'recycling',   label: 'Recycling',        icon: '♻️' },
-  { key: 'property',    label: 'Property Mgmt',    icon: '🏢' },
-  { key: 'scrap',       label: 'Scrap Metal',      icon: '🪙' },
-  { key: 'donation',    label: 'Donation Network', icon: '💚' },
-  { key: 'agency',      label: 'Agency / Public',  icon: '🏛️' },
-  { key: 'general',     label: 'General',          icon: '💬' },
+  { key: 'haulers',     label: 'Haulers' },
+  { key: 'cleanup',     label: 'Cleanup Crew' },
+  { key: 'reuse',       label: 'Reuse / Free' },
+  { key: 'contractors', label: 'Contractors' },
+  { key: 'recycling',   label: 'Recycling' },
+  { key: 'property',    label: 'Property Mgmt' },
+  { key: 'scrap',       label: 'Scrap Metal' },
+  { key: 'donation',    label: 'Donation Network' },
+  { key: 'agency',      label: 'Agency / Public' },
+  { key: 'general',     label: 'General' },
 ]
 const CAT_BY_KEY = Object.fromEntries(GROUP_CATEGORIES.map((c) => [c.key, c]))
 
@@ -79,9 +80,9 @@ function GroupsPageInner() {
           <h1 className="text-lg font-extrabold md:text-xl">Local groups for haulers, contractors &amp; cleanup crews</h1>
           <p className="mt-0.5 text-sm text-neutral-700">Find your tribe. Join groups by city, category, or trade. Organizers can pin posts, edit rules, and moderate.</p>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <CategoryChip current={filter.category} value="" label="All" icon="🌍" onClick={(v) => setFilter((f) => ({ ...f, category: v }))} />
+            <CategoryChip current={filter.category} value="" label="All" icon={<Globe className="h-3.5 w-3.5" />} onClick={(v) => setFilter((f) => ({ ...f, category: v }))} />
             {GROUP_CATEGORIES.map((c) => (
-              <CategoryChip key={c.key} current={filter.category} value={c.key} label={c.label} icon={c.icon} onClick={(v) => setFilter((f) => ({ ...f, category: v }))} />
+              <CategoryChip key={c.key} current={filter.category} value={c.key} label={c.label} icon={<GroupCategoryIcon categoryKey={c.key} className="h-3.5 w-3.5" />} onClick={(v) => setFilter((f) => ({ ...f, category: v }))} />
             ))}
           </div>
         </div>
@@ -93,7 +94,7 @@ function GroupsPageInner() {
                 <div className="mb-2 text-xs font-bold uppercase tracking-wide text-neutral-500">Browse by city</div>
                 <div className="space-y-1">
                   <button onClick={() => setFilter((f) => ({ ...f, city: '' }))} className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs ${!filter.city ? 'bg-brand-50 font-bold text-brand-800' : 'hover:bg-neutral-50'}`}>
-                    <span><span className="mr-1">🌐</span> All cities</span>
+                    <span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" /> All cities</span>
                   </button>
                   {cities.slice(0, 12).map((c) => (
                     <button key={c.key} onClick={() => setFilter((f) => ({ ...f, city: f.city === c.name ? '' : c.name }))} className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs ${filter.city === c.name ? 'bg-brand-50 font-bold text-brand-800' : 'hover:bg-neutral-50'}`}>
@@ -145,7 +146,7 @@ function CategoryChip({ current, value, label, icon, onClick }) {
   const active = current === value
   return (
     <button onClick={() => onClick(value)} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${active ? 'border-brand-500 bg-brand-100 text-brand-900 shadow-sm' : 'border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400'}`}>
-      <span>{icon}</span><span>{label}</span>
+      {icon}<span>{label}</span>
     </button>
   )
 }
@@ -167,8 +168,8 @@ function GroupCard({ group, token, onChanged }) {
         <div className="flex items-start justify-between gap-2">
           <Link href={`/community/groups/${group.slug || group.id}`} className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 text-[11px] text-neutral-500">
-              <Badge variant="outline">{cat.icon} {cat.label}</Badge>
-              {group.featured && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">⭐ Featured</Badge>}
+              <Badge variant="outline" className="inline-flex items-center gap-1"><GroupCategoryIcon categoryKey={group.category} className="h-3.5 w-3.5" /> {cat.label}</Badge>
+              {group.featured && <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-700"><Star className="h-3 w-3" /> Featured</Badge>}
               {group.adminVerified && <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700"><BadgeCheck className="mr-0.5 h-3 w-3" />Verified</Badge>}
             </div>
             <h3 className="mt-1.5 truncate text-sm font-bold md:text-base">{group.name}</h3>
@@ -229,7 +230,7 @@ function CreateGroupDialog({ open, onOpenChange, token, onCreated }) {
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
               {GROUP_CATEGORIES.map((c) => (
                 <button key={c.key} onClick={() => upd('category', c.key)} className={`flex items-center gap-1.5 rounded-lg border p-2 text-left text-xs transition ${form.category === c.key ? 'border-brand-500 bg-brand-50 font-bold text-brand-900' : 'border-neutral-200 bg-white hover:border-neutral-400'}`}>
-                  <span>{c.icon}</span><span>{c.label}</span>
+                  <GroupCategoryIcon categoryKey={c.key} className="h-3.5 w-3.5" /><span>{c.label}</span>
                 </button>
               ))}
             </div>

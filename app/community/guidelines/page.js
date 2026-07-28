@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import PageShell from '@/components/PageShell'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, Recycle, Shield, AlertTriangle, Heart, Users, Megaphone, FileText } from 'lucide-react'
+import { ArrowLeft, Recycle, Shield, AlertTriangle, Heart, Users, Megaphone, FileText, Landmark } from 'lucide-react'
 
 const RULES = [
   { icon: Recycle, title: 'Stay operational and hyper-local', body: 'DumpMaps is for cleanup, hauling, recycling, reuse, donation, and contractor coordination. Posts that aren\'t operational or neighborhood-focused will be removed.' },
   { icon: AlertTriangle, title: 'No scams or fake listings', body: 'Don\'t post fake pickups, fake free items, fake jobs, or anything misleading. Verify before reposting third-party info.' },
   { icon: Shield, title: 'No harassment or discrimination', body: 'Respect haulers, residents, contractors, and facility staff. Zero tolerance for racism, sexism, or threats.' },
   { icon: Heart, title: 'Coordinate pickups safely', body: 'Public meeting spots when possible. Don\'t share home addresses publicly when you can avoid it. Note daylight pickup times for safety.' },
-  { icon: Megaphone, title: 'Tag urgent posts honestly', body: 'Use 🚨 Urgent only for real-time issues (active dumping, hazards, fast-pickup curb alerts). Don\'t flood the feed.' },
+  { icon: Megaphone, title: 'Tag urgent posts honestly', body: 'Use the Urgent tag only for real-time issues (active dumping, hazards, fast-pickup curb alerts). Don\'t flood the feed.' },
   { icon: Users, title: 'Use the right category', body: 'Illegal Dumping, Free Items, Donation Need, Pickup Request, Contractor Tip, Facility Update, Safety Alert, Cleanup Event, Agency Notice, or General. Wrong category = harder to find.' },
   { icon: FileText, title: 'No illegal activity', body: 'Don\'t coordinate illegal dumping, theft, fraud, or unlicensed hauling for paid jobs. Report it instead.' },
 ]
@@ -73,7 +73,7 @@ export default function CommunityGuidelinesPage() {
         </section>
 
         <section className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm">
-          <div className="font-bold text-blue-900">🏛 Verified Agencies &amp; Public Works</div>
+          <div className="flex items-center gap-1.5 font-bold text-blue-900"><Landmark className="h-4 w-4" /> Verified Agencies &amp; Public Works</div>
           <p className="mt-1 text-blue-900/80">Cities, sanitation departments, and environmental groups can apply for verified agency status to post official notices. Contact admin to request verification.</p>
         </section>
 

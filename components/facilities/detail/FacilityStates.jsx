@@ -4,14 +4,20 @@
 // page. Extracted from app/facilities/[id]/page.js.
 
 import Link from 'next/link'
-import PageShell from '@/components/PageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2, MapPin, ArrowRight, RefreshCw, AlertTriangle } from 'lucide-react'
 
+// NOTE: These state components render WITHOUT a <PageShell>. The facility detail
+// page lives inside the (app) route-group layout, which already provides a
+// single <AppHeader>. Wrapping these in PageShell (which renders its own
+// AppHeader) produced a duplicate header while the page was loading/erroring —
+// two headers on the skeleton, one once loaded. Keep them header-less so the
+// layout stays the single source of truth for the header.
+
 export function FacilityDetailSkeleton({ onBack }) {
   return (
-    <PageShell active="facilities" maxWidth={null} padding="" bg="bg-neutral-50">
+    <div className="min-h-[100dvh] bg-neutral-50">
       <div className="relative h-48 w-full animate-pulse bg-neutral-200 sm:h-64 md:h-80" />
       <div className="border-b border-neutral-200 bg-white">
         <div className="container mx-auto flex flex-wrap items-center gap-2 px-4 py-3">
@@ -40,13 +46,13 @@ export function FacilityDetailSkeleton({ onBack }) {
       <div className="container mx-auto flex items-center gap-2 px-4 pb-10 text-xs text-neutral-500">
         <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading facility…
       </div>
-    </PageShell>
+    </div>
   )
 }
 
 export function FacilityNotFound({ onBack, onRetry, id }) {
   return (
-    <PageShell active="facilities" maxWidth={null} padding="">
+    <div className="min-h-[100dvh] bg-neutral-50">
       <main className="container mx-auto px-4 py-16">
         <Card className="mx-auto max-w-md">
           <CardContent className="space-y-3 p-6 text-center">
@@ -58,7 +64,7 @@ export function FacilityNotFound({ onBack, onRetry, id }) {
               We couldn't find a facility with the ID <code className="rounded bg-neutral-100 px-1 py-0.5 text-[11px]">{id}</code>.
             </p>
             <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
-              <Button asChild className="bg-green-700 hover:bg-green-800">
+              <Button asChild className="bg-brand-600 hover:bg-brand-700">
                 <Link href="/facilities"><ArrowRight className="mr-1.5 h-4 w-4 rotate-180" /> Browse facilities</Link>
               </Button>
               <Button variant="outline" onClick={onRetry}>
@@ -68,13 +74,13 @@ export function FacilityNotFound({ onBack, onRetry, id }) {
           </CardContent>
         </Card>
       </main>
-    </PageShell>
+    </div>
   )
 }
 
 export function FacilityErrorState({ title, detail, onBack, onRetry }) {
   return (
-    <PageShell active="facilities" maxWidth={null} padding="">
+    <div className="min-h-[100dvh] bg-neutral-50">
       <main className="container mx-auto px-4 py-16">
         <Card className="mx-auto max-w-md">
           <CardContent className="space-y-3 p-6 text-center">
@@ -84,7 +90,7 @@ export function FacilityErrorState({ title, detail, onBack, onRetry }) {
             <h1 className="text-lg font-bold text-neutral-900">{title}</h1>
             <p className="text-sm text-neutral-600">{detail}</p>
             <div className="flex flex-col items-center gap-2 pt-2 sm:flex-row sm:justify-center">
-              <Button onClick={onRetry} className="bg-green-700 hover:bg-green-800">
+              <Button onClick={onRetry} className="bg-brand-600 hover:bg-brand-700">
                 <RefreshCw className="mr-1.5 h-4 w-4" /> Retry
               </Button>
               <Button asChild variant="outline">
@@ -94,6 +100,6 @@ export function FacilityErrorState({ title, detail, onBack, onRetry }) {
           </CardContent>
         </Card>
       </main>
-    </PageShell>
+    </div>
   )
 }

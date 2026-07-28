@@ -15,6 +15,7 @@ import {
   LayoutDashboard, Activity, Heart, Navigation, Star, MapPin, BadgeCheck,
   Recycle, Truck, Building2, Users, AlertTriangle, BarChart3, ShieldCheck,
   Calendar, ThumbsUp, Edit, Plus, Flag,
+  Flame, MessageCircle, User, DollarSign, Zap, Shield,
 } from 'lucide-react'
 import { AlertCard, ALERT_TYPES, timeAgo } from '@/components/AlertSystem'
 import { COMMUNITY_CATEGORIES } from '@/components/Community'
@@ -27,7 +28,7 @@ function FacilityRow({ f, onJump, right }) {
     <div className="flex items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 hover:border-brand-400">
       <button onClick={onJump} className="flex flex-1 items-center gap-2 text-left">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-100 text-brand-700">
-          ♻
+          <Recycle className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <div className="flex items-center gap-1 truncate font-semibold">
@@ -37,7 +38,7 @@ function FacilityRow({ f, onJump, right }) {
           <div className="truncate text-[11px] text-neutral-500">{f.type} · {f.address}</div>
           {f.activeAlertCount > 0 && (
             <span className="mt-0.5 inline-flex items-center gap-1 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800">
-              🔥 {f.activeAlertCount} live · {f.activeAlerts?.[0]?.label}
+              <Flame className="h-3 w-3" /> {f.activeAlertCount} live · {f.activeAlerts?.[0]?.label}
             </span>
           )}
         </div>
@@ -96,7 +97,7 @@ function ContractorDashboard({ user, onJump, onReport, onCommunity }) {
         icon={Heart}
         action={favorites[0] && <Button size="sm" variant="outline" onClick={() => onReport(favorites[0])}><Activity className="mr-1 h-3 w-3" /> Quick alert</Button>}
       >
-        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap ❤️ on facilities to save them here.</div>}
+        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap <Heart className="inline h-3.5 w-3.5 align-text-bottom" /> on facilities to save them here.</div>}
         {favorites.slice(0, 5).map((f) => <FacilityRow key={f.id} f={f} onJump={() => onJump(f.id)} />)}
       </SectionCard>
 
@@ -107,7 +108,7 @@ function ContractorDashboard({ user, onJump, onReport, onCommunity }) {
 
       <SectionCard title={`Followed updates (${follows.length})`} icon={Users}>
         {follows.slice(0, 5).map((a) => <AlertCard key={a.id} alert={a} showFacilityName onVote={() => {}} onJump={onJump} />)}
-        {follows.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap ❤️ to follow facilities & see their updates here.</div>}
+        {follows.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap <Heart className="inline h-3.5 w-3.5 align-text-bottom" /> to follow facilities & see their updates here.</div>}
       </SectionCard>
 
       <SectionCard title={`Recent wait time reports (${waitReports.length})`} icon={Truck}>
@@ -135,7 +136,7 @@ function ContractorDashboard({ user, onJump, onReport, onCommunity }) {
         {contractorPosts.map((p) => (
           <div key={p.id} className="rounded-lg border border-neutral-200 bg-white p-2 text-sm">
             <div className="font-semibold">{p.title}</div>
-            <div className="text-[11px] text-neutral-500">by {p.userName} · {timeAgo(p.createdAt)} · 👍 {p.upvotes || 0} · 💬 {p.commentCount || 0}</div>
+            <div className="text-[11px] text-neutral-500">by {p.userName} · {timeAgo(p.createdAt)} · <ThumbsUp className="inline h-3 w-3" /> {p.upvotes || 0} · <MessageCircle className="inline h-3 w-3" /> {p.commentCount || 0}</div>
           </div>
         ))}
         {contractorPosts.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">No contractor posts yet.</div>}
@@ -180,7 +181,7 @@ function RecyclerDashboard({ user, onJump }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <SectionCard title={`Favorite recycling/scrap/CRV (${favorites.length})`} icon={Recycle}>
-        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap ❤️ on recycling facilities to save them here.</div>}
+        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap <Heart className="inline h-3.5 w-3.5 align-text-bottom" /> on recycling facilities to save them here.</div>}
         {favorites.slice(0, 6).map((f) => <FacilityRow key={f.id} f={f} onJump={() => onJump(f.id)} />)}
       </SectionCard>
 
@@ -234,7 +235,7 @@ function DonationDashboard({ user, onJump, onCommunity }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <SectionCard title={`Favorite donation centers (${favorites.length})`} icon={Heart}>
-        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap ❤️ on donation centers to save them here.</div>}
+        {favorites.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Tap <Heart className="inline h-3.5 w-3.5 align-text-bottom" /> on donation centers to save them here.</div>}
         {favorites.slice(0, 6).map((f) => <FacilityRow key={f.id} f={f} onJump={() => onJump(f.id)} />)}
       </SectionCard>
 
@@ -256,7 +257,7 @@ function DonationDashboard({ user, onJump, onCommunity }) {
         {events.map((p) => (
           <div key={p.id} className="rounded-lg border border-neutral-200 bg-white p-2 text-sm">
             <div className="font-semibold">{p.title}</div>
-            <div className="text-[11px] text-neutral-500">📅 {new Date(p.eventDate).toLocaleDateString()} {p.eventLocation ? `· 📍 ${p.eventLocation}` : ''}</div>
+            <div className="text-[11px] text-neutral-500"><Calendar className="inline h-3 w-3" /> {new Date(p.eventDate).toLocaleDateString()} {p.eventLocation ? <><span>· </span><MapPin className="inline h-3 w-3" /> {p.eventLocation}</> : ''}</div>
           </div>
         ))}
         {events.length === 0 && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">No upcoming events.</div>}
@@ -394,12 +395,12 @@ function AdminDashboard({ onJump }) {
   return (
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList className="flex-wrap">
-        <TabsTrigger value="analytics">📊 Analytics</TabsTrigger>
-        <TabsTrigger value="pending">🆕 Submissions ({pending.length})</TabsTrigger>
-        <TabsTrigger value="claims">🏢 Claims ({claims.length})</TabsTrigger>
-        <TabsTrigger value="flagged">⚐ Flagged ({flagged.length})</TabsTrigger>
-        <TabsTrigger value="users">👤 Users ({users.length})</TabsTrigger>
-        <TabsTrigger value="leads">💲 Payment Leads ({leads.length})</TabsTrigger>
+        <TabsTrigger value="analytics"><span className="inline-flex items-center gap-1"><BarChart3 className="h-3.5 w-3.5" /> Analytics</span></TabsTrigger>
+        <TabsTrigger value="pending"><span className="inline-flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Submissions ({pending.length})</span></TabsTrigger>
+        <TabsTrigger value="claims"><span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> Claims ({claims.length})</span></TabsTrigger>
+        <TabsTrigger value="flagged"><span className="inline-flex items-center gap-1"><Flag className="h-3.5 w-3.5" /> Flagged ({flagged.length})</span></TabsTrigger>
+        <TabsTrigger value="users"><span className="inline-flex items-center gap-1"><User className="h-3.5 w-3.5" /> Users ({users.length})</span></TabsTrigger>
+        <TabsTrigger value="leads"><span className="inline-flex items-center gap-1"><DollarSign className="h-3.5 w-3.5" /> Payment Leads ({leads.length})</span></TabsTrigger>
       </TabsList>
 
       <TabsContent value="analytics" className="pt-4">
@@ -487,7 +488,7 @@ function AdminDashboard({ onJump }) {
               <div>
                 <div className="font-semibold">{a.label} @ {a.facilityName}</div>
                 <div className="text-xs italic text-neutral-700">&ldquo;{a.text || '—'}&rdquo;</div>
-                <div className="text-[11px] text-neutral-500">by {a.userName} · {timeAgo(a.createdAt)} · 🚩 {a.flagCount} flag(s)</div>
+                <div className="text-[11px] text-neutral-500">by {a.userName} · {timeAgo(a.createdAt)} · <Flag className="inline h-3 w-3" /> {a.flagCount} flag(s)</div>
               </div>
               <Button size="sm" variant="destructive" onClick={async () => {
                 await api.del(`/api/alerts/${a.id}`)
@@ -508,7 +509,7 @@ function AdminDashboard({ onJump }) {
                 <div>
                   <div className="font-semibold">{u.name} <span className="text-xs font-normal text-neutral-500">· {u.email}</span></div>
                   <div className="text-[11px] text-neutral-500">
-                    {(u.profileTypes || []).join(', ') || u.userRole || 'user'} · ⚡ {u.karma || 0} {u.role === 'admin' && '· 🛡 admin'}
+                    {(u.profileTypes || []).join(', ') || u.userRole || 'user'} · <Zap className="inline h-3 w-3" /> {u.karma || 0} {u.role === 'admin' && <span className="inline-flex items-center gap-0.5">· <Shield className="h-3 w-3" /> admin</span>}
                   </div>
                 </div>
                 <div className="text-[10px] text-neutral-400">{new Date(u.createdAt).toLocaleDateString()}</div>
@@ -557,7 +558,7 @@ function GeneralDashboard({ user, onJump }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <SectionCard title={`Favorites (${favorites.length})`} icon={Heart}>
         {favorites.slice(0, 6).map((f) => <FacilityRow key={f.id} f={f} onJump={() => onJump(f.id)} />)}
-        {!favorites.length && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Save facilities with ❤️ to see them here.</div>}
+        {!favorites.length && <div className="rounded-lg border border-dashed p-4 text-center text-xs text-neutral-500">Save facilities with <Heart className="inline h-3.5 w-3.5 align-text-bottom" /> to see them here.</div>}
       </SectionCard>
       <SectionCard title={`Live activity (${recent.length})`} icon={Activity}>
         {recent.slice(0, 5).map((a) => <AlertCard key={a.id} alert={a} showFacilityName onVote={() => {}} onJump={onJump} />)}
@@ -568,11 +569,11 @@ function GeneralDashboard({ user, onJump }) {
 
 // =================== Main Dashboard Dialog ===================
 const PROFILE_TITLES = {
-  hauler: { title: 'Contractor / Hauler dashboard', icon: '🚚', color: 'text-orange-700' },
-  recycler: { title: 'Recycler dashboard', icon: '♻️', color: 'text-brand-700' },
-  donor: { title: 'Donation dashboard', icon: '❤️', color: 'text-sky-700' },
-  facility_owner: { title: 'Facility Owner dashboard', icon: '🏢', color: 'text-purple-700' },
-  general: { title: 'Your dashboard', icon: '👤', color: 'text-neutral-700' },
+  hauler: { title: 'Contractor / Hauler dashboard', Icon: Truck, color: 'text-orange-700' },
+  recycler: { title: 'Recycler dashboard', Icon: Recycle, color: 'text-brand-700' },
+  donor: { title: 'Donation dashboard', Icon: Heart, color: 'text-sky-700' },
+  facility_owner: { title: 'Facility Owner dashboard', Icon: Building2, color: 'text-purple-700' },
+  general: { title: 'Your dashboard', Icon: User, color: 'text-neutral-700' },
 }
 
 export function DashboardDialog({ open, onOpenChange, user, onJumpFacility, onReport, onCommunity }) {
@@ -595,20 +596,24 @@ export function DashboardDialog({ open, onOpenChange, user, onJumpFacility, onRe
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-brand-600" />
-            <span>{profile === 'admin' ? '🛡 Admin dashboard' : `${meta.icon} ${meta.title}`}</span>
+            {profile === 'admin' ? (
+              <span className="inline-flex items-center gap-1.5"><Shield className="h-5 w-5" /> Admin dashboard</span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5">{meta.Icon && <meta.Icon className="h-5 w-5" />} {meta.title}</span>
+            )}
           </DialogTitle>
         </DialogHeader>
         {profileTypes.length > 1 && (
           <div className="mt-1 flex flex-wrap gap-2">
             {profileTypes.map((p) => {
-              const m = p === 'admin' ? { title: 'Admin', icon: '🛡' } : PROFILE_TITLES[p] || { title: p, icon: '·' }
+              const m = p === 'admin' ? { title: 'Admin', Icon: Shield } : PROFILE_TITLES[p] || { title: p, Icon: null }
               return (
                 <button
                   key={p}
                   onClick={() => setView(p)}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${profile === p ? 'bg-brand-600 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
                 >
-                  {m.icon} {m.title}
+                  <span className="inline-flex items-center gap-1">{m.Icon && <m.Icon className="h-4 w-4" />} {m.title}</span>
                 </button>
               )
             })}

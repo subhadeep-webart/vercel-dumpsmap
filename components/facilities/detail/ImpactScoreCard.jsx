@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  Leaf, BadgeCheck, Recycle, Activity, Trees, Star, DollarSign,
+  Leaf, BadgeCheck, Recycle, Activity, Trees, Star, CircleDollarSign,
   Phone, Cloud, Droplets, Users, ShieldAlert,
 } from 'lucide-react'
 import { formatNumber } from './primitives'
@@ -66,32 +66,27 @@ export default function ImpactScoreCard({ impact, facility }) {
           icon={Recycle}
           label="Materials Diverted"
           value={isNew ? '—' : `${formatNumber(m.lbsDiverted)} lbs`}
-          emoji="♻️"
         />
         <ImpactStat
           icon={Activity}
           label="Contractor Visits"
           value={isNew ? '—' : formatNumber(m.contractorVisits)}
-          emoji="🚛"
         />
         <ImpactStat
           icon={Trees}
           label="Trees Equivalent"
           value={isNew ? '—' : `${formatNumber(m.treesEquivalent)}`}
-          emoji="🌳"
         />
         <ImpactStat
           icon={Star}
           label="Community Rating"
           value={isNew ? 'New' : `${m.communityRating.toFixed(1)}`}
           subValue={isNew ? null : `${m.reviewCount} reviews`}
-          emoji="⭐"
         />
         <ImpactStat
-          icon={DollarSign}
+          icon={CircleDollarSign}
           label="Rewards Earned Here"
           value={isNew ? '—' : `$${formatNumber(m.rewardsPaidUsd, 2)}`}
-          emoji="💰"
         />
       </div>
 
@@ -147,11 +142,11 @@ export default function ImpactScoreCard({ impact, facility }) {
   )
 }
 
-function ImpactStat({ icon: Icon, label, value, subValue, emoji }) {
+function ImpactStat({ icon: Icon, label, value, subValue }) {
   return (
     <div className="rounded-xl border border-green-100 bg-white p-3">
       <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-        <span className="text-sm">{emoji}</span>
+        <Icon className="h-3.5 w-3.5 shrink-0 text-green-600" />
         <span className="truncate">{label}</span>
       </div>
       <div className="mt-1 text-xl font-extrabold leading-tight text-green-800">{value}</div>

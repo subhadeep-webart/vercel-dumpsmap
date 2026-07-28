@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Target, MapPin, Clock, CheckCircle2, AlertTriangle, ChevronRight, Navigation,
-  Sparkles, RefreshCw, ShieldCheck, Flame, Star, DollarSign,
+  Sparkles, RefreshCw, ShieldCheck, Flame, Star, CircleDollarSign,
 } from 'lucide-react'
 
 const MATERIAL_OPTIONS = [

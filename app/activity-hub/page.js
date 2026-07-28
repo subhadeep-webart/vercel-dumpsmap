@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import {
-  Plus, Camera, Video, AlertTriangle, Briefcase, DollarSign, Heart, Building2,
+  Plus, Camera, Video, AlertTriangle, Briefcase, CircleDollarSign, Heart, Building2,
   Gift, MessageSquare, Globe, Lightbulb, Landmark, Loader2, X, MapPin, Eye,
   ThumbsUp, Send, Sparkles, ChevronDown, Bookmark, Share2,
 } from 'lucide-react'
@@ -29,7 +29,7 @@ const FILTERS = [
   { key: 'all',        label: 'All',         icon: Globe,         tone: 'text-brand-600 bg-brand-100' },
   { key: 'alerts',     label: 'Alerts',      icon: AlertTriangle, tone: 'text-red-600 bg-red-100' },
   { key: 'jobs',       label: 'Jobs',        icon: Briefcase,     tone: 'text-blue-600 bg-blue-100' },
-  { key: 'bounties',   label: 'Bounties',    icon: DollarSign,    tone: 'text-green-600 bg-green-100' },
+  { key: 'bounties',   label: 'Bounties',    icon: CircleDollarSign,    tone: 'text-green-600 bg-green-100' },
   { key: 'donations',  label: 'Donations',   icon: Heart,         tone: 'text-rose-600 bg-rose-100' },
   { key: 'facilities', label: 'Facilities',  icon: Building2,     tone: 'text-amber-600 bg-amber-100' },
   { key: 'tips',       label: 'Tips',        icon: Lightbulb,     tone: 'text-yellow-600 bg-yellow-100' },
@@ -40,7 +40,7 @@ const POST_TYPES = [
   { value: 'general',          label: 'General Post',     icon: MessageSquare, tone: 'text-neutral-700 bg-neutral-100', desc: 'Share something with the community' },
   { value: 'safety_alert',     label: 'Alert',            icon: AlertTriangle, tone: 'text-red-600 bg-red-50',           desc: 'Report a safety issue or alert' },
   { value: 'job',              label: 'Job',              icon: Briefcase,     tone: 'text-blue-600 bg-blue-50',         desc: 'Post a job for contractors', href: '/jobs/new' },
-  { value: 'bounty',           label: 'Bounty',           icon: DollarSign,    tone: 'text-green-600 bg-green-50',       desc: 'Start a community bounty', href: '/bounties/new' },
+  { value: 'bounty',           label: 'Bounty',           icon: CircleDollarSign,    tone: 'text-green-600 bg-green-50',       desc: 'Start a community bounty', href: '/bounties/new' },
   { value: 'donation_need',    label: 'Donation Need',    icon: Heart,         tone: 'text-rose-600 bg-rose-50',         desc: 'Request donations' },
   { value: 'free_item',        label: 'Free Item',        icon: Gift,          tone: 'text-orange-600 bg-orange-50',     desc: 'Give away or offer for free' },
   { value: 'facility_update',  label: 'Facility Update',  icon: Building2,     tone: 'text-amber-600 bg-amber-50',       desc: 'Post facility status (owners only)' },
@@ -51,7 +51,7 @@ const POST_TYPES = [
 const FEED_TYPE_META = {
   facility_update:    { label: 'FACILITY UPDATE', tone: 'bg-amber-100 text-amber-800',     icon: Building2 },
   job:                { label: 'JOB POSTED',      tone: 'bg-blue-100 text-blue-800',       icon: Briefcase },
-  bounty:             { label: 'BOUNTY',          tone: 'bg-green-100 text-green-800',     icon: DollarSign },
+  bounty:             { label: 'BOUNTY',          tone: 'bg-green-100 text-green-800',     icon: CircleDollarSign },
   donation_need:      { label: 'DONATION NEED',   tone: 'bg-rose-100 text-rose-800',       icon: Heart },
   free_item:          { label: 'FREE ITEM',       tone: 'bg-orange-100 text-orange-800',   icon: Gift },
   illegal_dumping:    { label: 'ILLEGAL DUMPING', tone: 'bg-red-100 text-red-800',         icon: AlertTriangle },
@@ -178,7 +178,7 @@ function ActivityHubInner() {
               { Icon: Video,         tone: 'bg-purple-100 text-purple-600' },
               { Icon: AlertTriangle, tone: 'bg-red-100 text-red-600' },
               { Icon: Briefcase,     tone: 'bg-blue-100 text-blue-600' },
-              { Icon: DollarSign,    tone: 'bg-green-100 text-green-600' },
+              { Icon: CircleDollarSign,    tone: 'bg-green-100 text-green-600' },
             ].map(({ Icon, tone }, i) => (
               <span key={i} className={`hidden h-7 w-7 items-center justify-center rounded-full sm:inline-flex ${tone}`}><Icon className="h-3.5 w-3.5" /></span>
             ))}
@@ -235,7 +235,7 @@ function ActivityHubInner() {
           <div ref={sentinelRef} className="py-4 text-center text-xs text-neutral-500">
             {loadingMore ? <span className="inline-flex items-center gap-1"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading more…</span>
               : hasMore ? <span>Scroll for more…</span>
-              : <span>You&apos;ve reached the end ✨</span>}
+              : <span className="inline-flex items-center gap-1">You&apos;ve reached the end <Sparkles className="h-3.5 w-3.5" /></span>}
           </div>
         )}
       </div>

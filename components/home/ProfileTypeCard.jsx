@@ -1,8 +1,10 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
+import { Check } from 'lucide-react'
 
 export default function ProfileTypeCard({ pt, selected, isPrimary, onClick, onMakePrimary, showPrimary = true }) {
+  const Icon = pt.icon
   return (
     <button
       onClick={onClick}
@@ -11,7 +13,7 @@ export default function ProfileTypeCard({ pt, selected, isPrimary, onClick, onMa
       }`}
     >
       <div className="flex items-start gap-3">
-        <div className="text-2xl">{pt.icon}</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">{Icon && <Icon className="h-5 w-5" />}</div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="font-bold text-neutral-900">{pt.title}</div>
@@ -26,7 +28,7 @@ export default function ProfileTypeCard({ pt, selected, isPrimary, onClick, onMa
             selected ? 'border-brand-600 bg-brand-600 text-white' : 'border-neutral-300'
           }`}
         >
-          {selected && <span className="text-xs">✓</span>}
+          {selected && <Check className="h-3 w-3" />}
         </div>
       </div>
       {selected && showPrimary && !isPrimary && onMakePrimary && (

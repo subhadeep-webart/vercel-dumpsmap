@@ -22,14 +22,15 @@
 // Usage:
 //   <FeatureLock featureKey="timeClock"><TimeClockPage /></FeatureLock>
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useFeatureAccess } from '@/lib/useFeatureAccess'
+import { startProgress, stopProgress } from '@/lib/top-progress'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  Lock, Sparkles, Pause, Hourglass, Crown, ShieldOff, ArrowRight, Loader2, Mail,
+  Lock, Sparkles, Pause, Hourglass, Crown, ShieldOff, ArrowRight, Mail,
 } from 'lucide-react'
 
 const SUPPORT_EMAIL = 'jamal@dumpmaps.org'
@@ -43,13 +44,22 @@ function buildMailto(featureName) {
 export default function FeatureLock({ featureKey, children, fallback }) {
   const { loading, allowed, status, lockedState, requiresUpgrade, requiresApply, isExpired, feature, grant } = useFeatureAccess(featureKey)
 
-  if (loading) {
-    return fallback || (
-      <div className="container mx-auto px-4 py-12 text-center text-sm text-neutral-500">
-        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Checking access…
-      </div>
-    )
-  }
+  // While the access check is in flight, drive the global top progress bar
+  // instead of blanking the page with a "Checking access…" spinner. The bar is
+  // a far lighter, more polished cue and keeps the header/chrome in place.
+  // Keyed per feature + ref-counted so overlapping checks don't cut each other
+  // short, and always released on unmount.
+  useEffect(() => {
+    const key = `feature-access:${featureKey}`
+    if (loading) startProgress(key)
+    else stopProgress(key)
+    return () => stopProgress(key)
+  }, [loading, featureKey])
+
+  // Don't render gated content until we know access. Prefer an explicit
+  // fallback if the caller supplied one; otherwise render nothing (the top bar
+  // communicates the pending check) to avoid a flash of the wrong UI.
+  if (loading) return fallback ?? null
 
   if (allowed) return children
 

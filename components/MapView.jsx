@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
-import { Navigation, BadgeCheck, Star, Plus, Minus, Locate, Activity, Heart } from 'lucide-react'
+import { Navigation, BadgeCheck, Star, Plus, Minus, Locate, Activity, Heart, Check, Truck, Recycle, Trash2, Cpu, Wrench, Hammer, Sofa, X } from 'lucide-react'
 
 const TYPE_COLORS = {
   Landfill: { bg: '#525252', ring: '#262626' },
@@ -22,16 +22,16 @@ const SEVERITY_PIN = {
   good: { halo: '#22c55e' },
 }
 
-const TYPE_GLYPHS = {
-  Landfill: '🗑',
-  'Transfer Station': '🚛',
-  'Recycling Center': '♻',
-  'Donation Center': '❤',
-  'Scrap Yard': '🔩',
-  'CRV Center': '♻',
-  'E-Waste Center': '💻',
-  'Reuse Center': '🛋',
-  'Construction Debris Facility': '🔨',
+const TYPE_GLYPH_ICONS = {
+  Landfill: Trash2,
+  'Transfer Station': Truck,
+  'Recycling Center': Recycle,
+  'Donation Center': Heart,
+  'Scrap Yard': Wrench,
+  'CRV Center': Recycle,
+  'E-Waste Center': Cpu,
+  'Reuse Center': Sofa,
+  'Construction Debris Facility': Hammer,
 }
 
 // Per-alert-type pin badge (chip below the pin)
@@ -208,7 +208,7 @@ export default function MockMap({
         const isSelected = f.id === popupId || f.id === selectedId
         const inView = f._xy.x > -5 && f._xy.x < 105 && f._xy.y > -5 && f._xy.y < 105
         if (!inView) return null
-        const glyph = TYPE_GLYPHS[f.type] || '♻'
+        const GlyphIcon = TYPE_GLYPH_ICONS[f.type] || Recycle
         const halo = f.topAlertSeverity ? SEVERITY_PIN[f.topAlertSeverity]?.halo : null
         const isAlertSevere = f.topAlertSeverity === 'bad' || f.topAlertSeverity === 'warn'
         const recent = isRecentActivity(f.lastAlertAt)
@@ -261,14 +261,14 @@ export default function MockMap({
               )}
               <div
                 className={`relative flex items-center justify-center rounded-full text-white shadow-lg ring-2 ring-white ${
-                  isSelected ? 'h-10 w-10 text-[18px]' : compact ? 'h-7 w-7 text-[12px]' : 'h-8 w-8 text-[14px]'
+                  isSelected ? 'h-10 w-10' : compact ? 'h-7 w-7' : 'h-8 w-8'
                 }`}
                 style={{ background: c.bg, boxShadow: `0 4px 12px ${c.ring}66` }}
               >
-                <span>{glyph}</span>
+                <GlyphIcon className={isSelected ? 'h-5 w-5' : compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                 {f.verified && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-[8px] font-bold text-white" title="Verified">
-                    ✓
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white" title="Verified">
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
                   </span>
                 )}
                 {isFavorite && (
@@ -332,7 +332,7 @@ export default function MockMap({
                 className="text-neutral-400 hover:text-neutral-900"
                 aria-label="Close popup"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -360,8 +360,8 @@ export default function MockMap({
                       </span>
                     )}
                     {popup.activeAlerts[0].truckCount && (
-                      <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
-                        🚛 ~{popup.activeAlerts[0].truckCount} trucks
+                      <span className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+                        <Truck className="h-3 w-3" /> ~{popup.activeAlerts[0].truckCount} trucks
                       </span>
                     )}
                   </div>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { HERO_STATS } from '@/constants/home_constants'
 import {
-  Search, ArrowRight, HeartHandshake, BadgeCheck, Activity,
+  Search, ArrowRight, HeartHandshake, BadgeCheck, Activity, Star,
 } from 'lucide-react'
 
 export default function HomeHero({ onSearchFacilities, onJoinBeta, onDonate }) {
@@ -74,7 +74,7 @@ export default function HomeHero({ onSearchFacilities, onJoinBeta, onDonate }) {
                 </div>
                 <div className="rounded-lg bg-neutral-50 px-2 py-1.5">
                   <div className="text-[10px] font-medium text-neutral-500">Rating</div>
-                  <div className="text-sm font-bold text-amber-600">★ 4.8</div>
+                  <div className="inline-flex items-center justify-center gap-0.5 text-sm font-bold text-amber-600"><Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" /> 4.8</div>
                 </div>
                 <div className="rounded-lg bg-emerald-50 px-2 py-1.5">
                   <div className="text-[10px] font-medium text-emerald-700">Cash Back</div>

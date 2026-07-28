@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { HeartHandshake, Mail, Repeat, DollarSign, AlertTriangle, Check, Download } from 'lucide-react'
+import { HeartHandshake, Mail, Repeat, CircleDollarSign, AlertTriangle, Check, Download, CheckCircle2 } from 'lucide-react'
 
 function KPI({ icon: Icon, title, value, color = 'green' }) {
   const map = { green: 'bg-brand-50 text-brand-700 border-brand-200', amber: 'bg-amber-50 text-amber-700 border-amber-200', blue: 'bg-blue-50 text-blue-700 border-blue-200' }
@@ -86,13 +86,13 @@ export default function AdminDonations() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className={data?.stripeReady ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-amber-300 bg-amber-50 text-amber-800'}>
-          {data?.stripeReady ? '✅ Stripe connected' : '⚠ Stripe not yet wired — intents are queued'}
+        <Badge variant="outline" className={`inline-flex items-center gap-1 ${data?.stripeReady ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-amber-300 bg-amber-50 text-amber-800'}`}>
+          {data?.stripeReady ? <><CheckCircle2 className="h-3 w-3" /> Stripe connected</> : <><AlertTriangle className="h-3 w-3" /> Stripe not yet wired — intents are queued</>}
         </Badge>
       </div>
 
       <div className="grid gap-3 md:grid-cols-4">
-        <KPI icon={DollarSign}     title="Total raised"        value={`$${(data?.stats?.totalRaised || 0).toLocaleString()}`} />
+        <KPI icon={CircleDollarSign}     title="Total raised"        value={`$${(data?.stats?.totalRaised || 0).toLocaleString()}`} />
         <KPI icon={HeartHandshake} title="Donations"           value={data?.stats?.donationCount ?? 0} />
         <KPI icon={Repeat}         title="Recurring supporters" value={data?.stats?.recurringCount ?? 0} color="blue" />
         <KPI icon={AlertTriangle}  title="Queued intents"       value={data?.stats?.intentCount ?? 0} color="amber" />

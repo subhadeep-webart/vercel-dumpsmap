@@ -66,8 +66,8 @@ export default function FacilitiesToolbar({
           />
         </div>
         <div className="grid grid-cols-3 gap-2 md:flex md:gap-2">
-          <Button variant="outline" onClick={onNearMe} className="h-10 justify-center md:flex-none">
-            <Locate className="mr-1 h-4 w-4 text-emerald-600" /> Near Me
+          <Button variant="outline" onClick={onNearMe} className="h-10 justify-center md:flex-none px-2">
+            <Locate className="sm:mr-1 h-4 w-4 text-emerald-600" /> Near Me
           </Button>
           <Button variant="outline" onClick={onOpenFilters} className="h-10 justify-center">
             <FilterIcon className="mr-1 h-4 w-4 text-emerald-600" /> Filters

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Camera, ImagePlus, X, Loader2, MapPin, DollarSign, Truck, Package, ChevronRight, ChevronLeft, Eye, Check } from 'lucide-react'
+import { Camera, ImagePlus, X, Loader2, MapPin, CircleDollarSign, Truck, Package, ChevronRight, ChevronLeft, Eye, Check } from 'lucide-react'
 import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
 import { allowedStatusesForUser, STATUS_META, resolveMarketplaceRole } from '@/lib/marketplace-roles'
 
@@ -291,7 +291,7 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
             {(priceType === 'fixed' || priceType === 'obo') && (
               <Field label="Price (USD)">
                 <div className="relative">
-                  <DollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                  <CircleDollarSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                   <Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="pl-8" placeholder="0" />
                 </div>
               </Field>

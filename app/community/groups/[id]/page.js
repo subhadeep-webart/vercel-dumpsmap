@@ -9,19 +9,20 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowLeft, Users, MapPin, Settings, Shield, Plus, LogOut, BadgeCheck, Pin } from 'lucide-react'
+import { ArrowLeft, Users, MapPin, Settings, Shield, Plus, LogOut, BadgeCheck, Pin, MessageCircle, AlertTriangle, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import RoleBadge from '@/components/RoleBadge'
 import { CATEGORY_BY_KEY, categoryColor, timeAgo, REACTION_TYPES } from '@/lib/community-categories'
+import { GroupCategoryIcon, CategoryIcon } from '@/lib/community-icons'
 import GroupChatPanel from '@/components/messaging/GroupChatPanel'
 import PageShell from '@/components/PageShell'
 
 const GROUP_CATS = {
-  haulers: { label: 'Haulers', icon: '🚚' }, cleanup: { label: 'Cleanup Crew', icon: '🧹' },
-  reuse: { label: 'Reuse / Free', icon: '🆓' }, contractors: { label: 'Contractors', icon: '👷' },
-  recycling: { label: 'Recycling', icon: '♻️' }, property: { label: 'Property Mgmt', icon: '🏢' },
-  scrap: { label: 'Scrap Metal', icon: '🪙' }, donation: { label: 'Donation Network', icon: '💚' },
-  agency: { label: 'Agency', icon: '🏛️' }, general: { label: 'General', icon: '💬' },
+  haulers: { label: 'Haulers' }, cleanup: { label: 'Cleanup Crew' },
+  reuse: { label: 'Reuse / Free' }, contractors: { label: 'Contractors' },
+  recycling: { label: 'Recycling' }, property: { label: 'Property Mgmt' },
+  scrap: { label: 'Scrap Metal' }, donation: { label: 'Donation Network' },
+  agency: { label: 'Agency' }, general: { label: 'General' },
 }
 
 export default function GroupDetailPage() {
@@ -110,9 +111,9 @@ export default function GroupDetailPage() {
         <Card>
           <CardContent className="p-4 md:p-6">
             <div className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="outline">{cat.icon} {cat.label}</Badge>
+              <Badge variant="outline" className="inline-flex items-center gap-1"><GroupCategoryIcon categoryKey={group.category} className="h-3.5 w-3.5" /> {cat.label}</Badge>
               {group.adminVerified && <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700"><BadgeCheck className="mr-0.5 h-3 w-3" /> Verified</Badge>}
-              {group.featured && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">⭐ Featured</Badge>}
+              {group.featured && <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-700"><Star className="h-3 w-3" /> Featured</Badge>}
               {group.city && <Badge variant="outline"><MapPin className="mr-0.5 h-3 w-3" /> {group.city}{group.state ? `, ${group.state}` : ''}</Badge>}
             </div>
             <h1 className="mt-2 text-xl font-extrabold leading-tight md:text-2xl">{group.name}</h1>
@@ -127,7 +128,7 @@ export default function GroupDetailPage() {
               {group.myRole === 'member' && <Button variant="outline" onClick={leave} disabled={busy}><LogOut className="mr-1 h-4 w-4" /> Leave</Button>}
               {group.myRole && <Button onClick={() => { if (!token) { toast.error('Log in'); return } setComposeOpen(true) }} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Post to group</Button>}
               {(isOrganizer || isStaff) && <Button variant="outline" onClick={() => router.push(`/community/groups/${group.slug || group.id}/settings`)}><Settings className="mr-1 h-4 w-4" /> Settings</Button>}
-              {isOrganizer && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">{group.myRole === 'group_admin' ? '⭐ Organizer' : 'Owner'}</Badge>}
+              {isOrganizer && <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-800">{group.myRole === 'group_admin' ? <><Star className="h-3 w-3" /> Organizer</> : 'Owner'}</Badge>}
             </div>
             {Array.isArray(group.rules) && group.rules.length > 0 && (
               <details className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
@@ -143,7 +144,7 @@ export default function GroupDetailPage() {
           {['feed', 'chat', 'members'].map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`relative whitespace-nowrap px-4 py-2 text-sm font-medium ${tab === t ? 'text-neutral-900' : 'text-neutral-500'}`}>
               {t === 'feed' && `Feed (${posts.length})`}
-              {t === 'chat' && `Chat 💬`}
+              {t === 'chat' && <span className="inline-flex items-center gap-1">Chat <MessageCircle className="h-4 w-4" /></span>}
               {t === 'members' && `Members (${group.memberCount || 0})`}
               {tab === t && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded bg-brand-500" />}
             </button>
@@ -164,10 +165,10 @@ export default function GroupDetailPage() {
           )}
           {tab === 'chat' && (
             group.myRole ? (
-              <GroupChatPanel groupId={group.id} token={token} currentUser={user} canPost={true} emptyHint={`Welcome to ${group.name}! Say hi 👋`} />
+              <GroupChatPanel groupId={group.id} token={token} currentUser={user} canPost={true} emptyHint={`Welcome to ${group.name}! Say hi.`} />
             ) : (
               <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center">
-                <p className="text-3xl">💬</p>
+                <MessageCircle className="mx-auto h-8 w-8 text-neutral-400" />
                 <p className="mt-2 text-sm font-semibold text-neutral-800">Members-only chat</p>
                 <p className="mt-1 text-xs text-neutral-500">Join this group to read and post messages.</p>
                 <Button onClick={join} disabled={busy} className="mt-3 bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>
@@ -184,7 +185,7 @@ export default function GroupDetailPage() {
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white">{(m.name || '?')[0].toUpperCase()}</span>
                       <div>
                         <div className="flex items-center gap-1.5 text-sm font-semibold">{m.name} <RoleBadge user={m} /></div>
-                        <div className="text-[11px] text-neutral-500">{m.role === 'group_admin' ? '⭐ Organizer' : 'Member'} · Joined {timeAgo(m.joinedAt)}</div>
+                        <div className="flex items-center gap-1 text-[11px] text-neutral-500">{m.role === 'group_admin' ? <><Star className="h-3 w-3" /> Organizer</> : 'Member'} · Joined {timeAgo(m.joinedAt)}</div>
                       </div>
                     </div>
                     {(isOrganizer || isStaff) && m.id !== group.ownerId && (
@@ -210,8 +211,8 @@ function GroupPostCard({ post }) {
     <Card className={post.pinned ? 'border-amber-300 bg-amber-50/30' : ''}>
       <CardContent className="p-3.5">
         <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-          <Badge variant="outline" className={colors.chip}>{cat?.icon} {cat?.label}</Badge>
-          {post.urgency === 'high' && <Badge variant="outline" className="border-red-300 bg-red-50 text-red-700">🚨 Urgent</Badge>}
+          <Badge variant="outline" className={`inline-flex items-center gap-1 ${colors.chip}`}><CategoryIcon categoryKey={post.category} className="h-3 w-3" /> {cat?.label}</Badge>
+          {post.urgency === 'high' && <Badge variant="outline" className="inline-flex items-center gap-1 border-red-300 bg-red-50 text-red-700"><AlertTriangle className="h-3 w-3" /> Urgent</Badge>}
           {post.pinned && <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800"><Pin className="mr-0.5 h-3 w-3" /> Pinned</Badge>}
           <span className="ml-auto text-[11px] text-neutral-500">{timeAgo(post.createdAt)}</span>
         </div>

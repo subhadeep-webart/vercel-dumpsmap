@@ -15,7 +15,7 @@ export default function StartDmButton({ targetUserId, targetUserName, currentUse
 
   const startThread = async () => {
     if (!token) { toast.error('Log in to send messages'); return }
-    if (targetUserId === currentUser?.id) { toast.info("That's you 🙂"); return }
+    if (targetUserId === currentUser?.id) { toast.info("That's you."); return }
     setLoading(true)
     try {
       let j

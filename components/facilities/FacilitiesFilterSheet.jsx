@@ -6,7 +6,7 @@
 // Extracted from HomeShell.jsx. Controlled entirely by the parent FacilitiesTab
 // via props; holds no state of its own.
 
-import { Filter as FilterIcon } from 'lucide-react'
+import { Filter as FilterIcon, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -93,7 +93,7 @@ export default function FacilitiesFilterSheet({
             </label>
             <label className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-3 py-2.5 text-sm active:bg-neutral-50">
               <Checkbox checked={hasAlertsOnly} onCheckedChange={(v) => onHasAlertsOnlyChange(!!v)} />
-              <span>🔥 Has live alerts</span>
+              <span className="inline-flex items-center gap-1"><Flame className="h-4 w-4 text-orange-500" /> Has live alerts</span>
             </label>
           </div>
           <div className="flex gap-2 pt-2">

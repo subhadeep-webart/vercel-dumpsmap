@@ -30,6 +30,9 @@ import {
   Trash2,
   Recycle as RecycleIcon,
   Wrench,
+  CreditCard,
+  Star,
+  Hand,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -749,7 +752,7 @@ export function JobPostDialog({ open, onOpenChange, user, onPosted, existing = n
               <div className="flex items-start gap-2">
                 <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
-                  <div className="font-semibold">💳 Verified job payments — coming soon</div>
+                  <div className="inline-flex items-center gap-1 font-semibold"><CreditCard className="h-4 w-4" /> Verified job payments — coming soon</div>
                   <div className="mt-0.5">DumpMaps is building escrow-style funding so customers can pre-fund jobs and contractors get faster payouts. No payments are processed today.</div>
                 </div>
               </div>
@@ -999,7 +1002,7 @@ export function JobDetailDialog({ jobId, onClose, user, onAuthRequest, onMapJump
                   <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <div className="text-sm font-bold text-amber-900">⭐ How was {data.contractor.name}?</div>
+                        <div className="inline-flex items-center gap-1 text-sm font-bold text-amber-900"><Star className="h-4 w-4" /> How was {data.contractor.name}?</div>
                         <p className="mt-0.5 text-xs text-amber-800">Job completed. Your review helps the community find trustworthy contractors.</p>
                       </div>
                       <Button onClick={() => setReviewOpen(true)} size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600">Leave review</Button>
@@ -1029,7 +1032,7 @@ export function JobDetailDialog({ jobId, onClose, user, onAuthRequest, onMapJump
                   <div className="space-y-3">
                     <div className="space-y-2">
                       {messages.length === 0 && (
-                        <div className="text-center text-xs text-neutral-500">No messages yet — say hi 👋</div>
+                        <div className="inline-flex w-full items-center justify-center gap-1 text-center text-xs text-neutral-500">No messages yet — say hi <Hand className="h-3.5 w-3.5" /></div>
                       )}
                       {messages.map((m) => (
                         <div key={m.id} className={`flex ${m.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
@@ -1171,7 +1174,7 @@ function JobStatusPanel({ job, user, isPoster, isContractor, onAction }) {
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <div className="font-semibold">💳 Verified job payments — coming soon</div>
+            <div className="inline-flex items-center gap-1 font-semibold"><CreditCard className="h-4 w-4" /> Verified job payments — coming soon</div>
             <div className="mt-0.5">Once payments launch, contractor payout will release on completion confirmation.</div>
           </div>
         </div>
@@ -1276,7 +1279,7 @@ export function VerifiedPostingApplyDialog({ open, onOpenChange, user, onContinu
             </Select>
           </div>
           <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-            <div className="font-semibold">💳 Verified job payments — coming soon</div>
+            <div className="inline-flex items-center gap-1 font-semibold"><CreditCard className="h-4 w-4" /> Verified job payments — coming soon</div>
             <div className="mt-0.5">DumpMaps is building verified funds, escrow-style job payments, instant contractor payouts, and a payout dashboard. Approve as a pilot now to be first in line.</div>
           </div>
         </div>

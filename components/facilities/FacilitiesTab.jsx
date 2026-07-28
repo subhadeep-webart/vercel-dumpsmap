@@ -98,6 +98,8 @@ export default function FacilitiesTab({ onFacilityOpen, onOpenMap }) {
     setVerifiedOnly(false); setHasAlertsOnly(false)
   }
 
+  console.log("facilities",facilities)
+
   return (
     <div className="space-y-3">
       <FacilitiesToolbar

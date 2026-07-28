@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
-  DollarSign, Scale, CreditCard, Banknote, FileText, Clock,
+  CircleDollarSign, Scale, CreditCard, Banknote, FileText, Clock,
   BadgeCheck, Building2, ShieldCheck, AlertCircle, ArrowRight, Sparkles,
+  CircleCheck, Construction, Lock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { timeAgo } from '@/components/AlertSystem'
@@ -42,7 +43,7 @@ export function PricingSection({ facility, onReportPrice, onOpenPaymentInterest,
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-semibold text-neutral-900">
-            <DollarSign className="h-4 w-4 text-amber-600" /> Pricing & Scale
+            <CircleDollarSign className="h-4 w-4 text-amber-600" /> Pricing & Scale
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge className={type.color + ' hover:' + type.color}>{type.label}</Badge>
@@ -239,14 +240,14 @@ export function PaymentInterestDialog({ open, onOpenChange, facilityName = '' })
         </DialogHeader>
         {done ? (
           <div className="space-y-3 pt-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-2xl">✓</div>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-700"><CircleCheck className="h-7 w-7" /></div>
             <div className="font-semibold">You&apos;re on the list!</div>
             <p className="text-sm text-neutral-600">We&apos;ll reach out when DumpMaps payments go live.</p>
             <Button onClick={() => onOpenChange(false)} className="bg-brand-600 hover:bg-brand-700">Done</Button>
           </div>
         ) : (
           <div className="space-y-3 pt-2">
-            <Badge className="bg-sky-100 text-sky-900 hover:bg-sky-100">🚧 Coming in Phase 2</Badge>
+            <Badge className="inline-flex items-center gap-1 bg-sky-100 text-sky-900 hover:bg-sky-100"><Construction className="h-3 w-3" /> Coming in Phase 2</Badge>
             <p className="text-sm text-neutral-700">
               Soon, contractors and haulers will be able to pre-pay tipping fees in-app, get receipts, and settle account billing. Join the early access list to be first.
             </p>
@@ -269,7 +270,7 @@ export function PaymentInterestDialog({ open, onOpenChange, facilityName = '' })
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Use case, volume, integrations…" rows={2} className="mt-1" />
             </div>
             <div className="flex items-start gap-2 rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-[11px] text-brand-900">
-              <span className="mt-0.5 text-base">🔒</span>
+              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <b>No card or payment info collected yet.</b> Just your email so we can invite you when payments go live.
               </div>

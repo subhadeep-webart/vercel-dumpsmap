@@ -12,54 +12,71 @@ import { LiveStatusCard, AcceptedMaterialsCard, PricingPreviewCard, ContractorIn
 import { SectionCard, KV } from './primitives'
 
 export default function OverviewTab({ facility, statusMeta, editing, editForm, setEditForm, impact, statusHistoryKey, onCheckIn }) {
+  // Each direct child gets a gentle staggered reveal (dm-card-in). We track a
+  // running index so cards cascade in top-to-bottom regardless of which
+  // optional blocks render. Pure-CSS; disabled under prefers-reduced-motion.
+  let i = 0
+  const stagger = () => ({ '--dm-i': i++ })
+
   return (
     <div className="space-y-4">
       {/* Live status banner */}
-      <LiveStatusCard facility={facility} statusMeta={statusMeta} />
+      <div className="dm-card-in" style={stagger()}>
+        <LiveStatusCard facility={facility} statusMeta={statusMeta} />
+      </div>
 
       {/* Quick Check-In CTA — primary call-to-action for live facility activity.
           Tapping opens the Waze-style 5-pill modal that auto-mirrors onto
           facility.liveStatus and creates a community_posts entry. */}
       <button
         onClick={onCheckIn}
-        className="flex w-full items-center justify-between rounded-xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-white p-4 text-left shadow-sm transition hover:border-emerald-500 hover:shadow-md"
+        style={stagger()}
+        className="dm-card-in group flex w-full items-center justify-between rounded-2xl border border-emerald-200 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-md"
       >
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">Quick Check-In</div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Quick Check-In</div>
           <div className="mt-0.5 text-base font-extrabold tracking-tight text-neutral-900">Report current wait time</div>
           <div className="mt-0.5 text-xs text-neutral-500">Takes 10 seconds · earns +25 reward points</div>
         </div>
-        <div className="ml-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow group-hover:bg-emerald-700">
+        <div className="ml-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition group-hover:scale-105 group-hover:bg-emerald-700">
           <Activity className="h-5 w-5" />
         </div>
       </button>
 
       {/* Recent Updates (Sprint A enhancement) — community check-ins history.
           Lives high on the page so contractors see live status before scrolling. */}
-      <FacilityStatusHistory facilityId={facility.id} refreshKey={statusHistoryKey} limit={10} />
+      <div className="dm-card-in" style={stagger()}>
+        <FacilityStatusHistory facilityId={facility.id} refreshKey={statusHistoryKey} limit={10} />
+      </div>
 
       {/* DumpMaps Impact Score™ */}
-      <ImpactScoreCard impact={impact} facility={facility} />
+      <div className="dm-card-in" style={stagger()}>
+        <ImpactScoreCard impact={impact} facility={facility} />
+      </div>
 
       {/* About / description */}
       {(facility.description || facility.about) && (
-        <SectionCard icon={Activity} title="About">
-          <p className="text-sm leading-relaxed text-neutral-700">{facility.description || facility.about}</p>
-        </SectionCard>
+        <div className="dm-card-in" style={stagger()}>
+          <SectionCard icon={Activity} title="About">
+            <p className="text-sm leading-relaxed text-neutral-700">{facility.description || facility.about}</p>
+          </SectionCard>
+        </div>
       )}
 
       {/* Contractor intel */}
-      <ContractorIntelCard facility={facility} />
+      <div className="dm-card-in" style={stagger()}>
+        <ContractorIntelCard facility={facility} />
+      </div>
 
       {/* Materials preview */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="dm-card-in grid gap-4 sm:grid-cols-2" style={stagger()}>
         <AcceptedMaterialsCard facility={facility} compact />
         <PricingPreviewCard facility={facility} />
       </div>
 
       {/* Provenance */}
       {(facility.sourceUrl || facility.sourceType || facility.confidenceScore != null || facility.lastVerifiedAt) && (
-        <SectionCard icon={ShieldAlert} title="Data Source & Verification">
+        <SectionCard icon={ShieldAlert} title="Data Source & Verification" className="dm-card-in" style={stagger()}>
           <div className="grid gap-2 text-xs sm:grid-cols-2">
             {facility.sourceType && (
               <KV label="Source type" value={facility.sourceType.replace(/_/g, ' ')} />

@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
 import {
-  MapPin, Star, Navigation, BadgeCheck, Heart, Phone, Globe, Clock, Activity,
+  MapPin, Star, Navigation, BadgeCheck, Heart, Phone, Globe, Clock, Activity, Building2,
 } from 'lucide-react'
 import { FacilityAlertSection } from '@/components/AlertSystem'
 import { PricingSection, PaymentInterestDialog } from '@/components/Pricing'
@@ -173,9 +173,9 @@ export default function FacilityDetail({ open, onOpenChange, facilityId, onClose
                     // Phase 2 teaser - dispatch through window event so we don't have to wire props
                     window.dispatchEvent(new CustomEvent('dm:teaser', { detail: 'owner_claim' }))
                   }}
-                  className="mt-3 w-full rounded-md border-2 border-dashed border-purple-300 bg-white px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50"
+                  className="mt-3 inline-flex w-full items-center gap-1 rounded-md border-2 border-dashed border-purple-300 bg-white px-3 py-2 text-xs font-semibold text-purple-700 hover:bg-purple-50"
                 >
-                  🏢 Manage this facility? · Claim listing
+                  <Building2 className="h-4 w-4" /> Manage this facility? · Claim listing
                   <Badge className="ml-2 bg-sky-100 text-sky-900 hover:bg-sky-100">Coming in Phase 2</Badge>
                 </button>
               )}
@@ -240,7 +240,7 @@ export default function FacilityDetail({ open, onOpenChange, facilityId, onClose
                             <SelectTrigger className="mt-1 h-9"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               {[5, 4, 3, 2, 1].map((n) => (
-                                <SelectItem key={n} value={String(n)}>{n} ★</SelectItem>
+                                <SelectItem key={n} value={String(n)}><span className="inline-flex items-center gap-1">{n} <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /></span></SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

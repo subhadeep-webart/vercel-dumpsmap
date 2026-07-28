@@ -49,7 +49,7 @@ export default function DmNotificationListener({ user }) {
   }, [user])
 
   const fire = (titleArg, body, href) => {
-    const title = titleArg || '💬 New message'
+    const title = titleArg || 'New message'
     // Toast
     toast(
       <div className="flex items-start gap-2">
@@ -119,7 +119,7 @@ export default function DmNotificationListener({ user }) {
             const newer = !prevTs || new Date(t.lastMessageAt) > new Date(prevTs)
             const incoming = t.lastSenderId && t.lastSenderId !== user.id
             if (newer && incoming) {
-              fire(`💬 ${t.otherUserName}`, t.lastMessage, '/inbox')
+              fire(`${t.otherUserName}`, t.lastMessage, '/inbox')
             }
           }
           seenRef.current = new Map(Array.from(map.entries()).map(([k, v]) => [k, v.lastMessageAt]))
@@ -130,9 +130,9 @@ export default function DmNotificationListener({ user }) {
         if (j2) {
           if (!initialRef.current && !onInbox) {
             const prev = inboxRef.current
-            if (j2.marketplace > prev.marketplace) fire('🛒 New marketplace message', null, '/inbox')
-            if (j2.jobs > prev.jobs) fire('🛠 New job message', null, '/inbox')
-            if (j2.groups > prev.groups) fire('👥 New group chat activity', null, '/inbox')
+            if (j2.marketplace > prev.marketplace) fire('New marketplace message', null, '/inbox')
+            if (j2.jobs > prev.jobs) fire('New job message', null, '/inbox')
+            if (j2.groups > prev.groups) fire('New group chat activity', null, '/inbox')
           }
           inboxRef.current = { dm: j2.dm || 0, marketplace: j2.marketplace || 0, jobs: j2.jobs || 0, groups: j2.groups || 0 }
         }
@@ -152,11 +152,11 @@ export default function DmNotificationListener({ user }) {
     window.__dmToggleSound = () => {
       const v = localStorage.getItem(SOUND_KEY) === '1' ? '0' : '1'
       localStorage.setItem(SOUND_KEY, v)
-      toast.success(v === '1' ? '🔔 DM sound on' : '🔕 DM sound off')
+      toast.success(v === '1' ? 'DM sound on' : 'DM sound off', { icon: v === '1' ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" /> })
     }
     window.__dmToggleEnable = () => {
       setEnabled((e) => {
-        toast.success(!e ? '🔔 DM notifications on' : '🔕 DM notifications muted')
+        toast.success(!e ? 'DM notifications on' : 'DM notifications muted', { icon: !e ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" /> })
         return !e
       })
     }

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Send, Trash2 } from 'lucide-react'
+import { Send, Trash2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { timeAgo } from '@/lib/community-categories'
 import RoleBadge from '@/components/RoleBadge'
@@ -80,7 +80,7 @@ export default function GroupChatPanel({ groupId, token, currentUser, canPost = 
       <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center text-sm text-neutral-500">
-            <p className="text-2xl">💬</p>
+            <MessageCircle className="h-7 w-7 text-neutral-400" />
             <p className="mt-1">{emptyHint}</p>
           </div>
         )}

@@ -6,7 +6,7 @@
 // manage:
 //   • Personal: name, email, phone, full address
 //   • Profile:  avatar, cover photo, bio, company, website, service area
-//   • Availability: 🟢 / 🟡 / 🔴 / 🚫 status pill (one-tap toggle, saves on click)
+//   • Availability: status pill (one-tap toggle, saves on click)
 //   • Payment Preferences: which payment types they accept
 //   • Visibility: public / private profile, verified badge readout
 //   • Security: change password
@@ -43,26 +43,28 @@ import {
   User, Mail, Phone, MapPin, Image as ImageIcon, Briefcase, Globe, Activity,
   Wallet, Eye, EyeOff, Lock, ShieldCheck, Loader2, Save, Camera, Pencil,
   Sparkles, CheckCircle2, AlertCircle, Edit3, RefreshCw,
+  CircleCheck, Clock, CircleSlash, Ban, CreditCard, Landmark, Banknote,
+  Smartphone, FileText, Receipt, DollarSign,
 } from 'lucide-react'
 
 // Availability options
 const AVAILABILITY_OPTIONS = [
-  { value: 'available',     label: 'Available',         emoji: '🟢', tone: 'bg-green-100 text-green-800 border-green-300', desc: 'Open for work, jobs, calls' },
-  { value: 'busy',          label: 'Busy',              emoji: '🟡', tone: 'bg-amber-100 text-amber-900 border-amber-300', desc: 'On a job, limited availability' },
-  { value: 'offline',       label: 'Offline',           emoji: '🔴', tone: 'bg-red-100 text-red-800 border-red-300',       desc: 'Off the clock' },
-  { value: 'not_accepting', label: 'Not Accepting Work', emoji: '🚫', tone: 'bg-neutral-200 text-neutral-700 border-neutral-300', desc: 'Pausing new requests' },
+  { value: 'available',     label: 'Available',         Icon: CircleCheck, tone: 'bg-green-100 text-green-800 border-green-300', desc: 'Open for work, jobs, calls' },
+  { value: 'busy',          label: 'Busy',              Icon: Clock,       tone: 'bg-amber-100 text-amber-900 border-amber-300', desc: 'On a job, limited availability' },
+  { value: 'offline',       label: 'Offline',           Icon: CircleSlash, tone: 'bg-red-100 text-red-800 border-red-300',       desc: 'Off the clock' },
+  { value: 'not_accepting', label: 'Not Accepting Work', Icon: Ban,        tone: 'bg-neutral-200 text-neutral-700 border-neutral-300', desc: 'Pausing new requests' },
 ]
 
 // Payment method options
 const PAYMENT_OPTIONS = [
-  { value: 'stripe',  label: 'Stripe',   emoji: '💳' },
-  { value: 'paypal',  label: 'PayPal',   emoji: '🅿️' },
-  { value: 'cashapp', label: 'Cash App', emoji: '💵' },
-  { value: 'zelle',   label: 'Zelle',    emoji: '🏦' },
-  { value: 'venmo',   label: 'Venmo',    emoji: '📲' },
-  { value: 'check',   label: 'Check',    emoji: '✉️' },
-  { value: 'cash',    label: 'Cash',     emoji: '💰' },
-  { value: 'other',   label: 'Other',    emoji: '🧾' },
+  { value: 'stripe',  label: 'Stripe',   Icon: CreditCard },
+  { value: 'paypal',  label: 'PayPal',   Icon: Wallet },
+  { value: 'cashapp', label: 'Cash App', Icon: Banknote },
+  { value: 'zelle',   label: 'Zelle',    Icon: Landmark },
+  { value: 'venmo',   label: 'Venmo',    Icon: Smartphone },
+  { value: 'check',   label: 'Check',    Icon: FileText },
+  { value: 'cash',    label: 'Cash',     Icon: DollarSign },
+  { value: 'other',   label: 'Other',    Icon: Receipt },
 ]
 
 const TABS = [
@@ -345,7 +347,7 @@ function ProfileHero({ user, form, availability, onChangeCover, onChangeAvatar, 
           </div>
           {/* Availability quick pill (shortcut to Availability tab) */}
           <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${availability.tone}`}>
-            <span className="text-sm">{availability.emoji}</span> {availability.label}
+            {availability.Icon && <availability.Icon className="h-4 w-4" />} {availability.label}
           </div>
         </div>
       </div>
@@ -654,7 +656,7 @@ function PreferencesTab({ form, setForm, save, user, saving }) {
                     isActive ? 'border-green-500 bg-green-50 ring-2 ring-green-200' : 'border-neutral-200 bg-white hover:border-neutral-300'
                   }`}
                 >
-                  <span className="text-2xl leading-none">{o.emoji}</span>
+                  {o.Icon && <o.Icon className="h-5 w-5 shrink-0 text-neutral-700" />}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-neutral-900">{o.label}</div>
                     <div className="text-xs text-neutral-600">{o.desc}</div>
@@ -737,7 +739,7 @@ function AvailabilityTab({ form, setForm, save, saving }) {
                     isActive ? 'border-green-500 bg-green-50 ring-2 ring-green-200' : 'border-neutral-200 bg-white hover:border-neutral-300'
                   }`}
                 >
-                  <span className="text-2xl leading-none">{o.emoji}</span>
+                  {o.Icon && <o.Icon className="h-5 w-5 shrink-0 text-neutral-700" />}
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-neutral-900">{o.label}</div>
                     <div className="text-xs text-neutral-600">{o.desc}</div>
@@ -780,7 +782,7 @@ function PaymentsTab({ form, setForm, save, saving }) {
                 }`}
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl leading-none">{o.emoji}</span>
+                  {o.Icon && <o.Icon className="h-5 w-5 shrink-0 text-neutral-700" />}
                   <span className="text-sm font-bold text-neutral-900">{o.label}</span>
                 </span>
                 {isOn ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <span className="text-xs text-neutral-400">Off</span>}

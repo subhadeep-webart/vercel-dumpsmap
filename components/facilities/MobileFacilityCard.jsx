@@ -24,7 +24,7 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import {
   BadgeCheck, Star, MapPin, Navigation, Eye, Activity, Circle,
-  Ban, PauseCircle, DollarSign, ImageIcon,
+  Ban, PauseCircle, CircleDollarSign, ImageIcon,
 } from 'lucide-react'
 import { getOpenStatusLine } from '@/lib/facility-hours'
 
@@ -108,6 +108,7 @@ function firstPhoto(f) {
     f?.heroImageUrl,
     f?.photoUrl,
     ...(Array.isArray(f?.photos) ? f.photos : []),
+     ...(Array.isArray(f?.images) ? f.images : []),
   ].filter(Boolean)
   const raw = candidates[0]
   if (!raw) return null

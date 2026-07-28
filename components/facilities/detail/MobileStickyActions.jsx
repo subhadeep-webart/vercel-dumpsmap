@@ -5,7 +5,7 @@
 
 import { Navigation, Phone, Gift, Star } from 'lucide-react'
 
-export default function MobileStickyActions({ facility, directionsUrl }) {
+export default function MobileStickyActions({ facility, directionsUrl, onCheckIn, onReview }) {
   return (
     <div
       className="fixed inset-x-0 z-30 border-t border-neutral-200 bg-white shadow-[0_-6px_18px_rgba(0,0,0,0.06)] md:hidden"
@@ -16,14 +16,14 @@ export default function MobileStickyActions({ facility, directionsUrl }) {
           href={directionsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center gap-1.5 rounded-md bg-green-700 px-3 py-2.5 text-sm font-bold text-white shadow hover:bg-green-800"
+          className="inline-flex items-center justify-center gap-1.5 rounded-md bg-brand-600 px-3 py-2.5 text-sm font-bold text-white shadow hover:bg-brand-700"
         >
           <Navigation className="h-4 w-4" /> Directions
         </a>
         {facility.phone ? (
           <a
             href={`tel:${facility.phone}`}
-            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 py-2.5 text-sm font-bold text-green-800 hover:bg-green-100"
+            className="inline-flex items-center justify-center gap-1.5 rounded-md border border-brand-300 bg-brand-50 px-3 py-2.5 text-sm font-bold text-brand-700 hover:bg-brand-100"
           >
             <Phone className="h-4 w-4" /> Call
           </a>
@@ -34,12 +34,14 @@ export default function MobileStickyActions({ facility, directionsUrl }) {
         )}
         {facility.rewardsPartner ? (
           <button
+            onClick={onCheckIn}
             className="inline-flex items-center justify-center gap-1.5 rounded-md bg-green-600 px-3 py-2.5 text-sm font-bold text-white shadow hover:bg-green-700"
           >
             <Gift className="h-4 w-4" /> Earn
           </button>
         ) : (
           <button
+            onClick={onReview}
             className="inline-flex items-center justify-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-2.5 text-sm font-bold text-neutral-700 hover:bg-neutral-50"
           >
             <Star className="h-4 w-4" /> Review

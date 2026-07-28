@@ -1,11 +1,12 @@
 'use client'
 
+import { Clock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { FACILITY_TYPE_CONFIG, getStatusMeta } from '@/lib/facility-types'
+import { getStatusMeta } from '@/lib/facility-types'
+import { TypeIcon, StatusIcon } from '@/lib/facility-icons'
 
 // ---------- Facility Preview Card (used in Submit form) ----------
 export default function FacilityPreviewCard({ facility: f }) {
-  const cfg = f.typeKey ? FACILITY_TYPE_CONFIG[f.typeKey] : null
   const statusMeta = f.currentStatus ? getStatusMeta(f.currentStatus) : null
   const statusColorMap = {
     green: 'border-brand-600 bg-brand-50 text-brand-800',
@@ -15,8 +16,8 @@ export default function FacilityPreviewCard({ facility: f }) {
   }
   return (
     <div className="flex items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-100 text-base text-brand-700">
-        {cfg?.icon || '📍'}
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-100 text-brand-700">
+        <TypeIcon typeKey={f.typeKey} className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -27,8 +28,8 @@ export default function FacilityPreviewCard({ facility: f }) {
         <div className="mt-1 line-clamp-1 text-xs text-neutral-600">{f.address}</div>
         {statusMeta && (
           <div className="mt-1.5">
-            <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorMap[statusMeta.color]}`}>
-              {statusMeta.icon} {statusMeta.label}
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusColorMap[statusMeta.color]}`}>
+              <StatusIcon status={f.currentStatus} className="h-3 w-3" /> {statusMeta.label}
             </span>
           </div>
         )}
@@ -62,7 +63,7 @@ export default function FacilityPreviewCard({ facility: f }) {
           </div>
         )}
         {f.hours && (
-          <div className="mt-1 text-[11px] text-neutral-500">🕒 {f.hours}</div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-neutral-500"><Clock className="h-3 w-3" /> {f.hours}</div>
         )}
       </div>
     </div>

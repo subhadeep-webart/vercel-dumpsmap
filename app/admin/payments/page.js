@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import {
   CreditCard, AlertTriangle, ShieldCheck, KeyRound, Eye, EyeOff, Lock, Trash2,
-  CheckCircle2, ExternalLink, Info,
+  CheckCircle2, ExternalLink, Info, Zap, FlaskConical, Check,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import PaymentHealthDashboard from '@/components/admin/PaymentHealthDashboard'
@@ -114,8 +114,8 @@ export default function AdminPayments() {
           {settings.configured
             ? <Badge variant="outline" className="border-brand-300 bg-brand-50 text-brand-800"><CheckCircle2 className="mr-1 h-3 w-3" /> Configured</Badge>
             : <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800"><AlertTriangle className="mr-1 h-3 w-3" /> Not configured</Badge>}
-          <Badge variant="outline" className={settings.mode === 'live' ? 'border-red-300 bg-red-50 text-red-800' : 'border-neutral-200 bg-neutral-50 text-neutral-700'}>
-            {settings.mode === 'live' ? '⚡ Live mode' : '🧪 Test mode'}
+          <Badge variant="outline" className={`inline-flex items-center gap-1 ${settings.mode === 'live' ? 'border-red-300 bg-red-50 text-red-800' : 'border-neutral-200 bg-neutral-50 text-neutral-700'}`}>
+            {settings.mode === 'live' ? <><Zap className="h-3 w-3" /> Live mode</> : <><FlaskConical className="h-3 w-3" /> Test mode</>}
           </Badge>
         </div>
       </div>
@@ -151,12 +151,12 @@ export default function AdminPayments() {
             <div className="inline-flex rounded-md border border-neutral-200 p-0.5">
               <button
                 onClick={() => setEdit((e) => ({ ...e, mode: 'test' }))}
-                className={`rounded px-3 py-1 text-xs font-semibold transition ${edit.mode === 'test' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:text-neutral-900'}`}
-              >🧪 Test</button>
+                className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${edit.mode === 'test' ? 'bg-neutral-900 text-white' : 'text-neutral-600 hover:text-neutral-900'}`}
+              ><FlaskConical className="h-3 w-3" /> Test</button>
               <button
                 onClick={() => { if (confirm('Switch to LIVE mode? Real charges will be made when payments are enabled.')) setEdit((e) => ({ ...e, mode: 'live' })) }}
-                className={`rounded px-3 py-1 text-xs font-semibold transition ${edit.mode === 'live' ? 'bg-red-600 text-white' : 'text-neutral-600 hover:text-neutral-900'}`}
-              >⚡ Live</button>
+                className={`inline-flex items-center gap-1 rounded px-3 py-1 text-xs font-semibold transition ${edit.mode === 'live' ? 'bg-red-600 text-white' : 'text-neutral-600 hover:text-neutral-900'}`}
+              ><Zap className="h-3 w-3" /> Live</button>
             </div>
             <span className="text-[11px] text-neutral-500">Switch keys when toggling.</span>
           </div>
@@ -209,7 +209,7 @@ export default function AdminPayments() {
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold uppercase">Secret key <Lock className="ml-1 inline h-3 w-3 text-amber-600" /></Label>
-              {settings.hasSecretKey && <span className="text-[11px] text-brand-700">Saved ✓</span>}
+              {settings.hasSecretKey && <span className="inline-flex items-center gap-0.5 text-[11px] text-brand-700"><Check className="h-3 w-3" /> Saved</span>}
             </div>
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -228,14 +228,14 @@ export default function AdminPayments() {
                 <Button variant="outline" size="icon" onClick={() => clearKey('secret')} className="h-10 w-10 text-red-600 hover:bg-red-50" aria-label="Clear"><Trash2 className="h-3.5 w-3.5" /></Button>
               )}
             </div>
-            <p className="mt-1 text-[10px] text-neutral-500">⚠️ Server-side only. Never exposed in the browser. Stored encrypted at rest.</p>
+            <p className="mt-1 inline-flex items-center gap-1 text-[10px] text-neutral-500"><AlertTriangle className="h-3 w-3" /> Server-side only. Never exposed in the browser. Stored encrypted at rest.</p>
           </div>
 
           {/* Webhook secret */}
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-xs font-bold uppercase">Webhook signing secret</Label>
-              {settings.hasWebhookSecret && <span className="text-[11px] text-brand-700">Saved ✓</span>}
+              {settings.hasWebhookSecret && <span className="inline-flex items-center gap-0.5 text-[11px] text-brand-700"><Check className="h-3 w-3" /> Saved</span>}
             </div>
             <div className="flex gap-2">
               <div className="relative flex-1">

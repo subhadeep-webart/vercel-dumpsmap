@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import {
-  Loader2, Building2, Users, DollarSign, TrendingUp, Clock, RotateCcw, Award,
+  Loader2, Building2, Users, CircleDollarSign, TrendingUp, Clock, RotateCcw, Award,
   Hammer, ShieldCheck, ArrowRight, Activity,
 } from 'lucide-react'
 
@@ -162,7 +162,7 @@ export default function AdminMembershipsPage() {
         <StatCard icon={Users}          label="Total users"             value={total.toLocaleString()}                        sub={`${data.recentSignups || 0} new in last 30d`} accent="brand" />
         <StatCard icon={ShieldCheck}    label="Paid commercial members" value={paid.toLocaleString()}                         sub={`${conversionRate}% of users`}                accent="emerald" />
         <StatCard icon={Clock}          label="Active trials"           value={(data.onTrial || 0).toLocaleString()}          sub="Free + active trial period"                   accent="amber" />
-        <StatCard icon={DollarSign}     label="Est. monthly revenue"    value={fmtUSD(data.revenue?.estimatedMonthlyRecurring || 0)} sub="placeholder ARPU"                       accent="indigo" />
+        <StatCard icon={CircleDollarSign}     label="Est. monthly revenue"    value={fmtUSD(data.revenue?.estimatedMonthlyRecurring || 0)} sub="placeholder ARPU"                       accent="indigo" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -187,7 +187,7 @@ export default function AdminMembershipsPage() {
             </div>
 
             <div className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-2.5 text-[11px] text-neutral-600">
-              <DollarSign className="-mt-0.5 mr-0.5 inline h-3 w-3" />
+              <CircleDollarSign className="-mt-0.5 mr-0.5 inline h-3 w-3" />
               Pricing assumption (ARPU): {Object.entries(data.revenue?.pricingAssumption || {}).map(([k, v]) => <span key={k} className="mx-1 inline-flex items-center"><b>{TIER_INFO[k]?.label || k}</b>=<span className="font-bold text-emerald-700">${v}/mo</span></span>)}
             </div>
           </CardContent>
