@@ -315,7 +315,7 @@ function ProfileHero({ user, form, availability, onChangeCover, onChangeAvatar, 
       />
 
       {/* Avatar + name (overlapping the cover by -mt-12) */}
-      <div className="container mx-auto -mt-12 px-4 pb-3 sm:-mt-14">
+      <div className="container mx-auto -mt-6 px-4 pb-3 sm:-mt-12">
         <div className="flex flex-wrap items-end gap-3">
           <div className="relative">
             <MediaUploader
@@ -346,7 +346,7 @@ function ProfileHero({ user, form, availability, onChangeCover, onChangeAvatar, 
             </div>
           </div>
           {/* Availability quick pill (shortcut to Availability tab) */}
-          <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold ${availability.tone}`}>
+          <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs mb-5 font-bold ${availability.tone}`}>
             {availability.Icon && <availability.Icon className="h-4 w-4" />} {availability.label}
           </div>
         </div>

@@ -28,7 +28,7 @@ import AppHeader from '@/components/AppHeader'
 
 export default function AppSectionLayout({ children }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-neutral-50">
+    <div className="dm-app-section flex min-h-[100dvh] flex-col bg-neutral-50">
       <AppHeader />
       {/* Plain div (not <main>) so pages that render their own <main> don't
           produce nested/duplicate <main> landmarks. */}

@@ -22,9 +22,10 @@ import QuickCheckInModal from '@/components/QuickCheckInModal'
 import FacilityRow from '@/components/facilities/FacilityRow'
 import FacilitiesToolbar from '@/components/facilities/FacilitiesToolbar'
 import FacilitiesFilterSheet from '@/components/facilities/FacilitiesFilterSheet'
-import { FACILITY_TYPES, MATERIALS } from '@/constants/facility_constants'
+import ActiveFilterChips from '@/components/facilities/ActiveFilterChips'
+import { FACILITY_TYPES, MATERIALS, FACILITY_SORT_OPTIONS } from '@/constants/facility_constants'
 
-export default function FacilitiesTab({ onFacilityOpen, onOpenMap }) {
+export default function FacilitiesTab({ onFacilityOpen, onOpenMap, onRequireLogin }) {
   const [facilities, setFacilities] = useState(SAMPLE_FALLBACK_FACILITIES)
   const [loading, setLoading] = useState(true)
   const [usedFallback, setUsedFallback] = useState(false)
@@ -98,7 +99,16 @@ export default function FacilitiesTab({ onFacilityOpen, onOpenMap }) {
     setVerifiedOnly(false); setHasAlertsOnly(false)
   }
 
-  console.log("facilities",facilities)
+  // Active-filter chips — one entry per applied filter, each with its own remover.
+  const activeChips = [
+    typeFilter !== 'all' && { key: 'type', label: `Type: ${typeFilter}`, onRemove: () => setTypeFilter('all') },
+    materialFilter !== 'all' && { key: 'material', label: `Material: ${materialFilter}`, onRemove: () => setMaterialFilter('all') },
+    maxKm !== 'any' && { key: 'distance', label: `Within ${maxKm} km`, onRemove: () => setMaxKm('any') },
+    verifiedOnly && { key: 'verified', label: 'Verified only', onRemove: () => setVerifiedOnly(false) },
+    hasAlertsOnly && { key: 'alerts', label: 'Has live alerts', onRemove: () => setHasAlertsOnly(false) },
+  ].filter(Boolean)
+
+  const sortLabel = FACILITY_SORT_OPTIONS.find((o) => o.k === sortBy)?.label
 
   return (
     <div className="space-y-3">
@@ -114,6 +124,8 @@ export default function FacilitiesTab({ onFacilityOpen, onOpenMap }) {
         sortOpen={sortOpen}
         onSortOpenChange={setSortOpen}
       />
+
+      <ActiveFilterChips chips={activeChips} onClearAll={resetFilters} sortLabel={sortLabel} />
 
       {usedFallback && (
         <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
@@ -176,6 +188,7 @@ export default function FacilitiesTab({ onFacilityOpen, onOpenMap }) {
         facility={checkinFacility}
         onClose={() => setCheckinFacility(null)}
         onSubmitted={() => setCheckinFacility(null)}
+        onRequireLogin={onRequireLogin}
       />
     </div>
   )

@@ -1,8 +1,28 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
-import { Navigation, BadgeCheck, Star, Plus, Minus, Locate, Activity, Heart, Check, Truck, Recycle, Trash2, Cpu, Wrench, Hammer, Sofa, X } from 'lucide-react'
+// MapView — REAL interactive Leaflet map (OpenStreetMap) of facilities.
+//
+// Replaces the earlier hand-drawn "mock map". This is a true pan/zoom map with
+// real tiles and real geographic pin positions, matching the client's Google-
+// Maps / Waze comparison. It keeps the SAME props interface the mock exposed so
+// MapPage (its only caller) works unchanged:
+//   facilities, center, zoom, selectedId, onSelect, onToggleFavorite, onReport,
+//   favoriteIds, userLocation, loading, error, className, compact
+//
+// Waze-style condition coloring: each pin's BODY color reflects the facility's
+// live condition — 🟢 free / 🟡 moderate / 🔴 busy — derived from `liveStatus`
+// (mirrored by the Activity Hub) or, as a fallback, `topAlertSeverity`. A pin
+// with no live signal keeps its facility-TYPE color. The type glyph always
+// shows inside the pin so you can still tell what kind of facility it is.
+//
+// Leaflet touches `window`, so leaflet itself is imported dynamically inside an
+// effect (never on the server). This component is 'use client' and its single
+// caller (MapPage) is client-only too.
 
+import { useEffect, useRef, useState } from 'react'
+import 'leaflet/dist/leaflet.css'
+
+// ---- Facility-type colors (fallback when there's no live condition) ---------
 const TYPE_COLORS = {
   Landfill: { bg: '#525252', ring: '#262626' },
   'Transfer Station': { bg: '#737373', ring: '#404040' },
@@ -15,74 +35,140 @@ const TYPE_COLORS = {
   'Construction Debris Facility': { bg: '#ea580c', ring: '#9a3412' },
 }
 
-const SEVERITY_PIN = {
-  bad: { halo: '#ef4444' },
-  warn: { halo: '#f59e0b' },
-  info: { halo: '#0ea5e9' },
-  good: { halo: '#22c55e' },
+// Emoji glyph per facility type (rendered inside the divIcon — no icon font
+// needed, keeps the pin self-contained HTML).
+const TYPE_GLYPH = {
+  Landfill: '🗑️',
+  'Transfer Station': '🚚',
+  'Recycling Center': '♻️',
+  'Donation Center': '❤️',
+  'Scrap Yard': '🔧',
+  'CRV Center': '♻️',
+  'E-Waste Center': '💻',
+  'Reuse Center': '🛋️',
+  'Construction Debris Facility': '🔨',
 }
 
-const TYPE_GLYPH_ICONS = {
-  Landfill: Trash2,
-  'Transfer Station': Truck,
-  'Recycling Center': Recycle,
-  'Donation Center': Heart,
-  'Scrap Yard': Wrench,
-  'CRV Center': Recycle,
-  'E-Waste Center': Cpu,
-  'Reuse Center': Sofa,
-  'Construction Debris Facility': Hammer,
+// ---- Waze-style live-condition colors for the pin BODY ----------------------
+const CONDITION_COLORS = {
+  busy:     { bg: '#dc2626', ring: '#991b1b', label: 'Busy' },
+  moderate: { bg: '#f59e0b', ring: '#b45309', label: 'Moderate' },
+  free:     { bg: '#16a34a', ring: '#15803d', label: 'Free' },
 }
 
-// Per-alert-type pin badge (chip below the pin)
-const ALERT_PIN_BADGE = {
-  WAIT_TIME:     { label: 'Long wait',    bg: 'bg-amber-500',  fg: 'text-white' },
-  LONG_LINE:     { label: 'Long line',    bg: 'bg-amber-500',  fg: 'text-white' },
-  FAST_MOVING:   { label: 'Fast line',    bg: 'bg-brand-600',  fg: 'text-white' },
-  CLOSED:        { label: 'Closed',       bg: 'bg-red-600',    fg: 'text-white' },
-  NOT_ACCEPTING: { label: 'Not accepting',bg: 'bg-amber-500',  fg: 'text-white' },
-  ACCEPTING_NOW: { label: 'Accepting',    bg: 'bg-brand-600',  fg: 'text-white' },
-  YARD_FULL:     { label: 'Full',         bg: 'bg-red-600',    fg: 'text-white' },
-  SCALE_ISSUE:   { label: 'Scale issue',  bg: 'bg-red-600',    fg: 'text-white' },
-  PRICE_UPDATE:  { label: 'Price update', bg: 'bg-sky-500',    fg: 'text-white' },
-  DONATION_NEED: { label: 'Needs items',  bg: 'bg-sky-500',    fg: 'text-white' },
-  EVENT:         { label: 'Event today',  bg: 'bg-brand-600',  fg: 'text-white' },
-  GENERAL_NOTE:  { label: 'Note',         bg: 'bg-neutral-500',fg: 'text-white' },
+// facility.liveStatus (see FACILITY_LIVE_SIGNALS in activityHub.js) → bucket
+const LIVE_STATUS_CONDITION = {
+  very_busy: 'busy',
+  busy: 'busy',
+  long_wait: 'busy',
+  closed: 'busy',
+  gate_closed: 'busy',
+  not_accepting: 'busy',
+  scale_issue: 'busy',
+  safety_alert: 'busy',
+  slow: 'moderate',
+  price_update: 'moderate',
+  not_busy: 'free',
+  accepting: 'free',
 }
 
-function isRecentActivity(date) {
-  if (!date) return false
-  return Date.now() - new Date(date).getTime() < 30 * 60 * 1000 // 30 min
+// topAlertSeverity → bucket (fallback when liveStatus is absent)
+const SEVERITY_CONDITION = { bad: 'busy', warn: 'moderate', good: 'free' }
+
+// Resolve a facility's live condition bucket ('busy'|'moderate'|'free') or null.
+function facilityCondition(f) {
+  if (f?.liveStatus && LIVE_STATUS_CONDITION[f.liveStatus]) return LIVE_STATUS_CONDITION[f.liveStatus]
+  if (f?.topAlertSeverity && SEVERITY_CONDITION[f.topAlertSeverity]) return SEVERITY_CONDITION[f.topAlertSeverity]
+  return null
 }
 
-// Project lat/lng into 0..100 % of the map area given a center and a span
-// Larger zoom => smaller span => content appears bigger
-function project(lat, lng, center, zoom) {
-  // base degree span at zoom=1
-  const baseLng = 1.2 // ~ Bay Area width-ish
-  const baseLat = 0.9
-  const factor = Math.pow(1.55, zoom - 1) // each zoom multiplies "scale"
-  const lngSpan = baseLng / factor
-  const latSpan = baseLat / factor
-  const x = ((lng - (center.lng - lngSpan / 2)) / lngSpan) * 100
-  const y = ((center.lat + latSpan / 2 - lat) / latSpan) * 100
-  return { x, y }
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function rand(seed) {
-  // simple deterministic-ish hash for animation seeding
-  const s = String(seed)
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return (h % 1000) / 1000
+// Build the HTML for a facility divIcon: colored teardrop + glyph + optional
+// verified check, favorite heart, alert-count badge, and a condition/alert chip.
+function markerHtml(f, { isFavorite, isSelected }) {
+  const condition = facilityCondition(f)
+  const c = condition ? CONDITION_COLORS[condition] : (TYPE_COLORS[f.type] || TYPE_COLORS['Recycling Center'])
+  const glyph = TYPE_GLYPH[f.type] || '♻️'
+  const size = isSelected ? 40 : 32
+  const chipLabel = condition ? CONDITION_COLORS[condition].label : ''
+  const chip = chipLabel
+    ? `<div style="margin-top:2px;white-space:nowrap;border-radius:9999px;padding:1px 6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:${c.bg};box-shadow:0 1px 3px rgba(0,0,0,.3)">${escapeHtml(chipLabel)}</div>`
+    : ''
+  const verified = f.verified
+    ? `<span style="position:absolute;right:-4px;top:-4px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#0B4DBA;color:#fff;font-size:10px;font-weight:900">✓</span>`
+    : ''
+  const fav = isFavorite
+    ? `<span style="position:absolute;left:-6px;bottom:-2px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#f43f5e;color:#fff;font-size:9px">♥</span>`
+    : ''
+  const alertBadge = f.activeAlertCount > 0
+    ? `<span style="position:absolute;left:-8px;top:-8px;display:flex;height:18px;min-width:18px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;padding:0 4px;font-size:10px;font-weight:800;color:#fff;background:${c.bg};box-shadow:0 1px 3px rgba(0,0,0,.3)">${f.activeAlertCount}</span>`
+    : ''
+  return `
+    <div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-100%)">
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;height:${size}px;width:${size}px;border-radius:9999px;background:${c.bg};color:#fff;font-size:${isSelected ? 18 : 15}px;box-shadow:0 4px 12px ${c.ring}88;border:2px solid #fff">
+        <span>${glyph}</span>
+        ${verified}${fav}${alertBadge}
+      </div>
+      <div style="height:8px;width:3px;margin-top:-1px;background:linear-gradient(to bottom, ${c.bg}, transparent)"></div>
+      ${chip}
+    </div>`
 }
 
-export default function MockMap({
+// Build the HTML for a facility's Leaflet popup card. Buttons carry data-*
+// attributes; a single delegated click handler on the map container dispatches
+// them to the React callbacks (onSelect / onReport / onToggleFavorite).
+function popupHtml(f, { isFavorite }) {
+  const condition = facilityCondition(f)
+  const top = f.activeAlerts?.[0]
+  const accepted = (f.accepted || []).slice(0, 4)
+  const statusPanel = top
+    ? `<div style="margin-top:8px;border-radius:8px;border:2px solid #fed7aa;background:#fff7ed;padding:8px">
+         <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">
+           <div style="font-size:11px;font-weight:800;color:#7c2d12">⚡ ${escapeHtml(top.label || top.type || 'Live update')}</div>
+           <span style="font-size:9px;font-weight:700;color:#c2410c">${f.activeAlertCount || 1} live</span>
+         </div>
+         ${top.text ? `<div style="margin-top:2px;font-size:10px;font-style:italic;color:#9a3412">“${escapeHtml(top.text)}”</div>` : ''}
+         ${top.waitMinutes ? `<div style="margin-top:4px"><span style="border-radius:4px;background:#fff;padding:2px 6px;font-size:10px;font-weight:800;color:#78350f">~${escapeHtml(top.waitMinutes)} min wait</span></div>` : ''}
+       </div>`
+    : condition
+      ? `<div style="margin-top:8px;border-radius:8px;padding:6px 8px;text-align:center;font-size:11px;font-weight:800;color:#fff;background:${CONDITION_COLORS[condition].bg}">${CONDITION_COLORS[condition].label} right now</div>`
+      : `<div style="margin-top:8px;border-radius:8px;border:1px dashed #e5e5e5;background:#fafafa;padding:4px 8px;text-align:center;font-size:10px;color:#737373">No live reports · Be the first to post</div>`
+  const chips = accepted.length
+    ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${accepted
+        .map((m) => `<span style="border-radius:4px;background:#eff6ff;padding:2px 6px;font-size:10px;font-weight:600;color:#1d4ed8">${escapeHtml(m)}</span>`)
+        .join('')}</div>`
+    : ''
+  const dir = `https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lng}`
+  return `
+    <div style="width:248px;font-family:inherit">
+      <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#171717">
+        <span>${escapeHtml(f.name || 'Facility')}</span>${f.verified ? '<span style="color:#0B4DBA">✓</span>' : ''}
+      </div>
+      <div style="font-size:11px;color:#737373">${escapeHtml(f.type || '')}</div>
+      ${statusPanel}
+      <div style="margin-top:6px;font-size:11px;color:#525252">${escapeHtml(f.address || '')}</div>
+      <div style="margin-top:6px;font-size:11px;color:#525252">⭐ ${f.rating?.toFixed?.(1) || '—'} · ${f.reviewsCount || 0} reviews${f.distanceKm != null ? ` · ${f.distanceKm.toFixed(1)} km` : ''}</div>
+      ${chips}
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <a href="${dir}" target="_blank" rel="noreferrer" style="display:flex;align-items:center;justify-content:center;gap:4px;border-radius:6px;background:#0B4DBA;padding:6px;font-size:11px;font-weight:700;color:#fff;text-decoration:none">➤ Directions</a>
+        <button data-dm-action="report" data-dm-id="${escapeHtml(f.id)}" style="cursor:pointer;border:0;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:6px;background:#ea580c;padding:6px;font-size:11px;font-weight:700;color:#fff">⚡ Post update</button>
+        <button data-dm-action="favorite" data-dm-id="${escapeHtml(f.id)}" style="cursor:pointer;border:1px solid #e5e5e5;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:6px;background:${isFavorite ? '#fff1f2' : '#fff'};padding:6px;font-size:11px;font-weight:700;color:${isFavorite ? '#be123c' : '#404040'}">${isFavorite ? '♥ Saved' : '♡ Save'}</button>
+        <button data-dm-action="details" data-dm-id="${escapeHtml(f.id)}" style="cursor:pointer;border:1px solid #e5e5e5;border-radius:6px;background:#fff;padding:6px;font-size:11px;font-weight:700;color:#404040">View details</button>
+      </div>
+    </div>`
+}
+
+export default function MapView({
   facilities = [],
   center = { lat: 37.3382, lng: -121.8863 },
-  zoom: initialZoom = 4,
+  zoom: initialZoom = 11,
   selectedId = null,
   onSelect = () => {},
+  onOpenDetails = null,
   onToggleFavorite = null,
   onReport = null,
   favoriteIds = [],
@@ -92,398 +178,173 @@ export default function MockMap({
   className = '',
   compact = false,
 }) {
-  const [zoom, setZoom] = useState(initialZoom)
-  const [mapCenter, setMapCenter] = useState(center)
-  const [popupId, setPopupId] = useState(null)
+  const containerRef = useRef(null)
+  const mapRef = useRef(null)
+  const LRef = useRef(null)
+  const markersRef = useRef(new Map()) // id -> L.marker
+  const userMarkerRef = useRef(null)
+  const didFitRef = useRef(false)
 
-  useEffect(() => {
-    if (selectedId) setPopupId(selectedId)
-  }, [selectedId])
+  // A tick bumped when the map finishes initializing, so the sync effect reruns.
+  const [ready, setReady] = useState(0)
 
+  // Keep the latest callbacks/props in refs so the delegated popup click handler
+  // and marker handlers always see current values without re-binding.
+  const cbRef = useRef({})
+  cbRef.current = { onSelect, onOpenDetails, onReport, onToggleFavorite, favoriteIds, facilities }
+
+  // ---- Init map once ----
   useEffect(() => {
-    // Recenter to passed-in center if it changes (e.g. Near Me)
-    if (center?.lat && center?.lng) setMapCenter(center)
+    if (!containerRef.current || mapRef.current) return
+    let cancelled = false
+    let ro
+    import('leaflet').then((mod) => {
+      const L = mod.default || mod
+      if (cancelled || !containerRef.current) return
+      LRef.current = L
+      const map = L.map(containerRef.current, {
+        center: [center.lat, center.lng],
+        zoom: initialZoom,
+        zoomControl: !compact,
+        scrollWheelZoom: !compact,
+        attributionControl: true,
+      })
+      mapRef.current = map
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap',
+      }).addTo(map)
+
+      // Delegated click handler for popup action buttons.
+      containerRef.current.addEventListener('click', (e) => {
+        const btn = e.target.closest?.('[data-dm-action]')
+        if (!btn) return
+        const id = btn.getAttribute('data-dm-id')
+        const action = btn.getAttribute('data-dm-action')
+        const { onSelect: os, onOpenDetails: od, onReport: orp, onToggleFavorite: otf, facilities: facs } = cbRef.current
+        const fac = facs.find((x) => x.id === id)
+        // "View details" navigates to the full facility page; fall back to
+        // onSelect if no details handler was provided.
+        if (action === 'details') (od || os)?.(id)
+        else if (action === 'report') orp?.(fac)
+        else if (action === 'favorite') otf?.(id)
+      })
+
+      // Staggered refit — the map container inside a flex shell doesn't have its
+      // final size on first paint (same issue FacilityMap solves).
+      const refit = () => { if (!cancelled && mapRef.current) mapRef.current.invalidateSize() }
+      if (typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(refit)
+        ro.observe(containerRef.current)
+      }
+      ;[60, 200, 500].forEach((ms) => setTimeout(refit, ms))
+      // Trigger the marker-sync effect now that the map exists.
+      setReady((n) => n + 1)
+    })
+    return () => {
+      cancelled = true
+      if (ro) ro.disconnect()
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
+      markersRef.current.clear()
+      userMarkerRef.current = null
+      didFitRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ---- Sync facility markers ----
+  useEffect(() => {
+    const L = LRef.current
+    const map = mapRef.current
+    if (!L || !map) return
+    const favSet = new Set(favoriteIds)
+    const seen = new Set()
+
+    facilities.forEach((f) => {
+      if (typeof f.lat !== 'number' || typeof f.lng !== 'number') return
+      seen.add(f.id)
+      const isFavorite = favSet.has(f.id)
+      const isSelected = f.id === selectedId
+      const icon = L.divIcon({
+        className: 'dm-facility-pin',
+        html: markerHtml(f, { isFavorite, isSelected }),
+        iconSize: [0, 0],
+        iconAnchor: [0, 0],
+      })
+      let m = markersRef.current.get(f.id)
+      if (!m) {
+        m = L.marker([f.lat, f.lng], { icon }).addTo(map)
+        m.bindPopup(popupHtml(f, { isFavorite }), { closeButton: true, maxWidth: 260, offset: [0, -24] })
+        m.on('click', () => cbRef.current.onSelect?.(f.id))
+        markersRef.current.set(f.id, m)
+      } else {
+        m.setLatLng([f.lat, f.lng])
+        m.setIcon(icon)
+        m.setPopupContent(popupHtml(f, { isFavorite }))
+      }
+    })
+
+    // Remove markers for facilities no longer present.
+    for (const [id, m] of markersRef.current) {
+      if (!seen.has(id)) { map.removeLayer(m); markersRef.current.delete(id) }
+    }
+
+    // Fit to markers once, on first load with data.
+    if (!didFitRef.current && markersRef.current.size > 0) {
+      const group = L.featureGroup([...markersRef.current.values()])
+      try { map.fitBounds(group.getBounds().pad(0.2), { maxZoom: 13 }) } catch {}
+      didFitRef.current = true
+    }
+  }, [facilities, favoriteIds, selectedId, ready])
+
+  // ---- Open popup + pan when selectedId changes externally ----
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !selectedId) return
+    const m = markersRef.current.get(selectedId)
+    if (m) { map.panTo(m.getLatLng(), { animate: true }); m.openPopup() }
+  }, [selectedId, ready])
+
+  // ---- Recenter when parent `center` changes (Near Me / search) ----
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !center?.lat || !center?.lng) return
+    map.panTo([center.lat, center.lng], { animate: true })
   }, [center?.lat, center?.lng])
 
-  const projected = useMemo(
-    () => facilities.map((f) => ({ ...f, _xy: project(f.lat, f.lng, mapCenter, zoom) })),
-    [facilities, mapCenter, zoom]
-  )
-
-  const userXY = useMemo(
-    () => (userLocation ? project(userLocation.lat, userLocation.lng, mapCenter, zoom) : null),
-    [userLocation, mapCenter, zoom]
-  )
-
-  const popup = projected.find((f) => f.id === popupId)
-
-  // grid lines as "streets" — a few major ones based on zoom
-  const gridLines = useMemo(() => {
-    const lines = []
-    const spacing = Math.max(60 / zoom, 18)
-    for (let i = 0; i < 100 / spacing; i++) {
-      lines.push({ kind: 'h', pos: i * spacing })
-      lines.push({ kind: 'v', pos: i * spacing })
+  // ---- User location marker ----
+  useEffect(() => {
+    const L = LRef.current
+    const map = mapRef.current
+    if (!L || !map) return
+    if (userMarkerRef.current) { map.removeLayer(userMarkerRef.current); userMarkerRef.current = null }
+    if (userLocation?.lat && userLocation?.lng) {
+      const icon = L.divIcon({
+        className: 'dm-user-dot',
+        html: `<span style="display:inline-flex;height:18px;width:18px;border-radius:9999px;border:3px solid #fff;background:#3b82f6;box-shadow:0 0 0 4px rgba(59,130,246,.35)"></span>`,
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      })
+      userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon, interactive: false, zIndexOffset: -1000 }).addTo(map)
     }
-    return lines
-  }, [zoom])
+  }, [userLocation?.lat, userLocation?.lng, ready])
 
   return (
-    <div
-      className={`relative w-full h-full overflow-hidden rounded-xl bg-[#eef3ef] ${className}`}
-      style={{
-        backgroundImage:
-          'radial-gradient(circle at 20% 30%, rgba(34,197,94,0.10), transparent 35%), radial-gradient(circle at 80% 60%, rgba(14,165,233,0.10), transparent 40%), radial-gradient(circle at 50% 90%, rgba(245,158,11,0.08), transparent 40%)',
-      }}
-    >
-      {/* "Streets" grid */}
-      <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-        <defs>
-          <pattern id="dm-grid" width="6" height="6" patternUnits="userSpaceOnUse">
-            <path d="M 6 0 L 0 0 0 6" fill="none" stroke="rgba(120,130,120,0.10)" strokeWidth="0.15" />
-          </pattern>
-        </defs>
-        <rect width="100" height="100" fill="url(#dm-grid)" />
-        {/* faux major roads */}
-        <g stroke="rgba(180,180,180,0.55)" strokeWidth="0.55" fill="none">
-          <path d="M -5 20 Q 30 30 60 22 T 110 18" />
-          <path d="M -5 45 Q 25 55 55 50 T 110 55" />
-          <path d="M -5 75 Q 30 65 60 78 T 110 72" />
-          <path d="M 20 -5 Q 30 30 22 60 T 28 110" />
-          <path d="M 55 -5 Q 60 35 50 70 T 58 110" />
-          <path d="M 80 -5 Q 75 40 82 70 T 78 110" />
-        </g>
-        {/* highways */}
-        <g stroke="#facc15" strokeWidth="0.5" opacity="0.8" fill="none">
-          <path d="M -5 35 Q 50 38 110 42" />
-          <path d="M 40 -5 Q 45 50 38 110" />
-        </g>
-        {/* water/parks */}
-        <g fill="rgba(125,211,252,0.30)">
-          <ellipse cx="92" cy="12" rx="14" ry="6" />
-          <ellipse cx="6" cy="88" rx="12" ry="8" />
-        </g>
-        <g fill="rgba(134,239,172,0.35)">
-          <ellipse cx="15" cy="20" rx="10" ry="6" />
-          <ellipse cx="78" cy="82" rx="13" ry="7" />
-        </g>
-      </svg>
+    <div className={`relative h-full w-full overflow-hidden rounded-xl ${className}`}>
+      <div ref={containerRef} className="dm-map-canvas h-full w-full" />
 
-      {/* Labels (neighborhood-ish) */}
-      <div className="pointer-events-none absolute inset-0 select-none">
-        {[
-          { t: 'Downtown San Jose', x: 50, y: 52 },
-          { t: 'North San Jose', x: 56, y: 36 },
-          { t: 'Milpitas', x: 70, y: 28 },
-          { t: 'Santa Clara', x: 36, y: 42 },
-          { t: 'Almaden', x: 38, y: 78 },
-          { t: 'Bay', x: 88, y: 14 },
-        ].map((l) => (
-          <div
-            key={l.t}
-            className="absolute text-[10px] font-semibold uppercase tracking-wider text-neutral-500/80"
-            style={{ left: `${l.x}%`, top: `${l.y}%`, transform: 'translate(-50%,-50%)' }}
-          >
-            {l.t}
-          </div>
-        ))}
-      </div>
-
-      {/* User location dot */}
-      {userXY && userXY.x >= -5 && userXY.x <= 105 && userXY.y >= -5 && userXY.y <= 105 && (
-        <div
-          className="absolute z-10"
-          style={{ left: `${userXY.x}%`, top: `${userXY.y}%`, transform: 'translate(-50%,-50%)' }}
-        >
-          <div className="relative">
-            <span className="absolute inset-0 inline-flex h-5 w-5 animate-ping rounded-full bg-blue-400 opacity-60" />
-            <span className="relative inline-flex h-5 w-5 rounded-full border-[3px] border-white bg-blue-500 shadow" />
-          </div>
+      {/* Live-condition legend — explains the Waze-style pin colors. */}
+      {!compact && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 z-[500] -translate-x-1/2 flex items-center gap-3 rounded-full border border-neutral-200 bg-white/95 px-3 py-1.5 text-[10px] font-semibold text-neutral-600 shadow">
+          <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: CONDITION_COLORS.free.bg }} /> Free</span>
+          <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: CONDITION_COLORS.moderate.bg }} /> Moderate</span>
+          <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full" style={{ background: CONDITION_COLORS.busy.bg }} /> Busy</span>
         </div>
       )}
-
-      {/* Facility pins */}
-      {projected.map((f) => {
-        const c = TYPE_COLORS[f.type] || TYPE_COLORS['Recycling Center']
-        const isSelected = f.id === popupId || f.id === selectedId
-        const inView = f._xy.x > -5 && f._xy.x < 105 && f._xy.y > -5 && f._xy.y < 105
-        if (!inView) return null
-        const GlyphIcon = TYPE_GLYPH_ICONS[f.type] || Recycle
-        const halo = f.topAlertSeverity ? SEVERITY_PIN[f.topAlertSeverity]?.halo : null
-        const isAlertSevere = f.topAlertSeverity === 'bad' || f.topAlertSeverity === 'warn'
-        const recent = isRecentActivity(f.lastAlertAt)
-        const isFavorite = favoriteIds.includes(f.id)
-        const top = f.activeAlerts?.[0]
-        const isOfficial = !!top?.isOfficial
-        const chip = top ? ALERT_PIN_BADGE[top.type] : null
-        return (
-          <button
-            key={f.id}
-            onClick={(e) => {
-              e.stopPropagation()
-              setPopupId(f.id)
-              onSelect(f.id)
-            }}
-            className="group absolute z-20 transition-transform hover:scale-110 focus:outline-none"
-            style={{
-              left: `${f._xy.x}%`,
-              top: `${f._xy.y}%`,
-              transform: `translate(-50%, -100%) ${isSelected ? 'scale(1.15)' : ''}`,
-            }}
-            aria-label={f.name}
-          >
-            <div className="relative flex flex-col items-center">
-              {/* Alert halo */}
-              {halo && (
-                <>
-                  <span
-                    className={`absolute inset-0 -m-2 rounded-full ${recent ? 'animate-ping' : isAlertSevere ? 'animate-pulse' : ''}`}
-                    style={{ background: halo, opacity: 0.35 }}
-                  />
-                  <span
-                    className="absolute inset-0 -m-1 rounded-full"
-                    style={{ boxShadow: `0 0 0 3px ${halo}`, opacity: 0.85 }}
-                  />
-                </>
-              )}
-              {/* Owner update purple ring */}
-              {isOfficial && (
-                <span
-                  className="absolute inset-0 -m-1.5 rounded-full"
-                  style={{ boxShadow: `0 0 0 3px #9333ea`, opacity: 0.9 }}
-                />
-              )}
-              {isSelected && (
-                <span
-                  className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full opacity-40 blur-sm"
-                  style={{ background: c.bg }}
-                />
-              )}
-              <div
-                className={`relative flex items-center justify-center rounded-full text-white shadow-lg ring-2 ring-white ${
-                  isSelected ? 'h-10 w-10' : compact ? 'h-7 w-7' : 'h-8 w-8'
-                }`}
-                style={{ background: c.bg, boxShadow: `0 4px 12px ${c.ring}66` }}
-              >
-                <GlyphIcon className={isSelected ? 'h-5 w-5' : compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
-                {f.verified && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white" title="Verified">
-                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                  </span>
-                )}
-                {isFavorite && (
-                  <span className="absolute -left-1.5 -bottom-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-white" title="Favorite">
-                    <Heart className="h-2 w-2 fill-white" />
-                  </span>
-                )}
-                {f.activeAlertCount > 0 && (
-                  <span
-                    className="absolute -left-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-white px-1 text-[10px] font-bold text-white shadow"
-                    style={{ background: halo || '#0ea5e9' }}
-                    title={`${f.activeAlertCount} active alerts`}
-                  >
-                    {f.activeAlertCount}
-                  </span>
-                )}
-              </div>
-              {/* Pin stem */}
-              <div
-                className="h-2 w-1 -mt-0.5"
-                style={{
-                  background: `linear-gradient(to bottom, ${c.bg}, transparent)`,
-                }}
-              />
-              {/* Alert badge chip below pin */}
-              {chip && !compact && (
-                <div className={`mt-0.5 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow ${chip.bg} ${chip.fg}`}>
-                  {chip.label}
-                </div>
-              )}
-            </div>
-          </button>
-        )
-      })}
-
-      {/* Popup card */}
-      {popup && !compact && (
-        <div
-          className="absolute z-30"
-          style={{
-            left: `${popup._xy.x}%`,
-            top: `${popup._xy.y}%`,
-            transform: 'translate(-50%, calc(-100% - 48px))',
-          }}
-        >
-          <div className="w-72 rounded-xl border border-neutral-200 bg-white p-3 shadow-2xl">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1 text-sm font-bold text-neutral-900">
-                  <span className="truncate">{popup.name}</span>
-                  {popup.verified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand-600" />}
-                  {favoriteIds.includes(popup.id) && <Heart className="h-3.5 w-3.5 shrink-0 fill-rose-500 text-rose-500" />}
-                </div>
-                <div className="text-[11px] text-neutral-500">{popup.type}</div>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setPopupId(null)
-                }}
-                className="text-neutral-400 hover:text-neutral-900"
-                aria-label="Close popup"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Live status panel */}
-            {popup.activeAlerts?.[0] ? (
-              <div className="mt-2 rounded-md border-2 border-orange-200 bg-orange-50 p-2">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-orange-900">
-                    <Activity className="h-3.5 w-3.5" />
-                    {popup.activeAlerts[0].label}
-                    {popup.activeAlerts[0].isOfficial && (
-                      <span className="rounded-sm bg-purple-600 px-1 text-[8px] font-bold uppercase text-white">Official</span>
-                    )}
-                  </div>
-                  <span className="text-[9px] font-semibold text-orange-700">{popup.activeAlertCount} live</span>
-                </div>
-                {popup.activeAlerts[0].text && (
-                  <div className="mt-0.5 line-clamp-1 text-[10px] italic text-orange-800">&ldquo;{popup.activeAlerts[0].text}&rdquo;</div>
-                )}
-                {(popup.activeAlerts[0].waitMinutes || popup.activeAlerts[0].truckCount) && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {popup.activeAlerts[0].waitMinutes && (
-                      <span className="rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
-                        ~{popup.activeAlerts[0].waitMinutes} min wait
-                      </span>
-                    )}
-                    {popup.activeAlerts[0].truckCount && (
-                      <span className="inline-flex items-center gap-1 rounded bg-white px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
-                        <Truck className="h-3 w-3" /> ~{popup.activeAlerts[0].truckCount} trucks
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="mt-2 rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-2 py-1 text-center text-[10px] text-neutral-500">
-                No live reports · Be the first to post
-              </div>
-            )}
-
-            <div className="mt-1.5 line-clamp-2 text-[11px] text-neutral-600">{popup.address}</div>
-            <div className="mt-1.5 flex items-center gap-2 text-[11px] text-neutral-600">
-              <span className="flex items-center gap-0.5">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                {popup.rating?.toFixed?.(1) || '—'}
-              </span>
-              <span>· {popup.reviewsCount || 0} reviews</span>
-              {popup.distanceKm != null && <span>· {popup.distanceKm.toFixed(1)} km</span>}
-            </div>
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {(popup.accepted || []).slice(0, 4).map((m) => (
-                <span key={m} className="rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-800">
-                  {m}
-                </span>
-              ))}
-              {(popup.accepted || []).length > 4 && (
-                <span className="text-[10px] text-neutral-500">+{popup.accepted.length - 4} more</span>
-              )}
-            </div>
-
-            {/* Action grid: Directions · Post update · Favorite · View details */}
-            <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${popup.lat},${popup.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center gap-1 rounded-md bg-brand-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-700"
-              >
-                <Navigation className="h-3 w-3" /> Directions
-              </a>
-              {onReport ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onReport(popup)
-                  }}
-                  className="flex items-center justify-center gap-1 rounded-md bg-orange-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-orange-700"
-                >
-                  <Activity className="h-3 w-3" /> Post update
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onSelect(popup.id) }}
-                  className="flex items-center justify-center gap-1 rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50"
-                >
-                  Details
-                </button>
-              )}
-              {onToggleFavorite && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onToggleFavorite(popup.id)
-                  }}
-                  className={`flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold ${
-                    favoriteIds.includes(popup.id)
-                      ? 'border-rose-300 bg-rose-50 text-rose-700'
-                      : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
-                  }`}
-                >
-                  <Heart className={`h-3 w-3 ${favoriteIds.includes(popup.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
-                  {favoriteIds.includes(popup.id) ? 'Saved' : 'Save'}
-                </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onSelect(popup.id)
-                }}
-                className="flex items-center justify-center rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50"
-              >
-                View details
-              </button>
-            </div>
-          </div>
-          {/* arrow tail */}
-          <div className="mx-auto h-3 w-3 -translate-y-1.5 rotate-45 border-b border-r border-neutral-200 bg-white" />
-        </div>
-      )}
-
-      {/* Zoom controls */}
-      <div className="absolute right-3 top-3 z-40 flex flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow">
-        <button
-          onClick={() => setZoom((z) => Math.min(z + 1, 8))}
-          className="flex h-9 w-9 items-center justify-center text-neutral-700 hover:bg-neutral-100"
-          aria-label="Zoom in"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <div className="h-px bg-neutral-200" />
-        <button
-          onClick={() => setZoom((z) => Math.max(z - 1, 1))}
-          className="flex h-9 w-9 items-center justify-center text-neutral-700 hover:bg-neutral-100"
-          aria-label="Zoom out"
-        >
-          <Minus className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Zoom badge */}
-      <div className="absolute bottom-3 left-3 z-40 rounded-md bg-white/90 px-2 py-1 text-[10px] font-semibold text-neutral-600 shadow">
-        Zoom · {zoom}x
-      </div>
-
-      {/* Attribution */}
-      <div className="absolute bottom-1 right-2 z-40 text-[9px] text-neutral-500">DumpMaps · mock map</div>
 
       {/* Loading overlay */}
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-sm">
+        <div className="absolute inset-0 z-[600] flex items-center justify-center bg-white/60 backdrop-blur-sm">
           <div className="flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 shadow">
             <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
             Loading facilities…
@@ -493,19 +354,27 @@ export default function MockMap({
 
       {/* Error overlay */}
       {error && (
-        <div className="absolute inset-x-0 top-3 z-50 mx-auto w-fit max-w-[90%] rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 shadow">
+        <div className="absolute inset-x-0 top-3 z-[600] mx-auto w-fit max-w-[90%] rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 shadow">
           {error}
         </div>
       )}
 
       {/* Empty hint */}
       {!loading && !error && facilities.length === 0 && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center">
+        <div className="pointer-events-none absolute inset-0 z-[550] flex items-center justify-center">
           <div className="rounded-xl border border-neutral-200 bg-white/95 px-4 py-3 text-sm font-medium text-neutral-700 shadow">
             No facilities match your filters
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        .dm-map-canvas .leaflet-tile-pane { filter: saturate(0.92) brightness(1.02) contrast(0.98); }
+        .dm-map-canvas .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+        .dm-map-canvas .leaflet-popup-content { margin: 10px 12px; }
+        .dm-map-canvas .leaflet-control-attribution { font-size: 9px; background: rgba(255,255,255,.7); }
+        .dm-facility-pin { background: transparent; border: 0; }
+      `}</style>
     </div>
   )
 }

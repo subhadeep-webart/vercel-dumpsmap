@@ -76,12 +76,25 @@ export function useRequireAuth() {
  * Bottom-sheet modal with three actions: Sign in · Create account · Continue
  * browsing. Render this anywhere on the page; toggle via `action` prop.
  */
-export function SoftLoginModal({ action, onClose }) {
+// `onSignIn` / `onCreateAccount` (optional): when provided, the buttons call
+// these INSTEAD of navigating to `/?login=1`. Use them to open an in-place
+// AuthDialog so the user isn't bounced to the homepage mid-flow (e.g. from the
+// facilities check-in). When omitted, the buttons keep the default navigation.
+export function SoftLoginModal({ action, onClose, onSignIn, onCreateAccount }) {
   const router = useRouter()
   if (!action) return null
 
   const headline = HEADLINES[action] || HEADLINES.default
   const returnTo = typeof window !== 'undefined' ? window.location.pathname : '/'
+
+  const handleSignIn = () => {
+    if (onSignIn) { onClose?.(); onSignIn(); return }
+    router.push(`/?login=1&returnTo=${encodeURIComponent(returnTo)}`)
+  }
+  const handleCreate = () => {
+    if (onCreateAccount) { onClose?.(); onCreateAccount(); return }
+    router.push(`/?signup=1&returnTo=${encodeURIComponent(returnTo)}`)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
@@ -92,10 +105,10 @@ export function SoftLoginModal({ action, onClose }) {
         <h2 className="mt-3 text-center text-lg font-extrabold text-neutral-900">{headline}</h2>
         <p className="mt-1 text-center text-sm text-neutral-600">Create a free account or sign in to engage with the community.</p>
         <div className="mt-5 space-y-2">
-          <Button className="w-full bg-green-700 hover:bg-green-800" onClick={() => router.push(`/?login=1&returnTo=${encodeURIComponent(returnTo)}`)}>
+          <Button className="w-full bg-green-700 hover:bg-green-800" onClick={handleSignIn}>
             Sign in
           </Button>
-          <Button variant="outline" className="w-full" onClick={() => router.push(`/?signup=1&returnTo=${encodeURIComponent(returnTo)}`)}>
+          <Button variant="outline" className="w-full" onClick={handleCreate}>
             Create account
           </Button>
           <button onClick={onClose} className="block w-full py-2 text-center text-xs font-semibold text-neutral-500 hover:text-neutral-800">

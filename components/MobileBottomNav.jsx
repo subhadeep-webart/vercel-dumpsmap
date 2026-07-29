@@ -101,9 +101,9 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
         <button
           onClick={handlePost}
           aria-label="Quick post"
-          className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 transition active:scale-95 hover:bg-emerald-700 md:hidden"
+          className="fixed bottom-24 right-4 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 transition active:scale-95 hover:bg-emerald-700 md:hidden"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5" />
         </button>
       )}
 

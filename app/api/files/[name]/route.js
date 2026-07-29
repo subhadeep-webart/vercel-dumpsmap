@@ -25,6 +25,10 @@ const MIME_BY_EXT = {
   '.heif': 'image/heif',
   '.bmp':  'image/bmp',
   '.svg':  'image/svg+xml',
+  '.mp4':  'video/mp4',
+  '.webm': 'video/webm',
+  '.ogv':  'video/ogg',
+  '.mov':  'video/quicktime',
 }
 
 export async function GET(_request, { params }) {

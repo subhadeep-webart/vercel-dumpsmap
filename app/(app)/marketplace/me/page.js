@@ -235,7 +235,7 @@ function BuyerDashboardPageInner() {
       <main className="container mx-auto px-4 py-6">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">My Marketplace</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">My Marketplace</h1>
             <p className="text-sm text-neutral-600">Track items you've saved, reserved, claimed, and alerts you've set up.</p>
           </div>
           <Link href="/marketplace" className="inline-flex h-9 items-center rounded-full bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Browse Marketplace</Link>

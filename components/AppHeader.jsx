@@ -198,7 +198,7 @@ export default function AppHeader({ active, showSearch = false }) {
                         <span className="truncate">{user.email}</span>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" />
+                    {/* <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" /> */}
                   </button>
                 ) : (
                   <div>

@@ -53,7 +53,8 @@ import {
   CheckCircle2, AlertCircle, RefreshCw,
 } from 'lucide-react'
 
-const MAX_BYTES = 8 * 1024 * 1024 // matches server limit
+const MAX_BYTES = 8 * 1024 * 1024        // matches server image limit
+const MAX_VIDEO_BYTES = 64 * 1024 * 1024 // matches server video limit
 const COMPRESS_LONG_EDGE = 2048    // resize long edge to this many px
 const COMPRESS_QUALITY = 0.85      // jpeg quality
 
@@ -145,13 +146,16 @@ export default function MediaUploader({
       const uploaded = []
       for (let i = 0; i < files.length; i++) {
         let file = files[i]
+        // Videos can't be canvas-compressed and get a larger server allowance.
+        const isVideo = (file.type || '').startsWith('video/')
+        const limit = isVideo ? MAX_VIDEO_BYTES : MAX_BYTES
         // Server hard limit. Try compressing oversized files before failing.
-        if (file.size > MAX_BYTES) {
-          file = await compressImage(file)
-          if (file.size > MAX_BYTES) {
-            throw new Error(`"${file.name}" is still too large after compression (>${Math.round(MAX_BYTES / 1024 / 1024)}MB).`)
+        if (file.size > limit) {
+          if (!isVideo) file = await compressImage(file)
+          if (file.size > limit) {
+            throw new Error(`"${file.name}" is too large (>${Math.round(limit / 1024 / 1024)}MB).`)
           }
-        } else {
+        } else if (!isVideo) {
           // Small but still benefit from compression on mobile bandwidth
           file = await compressImage(file)
         }
@@ -205,7 +209,7 @@ export default function MediaUploader({
   if (variant === 'avatar') {
     return (
       <div className={`relative inline-block ${className}`}>
-        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-green-600 text-2xl font-extrabold text-white shadow-lg sm:h-28 sm:w-28">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-green-600 text-2xl font-extrabold text-white shadow-lg sm:h-28 sm:w-28">
           {urls[0] ? (
             <SafeImage src={urls[0]} alt="Profile" kind="avatar" className="h-full w-full object-cover" />
           ) : (

@@ -97,8 +97,8 @@ export default function GlobalFab() {
                   <span className="block whitespace-nowrap pl-3 pr-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">{a.label}</span>
                 </span>
               </span>
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${a.chip}`}>
-                <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
+              <span className={`flex h-6 w-6 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6 ${a.chip}`}>
+                <Icon className="w-4 h-4 md:h-[18px] md:w-[18px]" strokeWidth={2.25} />
               </span>
             </button>
           )
@@ -107,8 +107,8 @@ export default function GlobalFab() {
 
       {/* Main FAB */}
       <button onClick={() => setOpen((v) => !v)} aria-label={open ? 'Close quick actions' : 'Open quick actions'}
-        className={`fixed bottom-8 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg ring-1 transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 active:scale-95 sm:bottom-6 sm:right-6 ${open ? 'rotate-[135deg] bg-neutral-100 text-neutral-600 ring-neutral-300 shadow-brand-navy/10' : 'bg-emerald-50 text-emerald-700 ring-emerald-200 shadow-emerald-600/20 hover:scale-110 hover:bg-emerald-100'}`}>
-        {open ? <X className="h-7 w-7" strokeWidth={2.25} /> : <Plus className="h-7 w-7" strokeWidth={2.25} />}
+        className={`fixed bottom-12 right-4 z-50 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full shadow-lg ring-1 transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 active:scale-95 md:bottom-10 md:right-6 ${open ? 'rotate-[135deg] bg-neutral-100 text-neutral-600 ring-neutral-300 shadow-brand-navy/10' : 'bg-emerald-50 text-emerald-700 ring-emerald-200 shadow-emerald-600/20 hover:scale-110 hover:bg-emerald-100'}`}>
+        {open ? <X className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.25} /> : <Plus className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.25} />}
       </button>
 
       <FacilityPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={(f) => { setPickerOpen(false); setCheckinFacility(f) }} />

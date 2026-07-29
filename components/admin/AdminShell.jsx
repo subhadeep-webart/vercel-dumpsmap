@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Users, MapPin, Store, Briefcase, Activity,
   Flag, ScrollText, BarChart3, LogOut, Shield, Menu, X, ChevronRight,
-  BadgeCheck, KeyRound, CreditCard, Plug, Settings, Mail, HeartHandshake, Database, Building2, Award, ToggleRight, Inbox, ShoppingBag,
+  BadgeCheck, KeyRound, CreditCard, Plug, Settings, Mail, HeartHandshake, Database, Building2, Award, ToggleRight, Inbox, ShoppingBag, Video,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,6 +34,7 @@ const NAV = [
   { href: '/admin/donations',             label: 'Donations',             icon: HeartHandshake,  key: 'donations' },
   { href: '/admin/memberships',           label: 'Memberships',           icon: Award,           key: 'memberships' },
   { href: '/admin/feature-controls',      label: 'Feature Controls',      icon: ToggleRight,     key: 'feature_controls' },
+  { href: '/admin/business-video',        label: 'Business Video',        icon: Video },
   { href: '/admin/integrations',          label: 'Integrations',          icon: Plug },
   { href: '/admin/platform-settings',     label: 'Platform Settings',     icon: Settings },
   { href: '/admin/email-notifications',   label: 'Email Notifications',   icon: Mail,            key: 'email_notifications' },

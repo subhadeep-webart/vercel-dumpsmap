@@ -767,6 +767,14 @@ const DEFAULT_PLATFORM_SETTINGS = {
     paymentPilot: false,
     uploadDocs: true,
   },
+  // "How it works" video shown in the Business page banner. CMS-managed.
+  businessVideo: {
+    enabled: false,
+    videoUrl: '',        // uploaded /api/files/... mp4 OR external (YouTube/Vimeo/mp4) URL
+    posterUrl: '',       // optional thumbnail shown before play
+    title: 'See how it works',
+    subtitle: '',
+  },
   updatedAt: new Date(),
 }
 async function getPlatformSettings(db) {
@@ -778,6 +786,7 @@ async function getPlatformSettings(db) {
       ...existing,
       modules: { ...DEFAULT_PLATFORM_SETTINGS.modules, ...(existing.modules || {}) },
       facilityOwnerFeatures: { ...DEFAULT_PLATFORM_SETTINGS.facilityOwnerFeatures, ...(existing.facilityOwnerFeatures || {}) },
+      businessVideo: { ...DEFAULT_PLATFORM_SETTINGS.businessVideo, ...(existing.businessVideo || {}) },
     })
   }
   await db.collection('platform_settings').insertOne({ ...DEFAULT_PLATFORM_SETTINGS })
@@ -2312,19 +2321,25 @@ async function handleRoute(request, { params }) {
         if (files.length === 0) {
           return handleCORS(NextResponse.json({ error: 'No file uploaded' }, { status: 400 }))
         }
-        const MAX_BYTES = 8 * 1024 * 1024 // 8 MB
-        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+        const MAX_IMAGE_BYTES = 8 * 1024 * 1024   // 8 MB for images
+        const MAX_VIDEO_BYTES = 64 * 1024 * 1024  // 64 MB for videos
+        const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+        const allowedVideoMimes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
         // Persistent storage \u2014 survives container redeploys (unlike /public/uploads).
         const uploadDir = PERSIST_UPLOAD_DIR
         await fs.mkdir(uploadDir, { recursive: true })
         const results = []
         for (const file of files) {
-          if (file.size > MAX_BYTES) {
-            return handleCORS(NextResponse.json({ error: `File "${file.name}" exceeds 8 MB limit` }, { status: 413 }))
-          }
           const mime = (file.type || '').toLowerCase()
-          if (!allowedMimes.includes(mime) && !mime.startsWith('image/')) {
-            return handleCORS(NextResponse.json({ error: `File "${file.name}" is not an image` }, { status: 415 }))
+          const isVideo = mime.startsWith('video/')
+          const isImage = mime.startsWith('image/')
+          const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+          if (file.size > maxBytes) {
+            const mb = Math.round(maxBytes / 1024 / 1024)
+            return handleCORS(NextResponse.json({ error: `File "${file.name}" exceeds ${mb} MB limit` }, { status: 413 }))
+          }
+          if (isVideo ? !allowedVideoMimes.includes(mime) : (!allowedImageMimes.includes(mime) && !isImage)) {
+            return handleCORS(NextResponse.json({ error: `File "${file.name}" is not a supported image or video` }, { status: 415 }))
           }
           const id = uuidv4()
           // Derive a safe extension
@@ -2333,10 +2348,14 @@ async function handleRoute(request, { params }) {
           if (nameExt && nameExt.length <= 5) ext = nameExt
           else if (mime.includes('jpeg') || mime.includes('jpg')) ext = 'jpg'
           else if (mime.includes('png')) ext = 'png'
-          else if (mime.includes('webp')) ext = 'webp'
+          else if (mime.includes('webp') && !isVideo) ext = 'webp'
           else if (mime.includes('gif')) ext = 'gif'
           else if (mime.includes('heic')) ext = 'heic'
           else if (mime.includes('heif')) ext = 'heif'
+          else if (mime.includes('mp4')) ext = 'mp4'
+          else if (mime.includes('webm')) ext = 'webm'
+          else if (mime.includes('ogg')) ext = 'ogv'
+          else if (mime.includes('quicktime')) ext = 'mov'
           else ext = 'bin'
           const fname = `${id}.${ext}`
           const fpath = nodePath.join(uploadDir, fname)

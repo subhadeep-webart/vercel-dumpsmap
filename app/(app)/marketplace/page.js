@@ -460,10 +460,10 @@ function MarketplacePageInner() {
       <main className="container mx-auto px-4 py-6">
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Marketplace</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Marketplace</h1>
             <p className="text-sm text-neutral-600">Rescue. Reuse. Recycle. Profit. <span className="ml-1 text-emerald-700">Find incredible items near you and keep them out of the landfill.</span></p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
             {user && (
               <>
                 <button
@@ -486,7 +486,7 @@ function MarketplacePageInner() {
                 </button>
               </>
             )}
-            <Button onClick={() => { if (requireAuth('post')) setPostOpen(true) }} className="h-10 rounded-full bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">
+            <Button onClick={() => { if (requireAuth('post')) setPostOpen(true) }} className="ml-auto h-8 md:ml-0 md:h-10 rounded-full bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700">
               <Plus className="mr-1 h-4 w-4" /> Post Item
             </Button>
           </div>
@@ -520,7 +520,7 @@ function MarketplacePageInner() {
                 <button
                   key={t.key}
                   onClick={t.filter}
-                  className={`inline-flex min-h-[40px] items-center gap-1 rounded-md px-4 py-2 text-sm font-bold transition ${isActive ? (isCommercial ? 'bg-indigo-600 text-white shadow-sm' : 'bg-brand-600 text-white shadow-sm') : 'text-neutral-700 hover:bg-neutral-100'}`}
+                  className={`inline-flex min-h-[20px] md:min-h-[40px] items-center gap-1 rounded-md px-4 py-1 md:py-2 text-sm font-bold transition ${isActive ? (isCommercial ? 'bg-indigo-600 text-white shadow-sm' : 'bg-brand-600 text-white shadow-sm') : 'text-neutral-700 hover:bg-neutral-100'}`}
                 >
                   {isCommercial && <Building2 className={`h-4 w-4 ${isActive ? '' : 'text-indigo-600'}`} />}
                   {t.label}
@@ -702,10 +702,10 @@ function MarketplacePageInner() {
       {/* Floating + on mobile */}
       <button
         onClick={() => { if (requireAuth('post')) setPostOpen(true) }}
-        className="fixed bottom-6 right-6 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-brand-600 text-white shadow-xl hover:bg-brand-700 md:hidden"
+        className="fixed bottom-36 right-4 z-40 inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white shadow-xl hover:bg-brand-700 md:hidden"
         aria-label="Post Item"
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-5 w-5" />
       </button>
 
       <PostItemDialog

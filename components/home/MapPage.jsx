@@ -40,10 +40,28 @@ import {
 import { JobsButton, useHotSpots } from '@/components/Jobs'
 import SiteHeader from '@/components/SiteHeader'
 import PostOptionRow from '@/components/home/PostOptionRow'
-import FacilityDetail from '@/components/home/FacilityDetail'
+import ActiveFilterChips from '@/components/facilities/ActiveFilterChips'
 import { FACILITY_TYPES, MATERIALS, TYPE_ICONS, TYPE_COLORS } from '@/components/home/home-facility-meta'
 
-export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, favoriteIds, toggleFavorite, onCommunity, onDashboard, pendingReport, consumePendingReport, pendingJump, consumePendingJump, onJobs, onPostJob }) {
+// Resolve the first usable facility photo across the various fields the API may
+// return, rewriting local /uploads/ paths to the /api/files/ route. Mirrors the
+// helper in FacilityRow so the map list thumbnails match the feed. Returns null
+// when there's no photo, so the card can fall back to the type icon.
+function firstPhoto(f) {
+  const candidates = [
+    f?.imageUrl,
+    f?.heroImageUrl,
+    f?.photoUrl,
+    ...(Array.isArray(f?.photos) ? f.photos : []),
+    ...(Array.isArray(f?.images) ? f.images : []),
+  ].filter(Boolean)
+  const raw = candidates[0]
+  if (!raw || typeof raw !== 'string') return null
+  if (raw.startsWith('/uploads/')) return `/api/files/${raw.slice('/uploads/'.length)}`
+  return raw
+}
+
+export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, favoriteIds, toggleFavorite, onCommunity, onDashboard, pendingReport, consumePendingReport, pendingJump, consumePendingJump, onJobs, onPostJob, hideHeader = false }) {
   const [facilities, setFacilities] = useState(SAMPLE_FALLBACK_FACILITIES)
   const [loading, setLoading] = useState(true)
   const [usedFallback, setUsedFallback] = useState(false)
@@ -61,8 +79,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
   const [userLocation, setUserLocation] = useState(null)
   const [mapCenter, setMapCenter] = useState(SAN_JOSE_DEFAULT)
   const [selectedId, setSelectedId] = useState(null)
-  const [detailOpen, setDetailOpen] = useState(false)
-  const [feedOpen, setFeedOpen] = useState(true)
+  const [feedOpen, setFeedOpen] = useState(false)
   const [reportTarget, setReportTarget] = useState(null) // facility object
   const [refreshKey, setRefreshKey] = useState(0)
   // mobile-only UI state
@@ -199,7 +216,36 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
     } catch {}
   }
 
+  const resetFilters = () => {
+    setTypeFilter('all'); setMaterialFilter('all'); setMaxKm('any')
+    setVerifiedOnly(false); setFreeOnly(false); setPaidOnly(false)
+    setDonationOnly(false); setContractorOnly(false); setHasAlertsOnly(false)
+  }
+
+  // Active-filter chips — one removable pill per applied filter (shared UX with
+  // the feed view). Order matches the filter sheet top-to-bottom.
+  const activeChips = [
+    typeFilter !== 'all' && { key: 'type', label: `Type: ${typeFilter}`, onRemove: () => setTypeFilter('all') },
+    materialFilter !== 'all' && { key: 'material', label: `Material: ${materialFilter}`, onRemove: () => setMaterialFilter('all') },
+    maxKm !== 'any' && { key: 'distance', label: `Within ${maxKm} km`, onRemove: () => setMaxKm('any') },
+    hasAlertsOnly && { key: 'alerts', label: 'Has live alerts', onRemove: () => setHasAlertsOnly(false) },
+    verifiedOnly && { key: 'verified', label: 'Verified only', onRemove: () => setVerifiedOnly(false) },
+    freeOnly && { key: 'free', label: 'Free drop-off', onRemove: () => setFreeOnly(false) },
+    paidOnly && { key: 'paid', label: 'Paid disposal', onRemove: () => setPaidOnly(false) },
+    donationOnly && { key: 'donation', label: 'Donation accepted', onRemove: () => setDonationOnly(false) },
+    contractorOnly && { key: 'contractor', label: 'Contractor-friendly', onRemove: () => setContractorOnly(false) },
+  ].filter(Boolean)
+
   const selected = facilities.find((f) => f.id === selectedId)
+
+  // "View details" should take the user to the full facility PAGE
+  // (/facilities/:id), not the in-map modal. window.location keeps this working
+  // identically whether MapPage is mounted from the homepage or the /facilities
+  // route, without threading a router through this shared component.
+  const openDetails = (id) => {
+    if (!id) return
+    if (typeof window !== 'undefined') window.location.href = `/facilities/${id}`
+  }
 
   // Handle deep-links from dashboard
   useEffect(() => {
@@ -208,7 +254,6 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
       if (f) {
         setMapCenter({ lat: f.lat, lng: f.lng })
         setSelectedId(pendingJump)
-        setDetailOpen(true)
       }
       consumePendingJump?.()
     }
@@ -222,19 +267,29 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
   }, [pendingReport])
 
   return (
-    <ResponsiveMapLayout>
-      {/* TOP — premium SiteHeader (consistent with Landing + HomeShell) */}
-      <SiteHeader
-        user={user}
-        onLogin={userMenu.onLogin}
-        onProfile={userMenu.onProfile}
-        onLogout={userMenu.onLogout}
-        onAdmin={openAdmin}
-        onDashboard={onDashboard}
-        onSubmit={onSubmit}
-        onEnterApp={(t) => { if (t === 'community') { window.location.href = '/community' } else { onExit?.() } }}
-        active="facilities"
-      />
+    // When embedded under the shared AppHeader (hideHeader), the map shell must
+    // be the viewport height MINUS that header (h-14 = 3.5rem), or its bottom —
+    // and the mobile action bar — spills past the viewport. On the homepage the
+    // shell owns the full viewport.
+    <ResponsiveMapLayout className={hideHeader ? '!h-[calc(100dvh-3.5rem)] !min-h-[calc(100dvh-3.5rem)]' : ''}>
+      {/* TOP — premium SiteHeader (consistent with Landing + HomeShell).
+          Suppressed when hideHeader is set: the /facilities route already
+          renders the shared (app)-section <AppHeader>, and rendering SiteHeader
+          on top of it would show two DIFFERENT headers. On the homepage there
+          is no AppHeader, so this stays the map's header. */}
+      {!hideHeader && (
+        <SiteHeader
+          user={user}
+          onLogin={userMenu.onLogin}
+          onProfile={userMenu.onProfile}
+          onLogout={userMenu.onLogout}
+          onAdmin={openAdmin}
+          onDashboard={onDashboard}
+          onSubmit={onSubmit}
+          onEnterApp={(t) => { if (t === 'community') { window.location.href = '/community' } else { onExit?.() } }}
+          active="facilities"
+        />
+      )}
 
       {/* SECONDARY ROW — map toolbar (search, near me, jobs, live feed toggle) */}
       <div className="z-20 flex flex-none items-center justify-between gap-2 border-b border-neutral-200 bg-white px-2 py-1.5 md:px-4">
@@ -280,7 +335,8 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
 
       {/* Body */}
       <div className="relative flex flex-1 overflow-hidden">
-        {/* Left filter + list panel */}
+        {/* Left list panel — filters now live in a modal (opened via the button
+            below); the panel shows the facility list + active-filter chips. */}
         <aside className="hidden w-[380px] flex-col border-r border-neutral-200 bg-white md:flex">
           <div className="space-y-3 border-b border-neutral-200 p-4">
             {profileMeta && (
@@ -292,86 +348,35 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                 </div>
               </div>
             )}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 font-semibold">
-                <FilterIcon className="h-4 w-4 text-brand-600" /> Filters
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileFiltersOpen(true)}
+                className="h-9"
+              >
+                <FilterIcon className="mr-1.5 h-4 w-4 text-brand-600" /> Filters
+                {activeChips.length > 0 && (
+                  <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[11px] font-bold text-white">
+                    {activeChips.length}
+                  </span>
+                )}
+              </Button>
               <Badge variant="outline" className="text-xs">
                 {facilities.length} results
               </Badge>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Facility type</Label>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    {FACILITY_TYPES.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Material</Label>
-                <Select value={materialFilter} onValueChange={setMaterialFilter}>
-                  <SelectTrigger className="mt-1 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All materials</SelectItem>
-                    {MATERIALS.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-xs">Distance from me</Label>
-              <Select value={maxKm} onValueChange={setMaxKm}>
-                <SelectTrigger className="mt-1 h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any distance</SelectItem>
-                  <SelectItem value="5">Within 5 km</SelectItem>
-                  <SelectItem value="10">Within 10 km</SelectItem>
-                  <SelectItem value="25">Within 25 km</SelectItem>
-                  <SelectItem value="50">Within 50 km</SelectItem>
-                  <SelectItem value="100">Within 100 km</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              {[
-                { id: 'alerts', label: 'Has live alerts', Icon: Flame, val: hasAlertsOnly, set: setHasAlertsOnly },
-                { id: 'verified', label: 'Verified only', val: verifiedOnly, set: setVerifiedOnly },
-                { id: 'free', label: 'Free drop-off', val: freeOnly, set: setFreeOnly },
-                { id: 'paid', label: 'Paid disposal', val: paidOnly, set: setPaidOnly },
-                { id: 'donation', label: 'Donation accepted', val: donationOnly, set: setDonationOnly },
-                { id: 'contractor', label: 'Contractor-friendly', val: contractorOnly, set: setContractorOnly },
-              ].map((c) => (
-                <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-2 py-1.5 text-sm hover:bg-neutral-50">
-                  <Checkbox checked={c.val} onCheckedChange={(v) => c.set(!!v)} />
-                  <span className="inline-flex items-center gap-1">{c.Icon && <c.Icon className="h-3.5 w-3.5 text-orange-500" />} {c.label}</span>
-                </label>
-              ))}
-            </div>
+            <ActiveFilterChips chips={activeChips} onClearAll={resetFilters} />
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-2 p-3">
+          {/* Radix ScrollArea's viewport wraps children in an internal
+              display:table div that shrink-to-fits and can grow past the
+              w-[380px] aside, overflowing the facility cards horizontally.
+              Forcing that child to block + w-full pins it to the panel width so
+              the cards' own truncate/min-w-0 rules take effect. */}
+          <ScrollArea className="flex-1 [&>div>div]:!block [&>div>div]:!w-full">
+            <div className="min-w-0 space-y-2 p-3">
               {loading && <div className="p-4 text-sm text-neutral-500">Loading facilities…</div>}
               {!loading && facilities.length === 0 && (
                 <div className="p-4 text-sm text-neutral-500">No facilities match your filters.</div>
@@ -379,12 +384,14 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
               {facilities.map((f) => {
                 const Icon = TYPE_ICONS[f.type] || MapPin
                 const isActive = selectedId === f.id
+                const photo = firstPhoto(f)
                 return (
                   <div
                     key={f.id}
                     onClick={() => {
-                      // first click highlights pin; second click opens details
-                      if (selectedId === f.id) setDetailOpen(true)
+                      // first click highlights pin; second click opens the full
+                      // facility page
+                      if (selectedId === f.id) openDetails(f.id)
                       else setSelectedId(f.id)
                     }}
                     className={`group w-full cursor-pointer rounded-xl border bg-white p-3 text-left transition hover:border-brand-600 hover:shadow-sm ${
@@ -392,8 +399,17 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${TYPE_COLORS[f.type] || 'bg-neutral-200'}`}>
-                        <Icon className="h-4 w-4" />
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md ${TYPE_COLORS[f.type] || 'bg-neutral-200'}`}>
+                        {photo ? (
+                          <img
+                            src={photo}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = 'none' }}
+                          />
+                        ) : (
+                          <Icon className="h-4 w-4" />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
@@ -420,15 +436,15 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                             <span className="text-[10px] text-neutral-500">+{f.accepted.length - 3}</span>
                           )}
                         </div>
-                        <AlertChipRow facility={f} onClick={() => { setSelectedId(f.id); setDetailOpen(true) }} />
+                        <AlertChipRow facility={f} onClick={() => openDetails(f.id)} />
                         {isActive && (
                           <div className="mt-2.5 flex flex-wrap gap-1.5">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setDetailOpen(true)
+                                openDetails(f.id)
                               }}
-                              className="flex-1 rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50"
+                              className="min-w-0 flex-1 rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] font-semibold text-neutral-700 hover:bg-neutral-50"
                             >
                               View details
                             </button>
@@ -437,7 +453,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                                 e.stopPropagation()
                                 setReportTarget(f)
                               }}
-                              className="flex-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 text-[11px] font-semibold text-orange-800 hover:bg-orange-100"
+                              className="min-w-0 flex-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 text-[11px] font-semibold text-orange-800 hover:bg-orange-100"
                             >
                               <Activity className="mr-1 inline h-3 w-3" />
                               Report
@@ -447,7 +463,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                               target="_blank"
                               rel="noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="flex flex-1 items-center justify-center gap-1 rounded-md bg-brand-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-700"
+                              className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md bg-brand-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-700"
                             >
                               <Navigation className="h-3 w-3" /> Go
                             </a>
@@ -494,6 +510,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
               onSelect={(id) => {
                 setSelectedId(id)
               }}
+              onOpenDetails={openDetails}
             />
           </MapErrorBoundary>
           <MapLoadingState visible={loading && facilities.length === 0} />
@@ -540,25 +557,11 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                 if (f) {
                   setMapCenter({ lat: f.lat, lng: f.lng })
                   setSelectedId(facilityId)
-                  setDetailOpen(true)
                 }
               }}
             />
           </aside>
         )}
-
-        {/* Detail dialog */}
-        <FacilityDetail
-          open={detailOpen}
-          onOpenChange={setDetailOpen}
-          facilityId={selectedId}
-          onClose={() => setDetailOpen(false)}
-          onReport={(f) => setReportTarget(f)}
-          user={user}
-          favoriteIds={favoriteIds}
-          toggleFavorite={toggleFavorite}
-          refreshFacilities={() => setRefreshKey((k) => k + 1)}
-        />
 
         {/* Alert post dialog */}
         <AlertPostDialog
@@ -641,11 +644,18 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
         </SheetContent>
       </Sheet>
 
-      {/* ---------------- MOBILE FILTERS SHEET ---------------- */}
+      {/* ---------------- FILTERS SHEET (desktop + mobile) ----------------
+          Opened from the "Filters" button in the left panel (desktop) and the
+          floating filter button (mobile). Full-width bottom sheet on mobile;
+          on desktop it lifts into a centered, fully-rounded floating card so it
+          reads as a modal over the map rather than a wall-to-wall bar. */}
       <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl p-4">
+        <SheetContent
+          side="bottom"
+          className="max-h-[85vh] overflow-y-auto rounded-t-2xl p-4 md:inset-x-auto md:bottom-6 md:left-1/2 md:max-w-lg md:-translate-x-1/2 md:rounded-2xl md:border md:shadow-2xl"
+        >
           <SheetHeader className="text-left">
-            <SheetTitle className="flex items-center gap-2">
+            <SheetTitle className="flex items-center gap-2 pr-8">
               <FilterIcon className="h-4 w-4 text-brand-600" /> Filters
               <Badge variant="outline" className="ml-auto text-xs">{facilities.length} results</Badge>
             </SheetTitle>
@@ -707,11 +717,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
               <Button
                 variant="outline"
                 className="flex-1 h-11"
-                onClick={() => {
-                  setTypeFilter('all'); setMaterialFilter('all'); setMaxKm('any')
-                  setVerifiedOnly(false); setFreeOnly(false); setPaidOnly(false)
-                  setDonationOnly(false); setContractorOnly(false); setHasAlertsOnly(false)
-                }}
+                onClick={resetFilters}
               >
                 Reset
               </Button>
@@ -740,19 +746,27 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
             )}
             {facilities.map((f) => {
               const Icon = TYPE_ICONS[f.type] || MapPin
+              const photo = firstPhoto(f)
               return (
                 <button
                   key={f.id}
                   onClick={() => {
-                    setSelectedId(f.id)
-                    setMapCenter({ lat: f.lat, lng: f.lng })
                     setMobileListOpen(false)
-                    setDetailOpen(true)
+                    openDetails(f.id)
                   }}
                   className="flex w-full items-start gap-3 rounded-xl border border-neutral-200 bg-white p-3 text-left active:bg-neutral-50"
                 >
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md ${TYPE_COLORS[f.type] || 'bg-neutral-200'}`}>
-                    <Icon className="h-5 w-5" />
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md ${TYPE_COLORS[f.type] || 'bg-neutral-200'}`}>
+                    {photo ? (
+                      <img
+                        src={photo}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
@@ -799,7 +813,6 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
                   setMapCenter({ lat: f.lat, lng: f.lng })
                   setSelectedId(facilityId)
                   setMobileFeedOpen(false)
-                  setDetailOpen(true)
                 }
               }}
             />

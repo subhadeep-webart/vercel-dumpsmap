@@ -1,11 +1,25 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import BusinessHeroVideo from '@/components/business/BusinessHeroVideo'
 import { HERO_BENEFITS } from '@/constants/business_constants'
 import { ArrowRight, TrendingUp, Star, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react'
 
 export default function BusinessHero({ onCtaClick }) {
+  const [video, setVideo] = useState(null)
+
+  // Pull the CMS-managed "How it works" video (public, unauthenticated).
+  useEffect(() => {
+    fetch('/api/platform-settings/public')
+      .then((r) => r.json())
+      .then((j) => setVideo(j.settings?.businessVideo || null))
+      .catch(() => {})
+  }, [])
+
+  const showVideo = !!(video?.enabled && video?.videoUrl)
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/60 via-white to-white">
       <div className="container mx-auto grid items-center gap-12 px-4 py-16 md:grid-cols-2 md:py-24">
@@ -36,8 +50,11 @@ export default function BusinessHero({ onCtaClick }) {
           </div>
         </div>
 
-        {/* Right: partner card mock */}
+        {/* Right: CMS "how it works" video, or the default partner card mock */}
         <div className="relative">
+          {showVideo ? (
+            <BusinessHeroVideo video={video} />
+          ) : (
           <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-2xl shadow-emerald-100">
             <img
               src="https://images.unsplash.com/photo-1715541275956-4845a5cf74c1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHx3YXN0ZSUyMGZhY2lsaXR5fGVufDB8fHxncmVlbnwxNzgyOTE4MzE2fDA&ixlib=rb-4.1.0&q=85"
@@ -81,6 +98,7 @@ export default function BusinessHero({ onCtaClick }) {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
     </section>

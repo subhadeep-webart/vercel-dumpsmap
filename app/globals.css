@@ -268,6 +268,17 @@ code {
 }
 .dm-spin { animation: dm-spin 6s linear infinite; }
 
+/* Tick "pop": the selected-status checkmark badge springs in with a tiny
+   overshoot so selecting a status feels responsive and eye-catching. */
+@keyframes dm-tick-pop {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-25deg); }
+  60%  { opacity: 1; transform: scale(1.18) rotate(6deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.dm-tick-pop {
+  animation: dm-tick-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
 /* Conveyor belts — two copies of the row translate -50% for a seamless loop */
 @keyframes dm-belt {
   from { transform: translateX(0); }
@@ -293,6 +304,7 @@ code {
   .dm-draw,
   .dm-shine::after,
   .dm-spin,
+  .dm-tick-pop,
   .dm-belt-track {
     animation: none !important;
   }

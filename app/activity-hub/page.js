@@ -161,14 +161,14 @@ function ActivityHubInner() {
       breadcrumbs={[{ label: 'Activity Hub' }]}>
       {/* Hero */}
       <header className="mb-4">
-        <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">What&apos;s happening now?</h1>
+        <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">What&apos;s happening now?</h1>
         <p className="mt-0.5 text-sm text-neutral-600">Real-time updates from your community.</p>
       </header>
 
       {/* Composer prompt */}
       <Card className="mb-4 cursor-pointer transition hover:border-green-300" onClick={() => { if (requireAuth('post')) setComposerOpen(true) }}>
         <CardContent className="flex items-center gap-3 p-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-600 text-white">
+          <div className="flex w-7 h-7 md:h-9 md:w-9 items-center justify-center rounded-full bg-green-600 text-white">
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="flex-1 text-sm text-neutral-500">{user ? 'Share an update…' : 'Sign in to share an update…'}</div>
@@ -199,7 +199,7 @@ function ActivityHubInner() {
               className="group flex shrink-0 flex-col items-center gap-1.5 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
             >
               <span
-                className={`flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${
+                className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full transition-all duration-200 group-hover:scale-105 sm:h-14 sm:w-14 ${
                   isActive ? 'shadow-md ring-2 ring-green-500 ring-offset-2' : 'group-hover:shadow-sm'
                 } ${f.tone}`}
               >
@@ -243,10 +243,10 @@ function ActivityHubInner() {
       {/* Floating compose button */}
       <button
         onClick={() => { if (requireAuth('post')) setComposerOpen(true) }}
-        className="fixed bottom-36 right-4 md:right-6 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-green-700 text-white shadow-lg ring-4 ring-white hover:bg-green-800 md:bottom-24"
+        className="fixed bottom-36 right-4 md:right-6 z-40 inline-flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-green-700 text-white shadow-lg ring-4 ring-white hover:bg-green-800 md:bottom-28"
         title={user ? 'Create post' : 'Sign in to post'}
       >
-        <Plus className="h-6 w-6" />
+        <Plus className="h-5 w-5 md:h-6 md:w-6" />
       </button>
 
       {composerOpen && user && (
