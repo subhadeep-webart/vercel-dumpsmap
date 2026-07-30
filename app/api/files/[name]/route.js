@@ -31,7 +31,9 @@ const MIME_BY_EXT = {
   '.mov':  'video/quicktime',
 }
 
-export async function GET(_request, { params }) {
+export async function GET(_request, context) {
+  // Next 15: route context `params` is now a Promise and must be awaited.
+  const params = await context.params
   const raw = params?.name || ''
   // Hard sanitize: only basename, no path traversal
   const safe = nodePath.basename(raw)

@@ -52,7 +52,7 @@ export default function SiteHeader({
   // V1 nav + Marketplace revival (July 2026). 6-item public nav.
   const primaryNav = [
     { key: 'facilities',  label: 'Facilities',  onClick: () => router.push('/facilities'),  match: 'facilities' },
-    { key: 'community',   label: 'Community',   onClick: () => router.push('/community'),   match: 'community' },
+    // { key: 'community',   label: 'Community',   onClick: () => router.push('/community'),   match: 'community' },
     { key: 'marketplace', label: 'Marketplace', onClick: () => router.push('/marketplace'), match: 'marketplace' },
     { key: 'business',    label: 'Business',    onClick: () => window.open('/business', '_blank', 'noopener,noreferrer'), match: 'business' },
     { key: 'donate',      label: 'Donate',      onClick: () => router.push('/donate'),      match: 'donate' },

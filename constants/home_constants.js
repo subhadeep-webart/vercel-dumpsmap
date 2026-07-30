@@ -25,7 +25,7 @@ export const FEATURES = [
   { icon: MapPin,         color: 'emerald', title: 'Find Facilities', desc: 'Search nearby recycling, donation, buy-back, and waste facilities.' },
   { icon: Activity,       color: 'orange',  title: 'Live Updates',    desc: 'Check wait times, closures, prices, and more from the community.' },
   { icon: CircleDollarSign,     color: 'emerald', title: 'Earn Cash Back',  desc: 'Upload receipts from participating locations and earn rewards.' },
-  { icon: Users,          color: 'sky',     title: 'Community',       desc: 'Share updates, ask questions, and connect with other members.' },
+  // { icon: Users,          color: 'sky',     title: 'Community',       desc: 'Share updates, ask questions, and connect with other members.' },
   { icon: HeartHandshake, color: 'rose',    title: 'Make an Impact',  desc: 'Recycle more. Donate more. Keep our community clean and green.' },
 ]
 
@@ -56,7 +56,7 @@ export const HOME_HOW_IT_WORKS = [
 // ── Footer link columns ──────────────────────────────────────────────────
 export const FOOTER_EXPLORE_LINKS = [
   { href: '/facilities',   label: 'Facilities' },
-  { href: '/community',    label: 'Community' },
+  // { href: '/community',    label: 'Community' },
   { href: '/activity-hub', label: 'Activity Hub' },
   { href: '/business',     label: 'For Business' },
 ]

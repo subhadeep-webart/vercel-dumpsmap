@@ -1,24 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import BusinessHeroVideo from '@/components/business/BusinessHeroVideo'
+import { useBusinessVideo } from '@/lib/useBusinessVideo'
 import { HERO_BENEFITS } from '@/constants/business_constants'
 import { ArrowRight, TrendingUp, Star, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react'
 
 export default function BusinessHero({ onCtaClick }) {
-  const [video, setVideo] = useState(null)
-
-  // Pull the CMS-managed "How it works" video (public, unauthenticated).
-  useEffect(() => {
-    fetch('/api/platform-settings/public')
-      .then((r) => r.json())
-      .then((j) => setVideo(j.settings?.businessVideo || null))
-      .catch(() => {})
-  }, [])
-
-  const showVideo = !!(video?.enabled && video?.videoUrl)
+  const { video, showVideo } = useBusinessVideo()
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/60 via-white to-white">
@@ -50,7 +40,7 @@ export default function BusinessHero({ onCtaClick }) {
           </div>
         </div>
 
-        {/* Right: CMS "how it works" video, or the default partner card mock */}
+        {/* Right: CMS "Request a Demo" video, or the default partner card mock */}
         <div className="relative">
           {showVideo ? (
             <BusinessHeroVideo video={video} />

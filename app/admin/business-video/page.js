@@ -11,7 +11,7 @@ import { toast } from 'sonner'
 import { PlayCircle, Video } from 'lucide-react'
 import MediaUploader from '@/components/MediaUploader'
 
-// CMS: manages ONLY the "How it works" video shown in the Business page banner.
+// CMS: manages ONLY the "Request a Demo" video shown in the Business page banner.
 // Backed by the platform_settings singleton (businessVideo key).
 export default function AdminBusinessVideo() {
   const { authFetch } = useAdmin()
@@ -46,7 +46,7 @@ export default function AdminBusinessVideo() {
           <Video className="h-6 w-6 text-emerald-600" /> Business Page Video
         </h1>
         <p className="text-sm text-neutral-500">
-          The “How it works” video shown in the banner of the public <span className="font-medium">Business</span> page.
+          The “Request a Demo” video shown in the banner of the public <span className="font-medium">Business</span> page.
           Upload a video file or paste a YouTube / Vimeo / MP4 link.
         </p>
       </div>

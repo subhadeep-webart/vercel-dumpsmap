@@ -14,7 +14,7 @@
 export const PRIMARY_NAV = [
   { key: 'facilities',  href: '/facilities',    label: 'Facilities' },
   { key: 'feed',        href: '/activity-hub',  label: 'Activity Hub' },
-  { key: 'community',   href: '/community',     label: 'Community' },
+  // { key: 'community',   href: '/community',     label: 'Community' },
   { key: 'marketplace', href: '/marketplace',   label: 'Marketplace' },
   { key: 'business',    href: '/business',      label: 'For Business' },
 ]
@@ -45,7 +45,7 @@ export const HEADER_CONFIG = {
       items: [
         { icon: 'MapPin',      label: 'Facilities',   href: '/facilities',   tint: 'emerald', activeKey: 'facilities' },
         { icon: 'Activity',    label: 'Activity Hub', href: '/activity-hub', tint: 'orange',  activeKey: 'feed' },
-        { icon: 'Users',       label: 'Community',    href: '/community',    tint: 'sky',     activeKey: 'community' },
+        // { icon: 'Users',       label: 'Community',    href: '/community',    tint: 'sky',     activeKey: 'community' },
         { icon: 'ShoppingBag', label: 'Marketplace',  href: '/marketplace',  tint: 'amber',   activeKey: 'marketplace' },
       ],
     },

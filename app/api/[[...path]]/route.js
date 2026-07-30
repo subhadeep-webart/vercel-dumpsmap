@@ -78,9 +78,16 @@ async function loadSocalSeed() { return loadSeed('socal', 'calrecycle-socal.json
 async function loadPacificNorthwestSeed() { return loadSeed('pacific-northwest', 'pacific-northwest.json') }
 async function loadNevadaSeed() { return loadSeed('nevada', 'nevada.json') }
 
-// MongoDB connection
-let client
-let db
+// MongoDB connection.
+//
+// Cached on globalThis so the client SURVIVES Next.js dev hot-reloads. Without
+// this, every edit re-evaluates the module, leaks the previous MongoClient, and
+// eventually one of those orphaned clients closes its topology — after which any
+// module still holding that reference throws `MongoTopologyClosedError:
+// Topology is closed` on the next query (seen at login → requireStaff).
+const globalForMongo = globalThis
+let client = globalForMongo.__dmClient || null
+let db = globalForMongo.__dmDb || null
 
 // ensureSeed is a one-time bootstrap/migration (loads every facility into
 // memory, runs user backfills, and imports four regional seed files with a
@@ -101,12 +108,39 @@ const SEED_VERSION = 1
 let seedChecked = false      // this process already resolved the seed decision
 let seedPromise = null       // in-flight background seed, if any
 
+// True when the cached client's topology is closed/dead and can no longer serve
+// queries. The driver exposes topology state privately, so we probe defensively
+// and fall back to treating an errored/absent topology as "not connected".
+function isClientAlive(c) {
+  if (!c) return false
+  try {
+    const topology = c.topology
+    if (!topology) return false                 // never connected
+    if (typeof topology.isConnected === 'function') return topology.isConnected()
+    // Newer drivers expose an `s.state` string; anything but 'closed' is usable.
+    return topology.s?.state !== 'closed'
+  } catch {
+    return false
+  }
+}
+
 async function connectToMongo() {
-  if (!client) {
+  // Reconnect if we have no client OR the cached client's topology has closed
+  // (idle timeout, network blip, or a hot-reload-orphaned client). Reusing a
+  // closed client is exactly what throws `Topology is closed`.
+  if (!isClientAlive(client)) {
+    // Best-effort close of any dead client so we don't leak sockets.
+    if (client) { try { await client.close() } catch {} }
     client = new MongoClient(process.env.MONGO_URL)
     await client.connect()
+    db = client.db(process.env.DB_NAME)
+    globalForMongo.__dmClient = client
+    globalForMongo.__dmDb = db
   }
-  if (!db) db = client.db(process.env.DB_NAME)
+  if (!db) {
+    db = client.db(process.env.DB_NAME)
+    globalForMongo.__dmDb = db
+  }
 
   if (!seedChecked) {
     seedChecked = true
@@ -851,8 +885,9 @@ export async function OPTIONS() {
   return handleCORS(new NextResponse(null, { status: 200 }))
 }
 
-async function handleRoute(request, { params }) {
-  const { path = [] } = params
+async function handleRoute(request, context) {
+  // Next 15: route context `params` is now a Promise and must be awaited.
+  const { path = [] } = await context.params
   const route = `/${path.join('/')}`
   const method = request.method
 
