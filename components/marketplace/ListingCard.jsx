@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { BadgeCheck, Clock, Eye, Heart, MapPin } from 'lucide-react'
+import { BadgeCheck, Clock, Heart, MapPin } from 'lucide-react'
 import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
 import SafeImage from '@/components/SafeImage'
 import {
@@ -21,7 +21,7 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
     && l.itemStatus !== 'sold' && l.itemStatus !== 'claimed'
   return (
     <Card
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border-neutral-200/80 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-neutral-300 hover:shadow-xl"
+      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-neutral-200/70 bg-white shadow-sm ring-1 ring-transparent transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-xl hover:ring-brand-200"
       onClick={onClick}
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-neutral-100">
@@ -44,12 +44,12 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
             overlap: the left column truncates before it reaches the heart. */}
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
           <div className="flex min-w-0 flex-col items-start gap-1">
-            <span className={`max-w-full truncate rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-sm ${statusBadgeStyle(l.itemStatus)}`}>
+            <span className={`max-w-full truncate rounded-full px-2 py-[3px] text-[9px] font-semibold uppercase leading-none tracking-wide shadow-sm ${statusBadgeStyle(l.itemStatus)}`}>
               {statusLabel(l.itemStatus)}
             </span>
             {showLastChance && (
-              <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-black/75 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm backdrop-blur">
-                <Clock className="h-3 w-3 shrink-0" /> {l.leavingInMinutes} min left
+              <span className="inline-flex max-w-full items-center gap-1 truncate rounded-full bg-black/75 px-2 py-[3px] text-[9px] font-semibold leading-none text-white shadow-sm backdrop-blur">
+                <Clock className="h-2.5 w-2.5 shrink-0" /> {l.leavingInMinutes} min left
               </span>
             )}
           </div>
@@ -66,16 +66,9 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
         {/* PRICE — pinned to the bottom-left of the photo, out of the way of
             the top badges. Bottom scrim keeps it readable over the image. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
-        <span className={`absolute bottom-2.5 left-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-lg px-2.5 py-1 text-sm font-black shadow-md backdrop-blur ${priceIsFree ? 'bg-emerald-500 text-white' : 'bg-white/95 text-neutral-900'}`}>
+        <span className={`absolute bottom-2.5 left-2.5 max-w-[calc(100%-1.25rem)] truncate rounded-lg px-2.5 py-1 text-[13px] font-bold leading-none shadow-md backdrop-blur ${priceIsFree ? 'bg-emerald-500 text-white' : 'bg-white/95 text-neutral-900'}`}>
           {priceLabel(l)}
         </span>
-
-        {/* Quick View hover overlay */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end p-2.5 opacity-0 transition group-hover:opacity-100">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg backdrop-blur">
-            <Eye className="h-3 w-3" /> Quick View
-          </span>
-        </div>
       </div>
 
       <CardContent className="flex flex-1 flex-col gap-1.5 p-3.5">
@@ -96,8 +89,8 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
               <span className="truncate text-xs font-medium text-neutral-700">{l.seller.name}</span>
             </div>
             {l.seller.badge && (
-              <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold ${sellerBadgeStyle(l.seller.badge)}`}>
-                <BadgeCheck className="mr-0.5 inline h-3 w-3" />{l.seller.badge.replace('Verified ', '')}
+              <span className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-[3px] text-[9px] font-medium leading-none ${sellerBadgeStyle(l.seller.badge)}`}>
+                <BadgeCheck className="h-2.5 w-2.5" />{l.seller.badge.replace('Verified ', '')}
               </span>
             )}
           </div>

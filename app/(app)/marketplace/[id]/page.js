@@ -39,6 +39,9 @@ export default function MarketplaceListingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [imgIdx, setImgIdx] = useState(0)
+  // Wishlist/save state — mirrors listing.isSaved and toggles optimistically.
+  const [saved, setSaved] = useState(false)
+  const [savingBookmark, setSavingBookmark] = useState(false)
   // Per-photo failure tracking so we can swap a broken <img> for a clean
   // <CategoryPlaceholder /> instead of showing a broken icon.
   const [imgFailed, setImgFailed] = useState({})
@@ -62,18 +65,32 @@ export default function MarketplaceListingDetailPage() {
       const r = await fetch(`/api/marketplace/${id}`, { headers: authHeaders() })
       if (!r.ok) { setErr((await r.json()).error || 'Not found'); return }
       const j = await r.json()
-      setListing(j.listing || j)
+      const data = j.listing || j
+      setListing(data)
+      setSaved(!!data.isSaved)
     } finally { setLoading(false) }
   }
   useEffect(() => { if (id) load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id])
 
   const save = async () => {
     if (!requireAuth('save')) return
+    if (savingBookmark) return
+    // Optimistic toggle so the icon fills/empties instantly.
+    const prev = saved
+    setSaved(!prev)
+    setSavingBookmark(true)
     try {
       const r = await fetch(`/api/marketplace/${id}/save`, { method: 'POST', headers: authHeaders() })
       const j = await r.json()
-      toast.success(j.saved ? 'Saved' : 'Unsaved')
-    } catch {}
+      if (!r.ok) throw new Error(j.error || 'Failed')
+      setSaved(!!j.saved)
+      toast.success(j.saved ? 'Saved to your list' : 'Removed from your list')
+    } catch (e) {
+      setSaved(prev) // revert on failure
+      toast.error('Could not update saved list')
+    } finally {
+      setSavingBookmark(false)
+    }
   }
 
   const message = () => {
@@ -189,12 +206,15 @@ export default function MarketplaceListingDetailPage() {
       title={isFree ? 'Free item' : 'Marketplace'}
       back="/marketplace"
       right={<ReportButton kind="marketplace_listing" targetId={listing.id} variant="inline" label="" />}
-      bodyClassName="!pb-28"
+      bodyClassName="!pb-6"
     >
-      <div className="space-y-3 p-3">
+      <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-stretch lg:gap-5 lg:p-5">
+        {/* Left column — image gallery. On desktop it stretches to match the
+            height of the right-hand panel column. */}
+        <div className="flex flex-col gap-3">
         {photos.length > 0 ? (
-          <Card className="overflow-hidden">
-            <div className="aspect-[4/3] w-full bg-neutral-100">
+          <Card className="flex flex-1 flex-col overflow-hidden border-0 shadow-sm ring-1 ring-neutral-200/70">
+            <div className="aspect-[4/3] w-full flex-1 bg-neutral-100 lg:aspect-auto">
               {imgFailed[imgIdx] ? (
                 <CategoryPlaceholder category={listing.category} size="lg" />
               ) : (
@@ -226,18 +246,22 @@ export default function MarketplaceListingDetailPage() {
             )}
           </Card>
         ) : (
-          <Card className="overflow-hidden">
-            <div className="aspect-[4/3] w-full">
+          <Card className="flex flex-1 flex-col overflow-hidden border-0 shadow-sm ring-1 ring-neutral-200/70">
+            <div className="aspect-[4/3] w-full flex-1 lg:aspect-auto">
               <CategoryPlaceholder category={listing.category} size="lg" />
             </div>
           </Card>
         )}
+        </div>
 
-        <Card>
-          <CardContent className="space-y-2 p-3">
-            <div className="flex items-start justify-between gap-2">
-              <h1 className="text-base font-extrabold leading-snug text-neutral-900">{listing.title}</h1>
-              <div className={`shrink-0 rounded-md px-2 py-1 text-sm font-bold ${isFree ? 'bg-brand-100 text-brand-800' : 'bg-neutral-900 text-white'}`}>{priceLabel}</div>
+        {/* Right column — title, details, reservation state, seller actions,
+            safety notice, and the primary buy/message action. */}
+        <div className="space-y-3">
+        <Card className="border-0 shadow-sm ring-1 ring-neutral-200/70">
+          <CardContent className="space-y-2.5 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-xl font-bold leading-tight tracking-tight text-neutral-900 lg:text-2xl">{listing.title}</h1>
+              <div className={`shrink-0 rounded-lg px-3 py-1.5 text-base font-bold tracking-tight ${isFree ? 'bg-brand-100 text-brand-700' : 'bg-neutral-900 text-white'}`}>{priceLabel}</div>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {listing.itemStatus && listing.itemStatus !== 'available' && (
@@ -253,36 +277,36 @@ export default function MarketplaceListingDetailPage() {
               {listing.leavingInMinutes != null && listing.leavingInMinutes > 0 && (
                 <Badge className="bg-black text-white"><Clock className="mr-1 h-3 w-3" />Leaving in {listing.leavingInMinutes} min</Badge>
               )}
-              {listing.condition && <Badge variant="outline" className="text-[10px]">{listing.condition.replace('_', ' ')}</Badge>}
-              {listing.category && <Badge variant="outline" className="text-[10px]">{listing.category}</Badge>}
+              {listing.condition && <Badge variant="outline" className="border-neutral-200 text-[11px] font-medium capitalize text-neutral-600">{listing.condition.replace('_', ' ')}</Badge>}
+              {listing.category && <Badge variant="outline" className="border-neutral-200 text-[11px] font-medium capitalize text-neutral-600">{listing.category}</Badge>}
               {listing.sold && <Badge className="bg-neutral-200 text-neutral-700">Sold</Badge>}
             </div>
-            {listing.description && <p className="whitespace-pre-wrap text-sm text-neutral-800">{listing.description}</p>}
+            {listing.description && <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">{listing.description}</p>}
             {(listing.location || listing.city) && (
-              <div className="flex items-start gap-1 text-[11px] text-neutral-600">
-                <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
+              <div className="flex items-start gap-1.5 text-xs text-neutral-600">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
                 <span>
                   {listing.addressHidden
-                    ? <>{[listing.city, listing.state].filter(Boolean).join(', ') || 'Location hidden'} · <span className="font-semibold text-amber-700">exact address shared after reservation</span></>
+                    ? <>{[listing.city, listing.state].filter(Boolean).join(', ') || 'Location hidden'} · <span className="font-semibold text-amber-600">exact address shared after reservation</span></>
                     : (listing.location || [listing.city, listing.state, listing.zip].filter(Boolean).join(', '))
                   }
                 </span>
               </div>
             )}
             {listing.pickupWindow && (
-              <div className="text-[11px] text-neutral-700"><b>Pickup window:</b> {listing.pickupWindow}</div>
+              <div className="text-xs text-neutral-600"><span className="font-semibold text-neutral-700">Pickup window:</span> {listing.pickupWindow}</div>
             )}
-            <header className="flex items-center gap-2 border-t border-neutral-100 pt-2">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[11px] font-bold text-white">
+            <header className="mt-1 flex items-center gap-2.5 border-t border-neutral-100 pt-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white shadow-sm">
                 {(listing.seller?.name || '?')[0].toUpperCase()}
               </span>
-              <div className="min-w-0 flex-1 text-xs">
-                <div className="flex items-center gap-1 font-bold">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 text-sm font-semibold text-neutral-900">
                   <span className="truncate">{listing.seller?.name || 'Seller'}</span>
-                  {(listing.seller?.isVerified || listing.seller?.verificationLevel?.startsWith?.('verified')) && <BadgeCheck className="h-3 w-3 text-brand-600" />}
+                  {(listing.seller?.isVerified || listing.seller?.verificationLevel?.startsWith?.('verified')) && <BadgeCheck className="h-3.5 w-3.5 text-brand-600" />}
                 </div>
-                {listing.seller?.badge && <div className="text-[10px] text-brand-700">{listing.seller.badge}</div>}
-                <div className="text-[10px] text-neutral-500">{timeAgo(listing.createdAt)}</div>
+                {listing.seller?.badge && <div className="text-[11px] font-medium text-brand-600">{listing.seller.badge}</div>}
+                <div className="text-[11px] text-neutral-400">{timeAgo(listing.createdAt)}</div>
               </div>
             </header>
           </CardContent>
@@ -290,11 +314,11 @@ export default function MarketplaceListingDetailPage() {
 
         {/* Active reservation bar */}
         {isReserver && (
-          <Card className="border-amber-300 bg-amber-50">
-            <CardContent className="space-y-2 p-3 text-sm">
+          <Card className="border-0 bg-amber-50 shadow-sm ring-1 ring-amber-300">
+            <CardContent className="space-y-2 p-4 text-sm">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 font-bold text-amber-900"><Timer className="h-4 w-4" /> You have this reserved</span>
-                <span className="rounded-md bg-amber-900 px-2 py-0.5 font-mono text-white">{mmss(myMsLeft)}</span>
+                <span className="rounded-md bg-amber-900 px-2.5 py-1 font-mono text-base font-bold tabular-nums text-white">{mmss(myMsLeft)}</span>
               </div>
               <p className="text-xs text-amber-800">First come, first served — coordinate pickup with the seller now. The exact pickup address has been revealed below.</p>
               {!listing.addressHidden && (listing.location || listing.zip) && (
@@ -312,8 +336,8 @@ export default function MarketplaceListingDetailPage() {
         )}
 
         {someoneElseReservation && !isOwner && (
-          <Card className="border-neutral-300 bg-neutral-50">
-            <CardContent className="p-3 text-xs text-neutral-700">
+          <Card className="border-0 bg-neutral-50 shadow-sm ring-1 ring-neutral-200">
+            <CardContent className="space-y-1 p-3 text-xs text-neutral-600">
               <span className="inline-flex items-center gap-1 font-semibold"><Timer className="h-3.5 w-3.5" /> Another buyer has this reserved right now.</span>
               <div>Their 15-minute hold expires {someoneElseReservation.expiresAt ? new Date(someoneElseReservation.expiresAt).toLocaleTimeString() : 'soon'}. Check back if they don't follow through.</div>
             </CardContent>
@@ -321,8 +345,8 @@ export default function MarketplaceListingDetailPage() {
         )}
 
         {isOwner && listing.reservation && (
-          <Card className="border-blue-300 bg-blue-50">
-            <CardContent className="space-y-2 p-3 text-sm">
+          <Card className="border-0 bg-blue-50 shadow-sm ring-1 ring-blue-200">
+            <CardContent className="space-y-2 p-4 text-sm">
               <div className="font-bold text-blue-900">Buyer reserved this item</div>
               <div className="text-xs text-blue-800">Coordinate pickup. When the buyer arrives, mark this complete:</div>
               <div className="flex flex-wrap gap-2">
@@ -377,28 +401,46 @@ export default function MarketplaceListingDetailPage() {
           )
         })()}
 
-        <Card>
-          <CardContent className="flex items-start gap-2 p-3 text-xs text-amber-900">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-            <span>Meet in safe public places when possible. Never share personal financial info. Verify items in person before any off-platform payment. <a href="#" onClick={(e) => { e.preventDefault(); }} className="font-semibold underline">Report this listing</a> if anything seems off.</span>
+        <Card className="border-0 shadow-sm ring-1 ring-neutral-200/70">
+          <CardContent className="flex items-start gap-2.5 p-3 text-xs leading-relaxed text-neutral-500">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+            <span>Meet in safe public places when possible. Never share personal financial info. Verify items in person before any off-platform payment. <a href="#" onClick={(e) => { e.preventDefault(); }} className="font-semibold text-brand-600 underline decoration-brand-300 underline-offset-2 hover:text-brand-700">Report this listing</a> if anything seems off.</span>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Sticky action bar */}
-      <div className="fixed inset-x-0 bottom-14 z-30 border-t border-neutral-200 bg-white/95 p-2 backdrop-blur" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}>
-        <div className="flex items-center gap-1.5">
-          <Button variant="outline" onClick={save} className="h-11 shrink-0 px-3" aria-label="Save"><Bookmark className="h-4 w-4" /></Button>
-          {!isOwner && itemActiveForBuyer && !someoneElseReservation && !isReserver && (
-            <Button onClick={() => setReserveOpen(true)} className="h-11 flex-1 bg-brand-600 hover:bg-brand-700">
-              <Timer className="mr-1 h-4 w-4" /> Reserve Item
+        {/* In-flow action panel — replaces the old always-floating fixed bar.
+            The primary buy/message action now sits at the natural end of the
+            page so it never overlaps content while scrolling. */}
+        {!isOwner && (
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              variant="outline"
+              onClick={save}
+              disabled={savingBookmark}
+              aria-pressed={saved}
+              className={`h-12 shrink-0 px-4 transition-colors ${saved ? 'border-brand-300 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:text-brand-700' : ''}`}
+              aria-label={saved ? 'Remove from saved' : 'Save'}
+            >
+              <Bookmark className={`h-5 w-5 transition-transform ${saved ? 'scale-110 fill-current' : ''}`} />
             </Button>
-          )}
-          {(!itemActiveForBuyer || someoneElseReservation || isReserver || isOwner) && (
-            <Button onClick={message} disabled={!user || isOwner} className="h-11 flex-1 bg-brand-600 hover:bg-brand-700 disabled:opacity-50">
-              <MessageCircle className="mr-1 h-4 w-4" /> {isFree ? 'Message for pickup' : 'Message seller'}
-            </Button>
-          )}
+            {itemActiveForBuyer && !someoneElseReservation && !isReserver ? (
+              <Button
+                onClick={() => setReserveOpen(true)}
+                className="h-12 flex-1 rounded-xl bg-brand-600 text-[15px] font-semibold shadow-sm hover:bg-brand-700"
+              >
+                <Timer className="mr-1.5 h-4 w-4" /> Reserve Item
+              </Button>
+            ) : (
+              <Button
+                onClick={message}
+                disabled={!user}
+                className="h-12 flex-1 rounded-xl bg-brand-600 text-[15px] font-semibold shadow-sm hover:bg-brand-700 disabled:opacity-50"
+              >
+                <MessageCircle className="mr-1.5 h-4 w-4" /> {isFree ? 'Message for pickup' : 'Message seller'}
+              </Button>
+            )}
+          </div>
+        )}
         </div>
       </div>
 

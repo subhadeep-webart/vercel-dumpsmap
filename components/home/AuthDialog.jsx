@@ -19,11 +19,13 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
   const [step, setStep] = useState(1) // 1: pick profiles, 2: credentials
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [name, setName] = useState('')
   const [selected, setSelected] = useState([]) // profile keys
   const [primary, setPrimary] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   // When the dialog re-opens, sync mode with the (possibly updated) prop so
   // deep links from /login vs /signup land in the right tab.
@@ -33,7 +35,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
 
   useEffect(() => {
     if (!open) {
-      setEmail(''); setPassword(''); setName(''); setSelected([]); setPrimary(''); setMode(initialMode); setStep(1); setShowPassword(false)
+      setEmail(''); setPassword(''); setConfirmPassword(''); setName(''); setSelected([]); setPrimary(''); setMode(initialMode); setStep(1); setShowPassword(false); setShowConfirmPassword(false)
     }
   }, [open, initialMode])
 
@@ -51,6 +53,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
 
   const submit = async () => {
     if (!email || !password) return toast.error('Email and password required')
+    if (mode === 'signup' && password !== confirmPassword) return toast.error('Passwords do not match')
     setBusy(true)
     try {
       const r = await fetch(`/api/auth/${mode}`, {
@@ -336,13 +339,49 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
 
               <div>
                 <Label className="text-xs">Password</Label>
-                <Input
-                  type="password"
-                  className="mt-1"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                />
+                <div className="relative mt-1">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    className="pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 transition hover:text-neutral-700"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Confirm Password</Label>
+                <div className="relative mt-1">
+                  <Input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="pr-10"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 transition hover:text-neutral-700"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="mt-1 text-[11px] text-red-600">Passwords do not match</p>
+                )}
               </div>
             </div>
           )}

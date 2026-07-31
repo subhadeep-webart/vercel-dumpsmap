@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -87,6 +87,10 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
   const [mobileListOpen, setMobileListOpen] = useState(false)
   const [mobileFeedOpen, setMobileFeedOpen] = useState(false)
   const [postFabOpen, setPostFabOpen] = useState(false)
+
+  // Mobile: the map is a 60dvh block near the top of a scrolling page, so
+  // tapping a card in the inline list below needs to scroll it back into view.
+  const mapSectionRef = useRef(null)
 
   // hot spots overlay
   const hotSpots = useHotSpots()
@@ -271,7 +275,11 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
     // be the viewport height MINUS that header (h-14 = 3.5rem), or its bottom —
     // and the mobile action bar — spills past the viewport. On the homepage the
     // shell owns the full viewport.
-    <ResponsiveMapLayout className={hideHeader ? '!h-[calc(100dvh-3.5rem)] !min-h-[calc(100dvh-3.5rem)]' : ''}>
+    //
+    // md:-scoped, because on mobile the shell is h-auto and the page scrolls —
+    // pinning it to the viewport there is exactly what made the content below
+    // the map unreachable.
+    <ResponsiveMapLayout className={hideHeader ? 'md:!h-[calc(100dvh-3.5rem)]' : ''}>
       {/* TOP — premium SiteHeader (consistent with Landing + HomeShell).
           Suppressed when hideHeader is set: the /facilities route already
           renders the shared (app)-section <AppHeader>, and rendering SiteHeader
@@ -292,7 +300,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
       )}
 
       {/* SECONDARY ROW — map toolbar (search, near me, jobs, live feed toggle) */}
-      <div className="z-20 flex flex-none items-center justify-between gap-2 border-b border-neutral-200 bg-white px-2 py-1.5 md:px-4">
+      <div className="z-20 flex flex-none flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-white px-2 py-1.5 md:flex-nowrap md:px-4">
         <button onClick={() => { try { localStorage.setItem('dm_view_mode', 'feed') } catch {}; onExit?.() }} className="flex shrink-0 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50" aria-label="Back to feed">
           <ArrowLeft className="h-3.5 w-3.5 text-neutral-500" />
           <span className="hidden sm:inline">Back to Feed</span>
@@ -301,7 +309,10 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
         <Badge variant="outline" className="hidden border-neutral-200 bg-neutral-50 text-[10px] font-bold uppercase tracking-wide text-neutral-500 md:inline-flex">
           Map View · optional
         </Badge>
-        <div className="flex min-w-0 flex-1 items-center gap-2 md:max-w-2xl">
+        {/* order-last + full basis drops the search onto its own row on mobile
+            (where the Back / action buttons already fill the first row); from md
+            up it returns to the single-row desktop layout. */}
+        <div className="order-last flex w-full min-w-0 basis-full items-center gap-2 md:order-none md:w-auto md:flex-1 md:basis-auto md:max-w-2xl">
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
             <Input
@@ -333,8 +344,13 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
         </div>
       </div>
 
-      {/* Body */}
-      <div className="relative flex flex-1 overflow-hidden">
+      {/* Body.
+          mobile — a normal block that grows with its content (map + inline
+            facility list), so the PAGE scrolls to reveal what's below the map.
+          md+   — the original flex row that fills the shell; min-h-0 is
+            required there because a flex-1 child defaults to min-height:auto,
+            which would stop the Leaflet canvas from shrinking. */}
+      <div className="relative block md:flex md:min-h-0 md:flex-1 md:overflow-hidden">
         {/* Left list panel — filters now live in a modal (opened via the button
             below); the panel shows the facility list + active-filter chips. */}
         <aside className="hidden w-[380px] flex-col border-r border-neutral-200 bg-white md:flex">
@@ -493,8 +509,10 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
           </ScrollArea>
         </aside>
 
-        {/* Map area */}
-        <div className="relative min-w-0 flex-1 p-2 md:p-4">
+        {/* Map area — a fixed 60dvh block on mobile (the page scrolls past it),
+            growing to fill the shell from md up. min-h-0/min-w-0 let the canvas
+            shrink to its column instead of forcing the shell to overflow. */}
+        <div ref={mapSectionRef} className="relative h-[60dvh] min-h-0 min-w-0 scroll-mt-14 p-2 md:h-auto md:flex-1 md:p-4">
           <MapErrorBoundary>
             <MapView
               facilities={facilities}
@@ -547,6 +565,145 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
           </div>
         </div>
 
+        {/* ---------------- MOBILE INLINE FACILITY LIST ----------------
+            Mobile-only. The map above is a fixed 60dvh block, so this list is
+            what the page scrolls to. On md+ the same content lives in the left
+            aside, so this is hidden there. Tapping a card centres the map on
+            that facility (and scrolls back up to it) rather than navigating —
+            a second tap on the highlighted card opens the full page. */}
+        {/* pb reserves room for the FIXED bottom action bar (~4rem + safe area),
+            which is out of flow and would otherwise cover the last card. */}
+        <div className="border-t border-neutral-200 bg-neutral-50 px-3 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-3 md:hidden">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-neutral-900">
+              Nearby facilities
+            </h2>
+            <Badge variant="outline" className="bg-white text-xs">
+              {facilities.length} results
+            </Badge>
+          </div>
+
+          {activeChips.length > 0 && (
+            <div className="mb-2">
+              <ActiveFilterChips chips={activeChips} onClearAll={resetFilters} />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {loading && facilities.length === 0 && (
+              <div className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
+                Loading facilities…
+              </div>
+            )}
+            {!loading && facilities.length === 0 && (
+              <div className="rounded-xl border border-neutral-200 bg-white p-4 text-sm text-neutral-500">
+                No facilities match your filters.
+              </div>
+            )}
+            {facilities.map((f) => {
+              const Icon = TYPE_ICONS[f.type] || MapPin
+              const isActive = selectedId === f.id
+              const photo = firstPhoto(f)
+              return (
+                <div
+                  key={f.id}
+                  onClick={() => {
+                    if (selectedId === f.id) {
+                      openDetails(f.id)
+                      return
+                    }
+                    setSelectedId(f.id)
+                    if (typeof f.lat === 'number' && typeof f.lng === 'number') {
+                      setMapCenter({ lat: f.lat, lng: f.lng })
+                    }
+                    // Bring the map back into view so the selected pin is
+                    // actually visible after tapping a card further down.
+                    mapSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }}
+                  className={`cursor-pointer rounded-xl border bg-white p-3 text-left transition active:bg-neutral-50 ${
+                    isActive ? 'border-brand-600 ring-2 ring-brand-600/30' : 'border-neutral-200'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md ${TYPE_COLORS[f.type] || 'bg-neutral-200'}`}>
+                      {photo ? (
+                        <img
+                          src={photo}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={(e) => { e.currentTarget.style.display = 'none' }}
+                        />
+                      ) : (
+                        <Icon className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className="truncate font-semibold">{f.name}</div>
+                        {f.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-brand-600" />}
+                      </div>
+                      <div className="mt-0.5 text-xs text-neutral-500">{f.type}</div>
+                      <div className="mt-1 line-clamp-1 text-xs text-neutral-600">{f.address}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                        <span className="flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          {f.rating?.toFixed?.(1) || '—'}
+                        </span>
+                        <span>· {f.reviewsCount || 0} reviews</span>
+                        {f.distanceKm != null && <span>· {f.distanceKm.toFixed(1)} km</span>}
+                        {f.activeAlertCount > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-700">
+                            <Flame className="h-3 w-3" /> {f.activeAlertCount} live
+                          </span>
+                        )}
+                      </div>
+                      <AlertChipRow facility={f} onClick={() => openDetails(f.id)} />
+                      {isActive && (
+                        <div className="mt-2.5 flex flex-wrap gap-1.5">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openDetails(f.id) }}
+                            className="min-w-0 flex-1 rounded-md border border-neutral-200 px-2 py-2 text-[11px] font-semibold text-neutral-700 active:bg-neutral-50"
+                          >
+                            View details
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setReportTarget(f) }}
+                            className="min-w-0 flex-1 rounded-md border border-orange-200 bg-orange-50 px-2 py-2 text-[11px] font-semibold text-orange-800 active:bg-orange-100"
+                          >
+                            <Activity className="mr-1 inline h-3 w-3" />
+                            Report
+                          </button>
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-md bg-brand-600 px-2 py-2 text-[11px] font-semibold text-white active:bg-brand-700"
+                          >
+                            <Navigation className="h-3 w-3" /> Go
+                          </a>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(f.id) }}
+                            className={`flex items-center justify-center rounded-md border px-2.5 py-2 text-[11px] font-semibold ${
+                              favoriteIds?.includes(f.id)
+                                ? 'border-rose-300 bg-rose-50 text-rose-700'
+                                : 'border-neutral-200 text-neutral-700 active:bg-neutral-50'
+                            }`}
+                            aria-label="Toggle favorite"
+                          >
+                            <Heart className={`h-3.5 w-3.5 ${favoriteIds?.includes(f.id) ? 'fill-rose-500 text-rose-500' : ''}`} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Live Feed sidebar (right) */}
         {feedOpen && (
           <aside className="hidden w-[340px] shrink-0 border-l border-neutral-200 bg-white lg:flex lg:flex-col">
@@ -572,8 +729,12 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
         />
       </div>
 
-      {/* ---------------- MOBILE BOTTOM ACTION BAR ---------------- */}
-      <div className="z-30 grid flex-none grid-cols-5 items-stretch gap-1 border-t border-neutral-200 bg-white px-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 md:hidden">
+      {/* ---------------- MOBILE BOTTOM ACTION BAR ----------------
+          `fixed` so it's pinned to the viewport bottom at every scroll
+          position. Being fixed takes it out of flow, so the scrolling content
+          above reserves space for it via the pb-[…] on the inline facility
+          list — otherwise the last card sits underneath the bar. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 grid flex-none grid-cols-5 items-stretch gap-1 border-t border-neutral-200 bg-white px-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 shadow-[0_-1px_3px_rgba(0,0,0,0.06)] md:hidden">
         <button
           onClick={() => setMobileListOpen(true)}
           className="flex flex-col items-center justify-center gap-0.5 rounded-md py-1.5 text-[10px] font-semibold text-neutral-700 active:bg-neutral-100"

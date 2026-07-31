@@ -165,10 +165,21 @@ export async function fetchWithTimeout(url, { timeoutMs = 7000, ...opts } = {}) 
 
 // ---------- ResponsiveMapLayout: standardises full-height, no-overflow shell ----------
 // Use as the outermost wrapper of the map screen so children can use flex-1 safely.
+// Height is responsive by design:
+//   • mobile (<md) — `h-auto`, so the shell grows to fit its content and the
+//     PAGE scrolls. The map itself is a fixed 60dvh block inside; everything
+//     below it (action bar, facility list) is reached by normal page scrolling.
+//     Freezing the shell to the viewport here is what previously made the
+//     content below the map unreachable — the Leaflet canvas ate every touch.
+//   • md+ — `h-[100dvh]`, the original app-like shell that owns the viewport
+//     and manages its own internal scroll panes. Unchanged.
+// `min-h-0` avoids the flex `min-height:auto` floor when embedded under a
+// header (/facilities passes md:h-[calc(100dvh-3.5rem)]).
 export function ResponsiveMapLayout({ children, className = '' }) {
   return (
     <div
-      className={`flex h-[100dvh] min-h-[100dvh] w-full max-w-[100vw] flex-col overflow-x-hidden bg-white ${className}`}
+      data-map-shell-root
+      className={`flex h-auto min-h-0 w-full max-w-[100vw] flex-col overflow-x-hidden bg-white md:h-[100dvh] md:overflow-hidden ${className}`}
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {children}

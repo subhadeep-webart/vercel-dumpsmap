@@ -101,6 +101,7 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
         <button
           onClick={handlePost}
           aria-label="Quick post"
+          data-mobile-nav-fab
           className="fixed bottom-24 right-4 z-40 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 transition active:scale-95 hover:bg-emerald-700 md:hidden"
         >
           <Plus className="h-5 w-5" />
@@ -110,6 +111,7 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
       <nav
         role="navigation"
         aria-label="Mobile navigation"
+        data-mobile-nav
         className="sticky bottom-0 z-30 flex h-14 flex-none items-stretch border-t border-neutral-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85 md:hidden"
         style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0px)' }}
       >

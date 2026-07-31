@@ -84,22 +84,75 @@ html[data-view-mode="field"][data-is-mobile="1"] :not([data-field-keep-grid]) > 
    producing a second (page-level) scrollbar on top of the map's own.
    While the map is mounted it sets data-map-shell="1" on <html>, so we
    pin the document to the viewport and hide the global footer.
+
+   MOBILE (<768px) IS DELIBERATELY EXEMPT from this lock. There the map is a
+   fixed-height (60dvh) block in normal page flow and the document scrolls
+   past it to the facility list below. Locking the document on phones meant
+   the Leaflet canvas was the only element consuming touch, so everything
+   below the map was unreachable. Dragging ON the map still pans the map —
+   that is contained via `touch-action` on the canvas, not by freezing the
+   page. Hence every rule below is scoped to md+.
    ------------------------------------------------------------------ */
-html[data-map-shell="1"],
-html[data-map-shell="1"] body {
-  height: 100%;
-  overflow: hidden;
-}
-/* The shell and its children already size to 100dvh — drop the min-height
-   so the footer's height can't push the shell past the viewport. */
-html[data-map-shell="1"] .dm-app-shell {
-  min-height: 0;
-  height: 100%;
+@media (min-width: 768px) {
+  html[data-map-shell="1"],
+  html[data-map-shell="1"] body {
+    height: 100%;
+    overflow: hidden;
+  }
+  /* The shell and its children already size to 100dvh — drop the min-height
+     so the footer's height can't push the shell past the viewport. */
+  html[data-map-shell="1"] .dm-app-shell {
+    min-height: 0;
+    height: 100%;
+  }
 }
 /* AppFooter is redundant here: the map fills the viewport and has its own
    mobile action bar. Hiding it removes the overflow that caused scrollbar #2. */
 html[data-map-shell="1"] .dm-app-shell > footer {
   display: none;
+}
+/* Same for the global mobile bottom nav (<GlobalMobileNav /> → MobileBottomNav,
+   a `sticky bottom-0 h-14 md:hidden` bar). MapPage renders its OWN 5-button
+   mobile action bar, so on phones the two stack: the shell is sized
+   100dvh - header, the global nav adds another 3.5rem, and the map's action bar
+   gets pushed below the fold. Because <html>/<body> are overflow:hidden here,
+   there is no way to scroll down to it — the Leaflet canvas is the only thing
+   that responds to touch. Hiding the redundant global nav is what makes the map
+   view usable on mobile. */
+html[data-map-shell="1"] [data-mobile-nav],
+html[data-map-shell="1"] [data-mobile-nav-fab] {
+  display: none;
+}
+/* The interior (app)-group wrapper also carries min-h-[100dvh]; combined with
+   the sticky AppHeader that makes the section taller than the viewport while
+   the map owns the screen. Pin it like .dm-app-shell above — md+ only, so the
+   section stays free to grow (and scroll) on mobile. */
+@media (min-width: 768px) {
+  html[data-map-shell="1"] .dm-app-section {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  /* …and its flex-1 content wrapper needs min-height:0, otherwise the default
+     min-height:auto lets the map shell inside it overflow rather than fit. */
+  html[data-map-shell="1"] .dm-app-section > div {
+    min-height: 0;
+  }
+  /* Belt-and-braces: clamp the shell so a future chrome change can't
+     reintroduce the un-scrollable overflow. */
+  html[data-map-shell="1"] .dm-app-section [data-map-shell-root] {
+    max-height: 100%;
+  }
+}
+
+/* Leaflet gesture containment (mobile). `touch-action: none` lets Leaflet own
+   pan/pinch inside the canvas, and `overscroll-behavior: contain` stops that
+   gesture from chaining to the document — so a drag ON the map pans the map
+   and a drag anywhere else scrolls the page. This is what replaces the old
+   "freeze the whole document" approach. */
+.dm-map-canvas {
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 /* ------------------------------------------------------------------

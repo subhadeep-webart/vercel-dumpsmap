@@ -79,32 +79,39 @@ export default function ReportButton({ kind, targetId, targetUserId, className =
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        {/* Flex column with capped height so the header stays fixed and only the
+            body scrolls. Override the primitive's own padding/overflow (p-6,
+            overflow-y-auto) which would otherwise scroll the whole modal. */}
+        <DialogContent className="flex max-h-[90dvh] max-w-md flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="flex-none border-b border-neutral-200 px-6 py-4">
             <DialogTitle>Report this {kind}</DialogTitle>
             <DialogDescription className="text-xs">
               Our moderators review every report. Please don&apos;t submit duplicate reports.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={submit} className="space-y-3">
-            <div>
-              <Label className="text-sm">Reason</Label>
-              <div className="mt-1 grid grid-cols-1 gap-1.5">
-                {REASONS.map((r) => (
-                  <label key={r.value} className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${reason === r.value ? 'border-red-500 bg-red-50' : 'border-neutral-200 bg-white'}`}>
-                    <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="accent-red-600" />
-                    <span>{r.label}</span>
-                  </label>
-                ))}
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+              <div>
+                <Label className="text-sm">Reason</Label>
+                <div className="mt-1 grid grid-cols-1 gap-1.5">
+                  {REASONS.map((r) => (
+                    <label key={r.value} className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${reason === r.value ? 'border-red-500 bg-red-50' : 'border-neutral-200 bg-white'}`}>
+                      <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="accent-red-600" />
+                      <span>{r.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-sm">Details (optional)</Label>
+                <Textarea rows={3} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="What did you see? Provide context that will help moderation." />
               </div>
             </div>
-            <div>
-              <Label className="text-sm">Details (optional)</Label>
-              <Textarea rows={3} value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="What did you see? Provide context that will help moderation." />
+            <div className="flex-none border-t border-neutral-200 px-6 py-4">
+              <Button type="submit" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700">
+                {submitting ? 'Submitting…' : 'Submit report'}
+              </Button>
             </div>
-            <Button type="submit" disabled={submitting} className="w-full bg-red-600 hover:bg-red-700">
-              {submitting ? 'Submitting…' : 'Submit report'}
-            </Button>
           </form>
         </DialogContent>
       </Dialog>

@@ -2556,6 +2556,8 @@ async function handleRoute(request, context) {
       }
       const msgCount = await db.collection('marketplace_messages').countDocuments({ listingId: l.id })
       out.messageCount = msgCount
+      // Convenience: whether the viewer has this listing saved (wishlist state)
+      out.isSaved = !!viewer?.id && (l.savedByUserIds || []).includes(viewer.id)
       // Convenience: minutes until "leaving"
       if (l.leavingAt) {
         const ms = new Date(l.leavingAt).getTime() - Date.now()
