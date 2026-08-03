@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, MessageCircle, ShoppingBag, Briefcase, Users, Mail } from 'lucide-react'
 import DmThreadPanel from '@/components/messaging/DmThreadPanel'
-import { api } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 import { timeAgo } from '@/lib/community-categories'
 import { Volume2, VolumeX } from 'lucide-react'
 
@@ -50,10 +50,10 @@ export default function InboxPage() {
   const [selected, setSelected] = useState(null) // DM thread object
   const [loading, setLoading] = useState(true)
 
-  // Hydration-safe: defer localStorage read to client mount
+  // Hydration-safe: defer the login check to client mount
   useEffect(() => {
     setMounted(true)
-    setToken(typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null)
+    setToken(isLikelyLoggedIn())
   }, [])
 
   useEffect(() => {

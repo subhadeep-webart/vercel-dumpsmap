@@ -24,12 +24,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const STATUS_META = {
   live:        { label: 'Live',        cls: 'bg-emerald-100 text-emerald-800 ring-emerald-200', icon: Rocket },
   beta:        { label: 'Beta',        cls: 'bg-violet-100 text-violet-800 ring-violet-200',     icon: FlaskConical },
@@ -65,8 +59,8 @@ function FeatureControls() {
     setLoading(true)
     try {
       const [f, a] = await Promise.all([
-        fetch('/api/admin/feature-flags', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch('/api/admin/feature-flags/audit?limit=100', { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ entries: [] })),
+        fetch('/api/admin/feature-flags').then((r) => r.json()).catch(() => null),
+        fetch('/api/admin/feature-flags/audit?limit=100').then((r) => r.json()).catch(() => ({ entries: [] })),
       ])
       if (f?.flags) {
         setFlags(f.flags)
@@ -90,7 +84,7 @@ function FeatureControls() {
     try {
       const res = await fetch(`/api/admin/feature-flags/${key}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
       })
       const j = await res.json()

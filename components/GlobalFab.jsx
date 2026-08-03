@@ -22,12 +22,6 @@ import QuickCheckInModal from '@/components/QuickCheckInModal'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 // Soft-tinted pills: near-white surface with a light wash of the action's hue,
 // coloured text/icon, and a pale border. Keeps each action distinguishable
 // without the saturated fills, and sits comfortably next to the brand blue
@@ -131,7 +125,7 @@ function FacilityPicker({ open, onClose, onPick }) {
     ;(async () => {
       try {
         const url = `/api/facilities?limit=12${q ? `&search=${encodeURIComponent(q)}` : ''}`
-        const r = await fetch(url, { headers: authHeaders() })
+        const r = await fetch(url)
         const j = await r.json()
         if (!cancelled) setList(j?.facilities || [])
       } finally { if (!cancelled) setLoading(false) }

@@ -13,13 +13,12 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 export default function HomeBrandLink({ children, className = '', ariaLabel = null, fallbackHref = '/' }) {
   const [authed, setAuthed] = useState(false)
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && localStorage.getItem('dm_token')) setAuthed(true)
-    } catch {}
+    if (isLikelyLoggedIn()) setAuthed(true)
   }, [])
   const href = authed ? '/dashboard' : fallbackHref
   const label = ariaLabel || (authed ? 'DumpMaps dashboard' : 'DumpMaps home')

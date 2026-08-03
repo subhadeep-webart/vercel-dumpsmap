@@ -161,9 +161,7 @@ export default function MediaUploader({
         }
         const fd = new FormData()
         fd.append('file', file)
-        const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-        const headers = token ? { Authorization: `Bearer ${token}` } : {}
-        const resp = await fetch('/api/upload', { method: 'POST', headers, body: fd })
+        const resp = await fetch('/api/upload', { method: 'POST', body: fd })
         const j = await resp.json().catch(() => ({}))
         if (!resp.ok) throw new Error(j.error || `Upload failed (HTTP ${resp.status})`)
         const url = j.uploads?.[0]?.url

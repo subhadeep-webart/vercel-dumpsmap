@@ -19,12 +19,6 @@ import {
 const FUEL_LABEL = { empty: 'Empty', '1_4': '¼', '1_2': '½', '3_4': '¾', full: 'Full' }
 const LOAD_LABEL = { empty: 'Empty', half: 'Half full', full: 'Full' }
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 export default function VehicleInspectionsPage() {
   return (
     <ContractorToolsGate toolName="Vehicle Inspections">
@@ -43,8 +37,8 @@ function VehicleInspections() {
     setLoading(true)
     try {
       const [s, l] = await Promise.all([
-        fetch('/api/vehicle-inspections/stats', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch('/api/vehicle-inspections?limit=30', { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ inspections: [] })),
+        fetch('/api/vehicle-inspections/stats').then((r) => r.json()).catch(() => null),
+        fetch('/api/vehicle-inspections?limit=30').then((r) => r.json()).catch(() => ({ inspections: [] })),
       ])
       if (s && !s.error) setStats(s)
       setInspections(l.inspections || [])

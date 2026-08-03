@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import PhotoUploader, { toUrlList } from '@/components/PhotoUploader'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import FacilityPreviewCard from '@/components/home/FacilityPreviewCard'
 import { TypeIcon, StatusIcon } from '@/lib/facility-icons'
 import {
@@ -104,7 +105,7 @@ export default function SubmitFacilityDialog({ open, onOpenChange }) {
       const allTags = [...autoTags, ...customTags]
       const r = await fetch('/api/facilities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(typeof window !== 'undefined' && localStorage.getItem('dm_token') ? { Authorization: `Bearer ${localStorage.getItem('dm_token')}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name, type: config?.label || type, typeKey: type,
           address, phone, website, hours, notes,
@@ -117,7 +118,7 @@ export default function SubmitFacilityDialog({ open, onOpenChange }) {
           photos: toUrlList(photos),
           lastUpdated: new Date().toISOString(),
           submittedAt: new Date().toISOString(),
-          submittedBy: typeof window !== 'undefined' && localStorage.getItem('dm_token') ? 'user' : 'anon',
+          submittedBy: isLikelyLoggedIn() ? 'user' : 'anon',
           status: 'pending',
         }),
       })

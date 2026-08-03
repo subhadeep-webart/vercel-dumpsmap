@@ -16,12 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Loader2, Building2, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const ROLE_OPTIONS = [
   { value: 'vendor', label: 'Vendor', helper: 'Supplier of commercial goods, parts, or wholesale inventory.' },
   { value: 'facility_owner', label: 'Facility Owner', helper: 'Recycling, transfer, salvage, or material-yard owner/operator.' },
@@ -51,7 +45,7 @@ export default function CommercialAccessApplyDialog({ open, onClose, onApproved,
     try {
       const r = await fetch('/api/commercial-access/apply', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ requestedRole, companyName: companyName.trim(), website: website.trim(), phone: phone.trim(), businessDescription: businessDescription.trim() }),
       })
       const j = await r.json()

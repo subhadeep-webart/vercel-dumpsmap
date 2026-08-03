@@ -54,11 +54,6 @@ const EVENT_TYPES = [
   'Contractor Meetup',
 ]
 
-const authHeader = () => {
-  const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 // ---------- New Post Dialog ----------
 export function NewPostDialog({ open, onOpenChange, scope, facilityId, onPosted, defaultCategory = '' }) {
   const [title, setTitle] = useState('')
@@ -80,7 +75,7 @@ export function NewPostDialog({ open, onOpenChange, scope, facilityId, onPosted,
     try {
       const r = await fetch('/api/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scope, facilityId, title, body, category, eventDate, eventLocation }),
       })
       const j = await r.json()
@@ -208,7 +203,7 @@ function PostDetailDialog({ open, onOpenChange, postId, currentUser }) {
     if (!text || !currentUser) return
     const r = await fetch(`/api/posts/${postId}/comments`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: text }),
     })
     if (r.ok) { setText(''); load() }
@@ -267,7 +262,7 @@ export function FacilityBoard({ facilityId, currentUser }) {
 
   const upvote = async (id) => {
     if (!currentUser) return toast('Log in to upvote')
-    await fetch(`/api/posts/${id}/upvote`, { method: 'POST', headers: authHeader() })
+    await fetch(`/api/posts/${id}/upvote`, { method: 'POST' })
     load()
   }
 
@@ -306,7 +301,7 @@ function MessagesPane({ currentUser, openTarget }) {
   const [searchResults, setSearchResults] = useState([])
   const [newTo, setNewTo] = useState(null)
 
-  const loadThreads = () => fetch('/api/messages/threads', { headers: authHeader() }).then((r) => r.json()).then((j) => setThreads(j.threads || []))
+  const loadThreads = () => fetch('/api/messages/threads').then((r) => r.json()).then((j) => setThreads(j.threads || []))
 
   useEffect(() => { if (currentUser) loadThreads() }, [currentUser])
   useEffect(() => {
@@ -325,7 +320,7 @@ function MessagesPane({ currentUser, openTarget }) {
   const openThread = async (t) => {
     setActiveThread(t)
     setNewTo(null)
-    const r = await fetch(`/api/messages/thread/${t.threadId}`, { headers: authHeader() })
+    const r = await fetch(`/api/messages/thread/${t.threadId}`)
     const j = await r.json()
     setMessages(j.messages || [])
     loadThreads()
@@ -335,13 +330,13 @@ function MessagesPane({ currentUser, openTarget }) {
     if (!text) return
     const r = await fetch('/api/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeader() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ toUserId, body: text }),
     })
     if (r.ok) {
       setText('')
       // refresh thread list and open the (possibly new) thread
-      const j = await fetch('/api/messages/threads', { headers: authHeader() }).then((x) => x.json())
+      const j = await fetch('/api/messages/threads').then((x) => x.json())
       setThreads(j.threads || [])
       const pair = [currentUser.id, toUserId].sort().join('_')
       const found = (j.threads || []).find((t) => t.threadId === pair)
@@ -353,7 +348,7 @@ function MessagesPane({ currentUser, openTarget }) {
   const search = async (q) => {
     setSearchQuery(q)
     if (q.length < 2) { setSearchResults([]); return }
-    const r = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`, { headers: authHeader() })
+    const r = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`)
     const j = await r.json()
     setSearchResults(j.users || [])
   }
@@ -484,7 +479,7 @@ export function CommunityCenter({ open, onOpenChange, currentUser, initialTab = 
 
   const upvote = async (id) => {
     if (!currentUser) return toast('Log in to upvote')
-    await fetch(`/api/posts/${id}/upvote`, { method: 'POST', headers: authHeader() })
+    await fetch(`/api/posts/${id}/upvote`, { method: 'POST' })
     if (tab === 'community') loadCommunity(); else loadEvents()
   }
 
@@ -569,7 +564,7 @@ export function CommunityButton({ onOpen, user }) {
   const [unread, setUnread] = useState(0)
   useEffect(() => {
     if (!user) return
-    const load = () => fetch('/api/messages/threads', { headers: authHeader() }).then((r) => r.json()).then((j) => setUnread(j.unreadCount || 0))
+    const load = () => fetch('/api/messages/threads').then((r) => r.json()).then((j) => setUnread(j.unreadCount || 0))
     load()
     const t = setInterval(load, 20000)
     return () => clearInterval(t)

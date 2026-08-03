@@ -10,7 +10,11 @@ import { api } from '@/lib/api-client'
 
 const POLL_MS = 5000
 
-export default function DmThreadPanel({ threadId, token, currentUser, otherUser, autoFocus = false }) {
+// `token` is accepted for backward compat but unused — the session rides in the
+// httpOnly cookie. `loggedIn` (default true) is the login gate; callers that
+// know the auth state pass it, others fall back to "assume logged in" since the
+// server re-validates every /api call anyway.
+export default function DmThreadPanel({ threadId, token, loggedIn = true, currentUser, otherUser, autoFocus = false }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [body, setBody] = useState('')
@@ -19,7 +23,7 @@ export default function DmThreadPanel({ threadId, token, currentUser, otherUser,
   const scrollRef = useRef(null)
 
   const load = async () => {
-    if (!threadId || !token) return
+    if (!threadId || !loggedIn) return
     try {
       const j = await api.get(`/api/dm/threads/${threadId}/messages`)
       setMessages(j.messages || [])
@@ -47,7 +51,7 @@ export default function DmThreadPanel({ threadId, token, currentUser, otherUser,
 
   const send = async () => {
     const text = body.trim()
-    if (!text || !token || !threadId) return
+    if (!text || !loggedIn || !threadId) return
     setSending(true)
     try {
       const j = await api.post(`/api/dm/threads/${threadId}/messages`, { body: text })

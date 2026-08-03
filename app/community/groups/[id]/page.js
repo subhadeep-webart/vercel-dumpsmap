@@ -16,6 +16,7 @@ import { CATEGORY_BY_KEY, categoryColor, timeAgo, REACTION_TYPES } from '@/lib/c
 import { GroupCategoryIcon, CategoryIcon } from '@/lib/community-icons'
 import GroupChatPanel from '@/components/messaging/GroupChatPanel'
 import PageShell from '@/components/PageShell'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const GROUP_CATS = {
   haulers: { label: 'Haulers' }, cleanup: { label: 'Cleanup Crew' },
@@ -45,19 +46,18 @@ export default function GroupDetailPage() {
     if (t && ['feed', 'chat', 'members'].includes(t)) setTab(t)
   }, [])
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const loggedIn = isLikelyLoggedIn()
 
-  useEffect(() => { if (token) fetch('/api/auth/me', { headers }).then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [token])
+  useEffect(() => { if (loggedIn) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [loggedIn])
 
   const loadGroup = async () => {
-    const r = await fetch(`/api/community/groups/${id}`, { headers })
+    const r = await fetch(`/api/community/groups/${id}`)
     if (!r.ok) { setGroup('not_found'); return }
     const j = await r.json()
     setGroup(j.group)
   }
   const loadPosts = async () => {
-    const r = await fetch(`/api/community/groups/${id}/posts?limit=60`, { headers })
+    const r = await fetch(`/api/community/groups/${id}/posts?limit=60`)
     const j = await r.json()
     setPosts(j.posts || [])
   }
@@ -70,22 +70,22 @@ export default function GroupDetailPage() {
   useEffect(() => { if (tab === 'members' && id) loadMembers() }, [tab, id])
 
   const join = async () => {
-    if (!token) { toast.error('Log in'); return }
+    if (!loggedIn) { toast.error('Log in'); return }
     setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST', headers })
+    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST' })
     setBusy(false)
     if (r.ok) { toast.success('Joined group'); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
   }
   const leave = async () => {
     if (!confirm('Leave this group?')) return
     setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/leave`, { method: 'POST', headers })
+    const r = await fetch(`/api/community/groups/${group.id}/leave`, { method: 'POST' })
     setBusy(false)
     if (r.ok) { toast.success('Left group'); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
   }
   const kick = async (memberId) => {
     if (!confirm('Remove this member from the group?')) return
-    const r = await fetch(`/api/community/groups/${group.id}/members/${memberId}`, { method: 'DELETE', headers })
+    const r = await fetch(`/api/community/groups/${group.id}/members/${memberId}`, { method: 'DELETE' })
     if (r.ok) { toast.success('Removed'); loadMembers(); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
   }
 
@@ -126,7 +126,7 @@ export default function GroupDetailPage() {
             <div className="mt-4 flex flex-wrap gap-2">
               {!group.myRole && <Button onClick={join} disabled={busy} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>}
               {group.myRole === 'member' && <Button variant="outline" onClick={leave} disabled={busy}><LogOut className="mr-1 h-4 w-4" /> Leave</Button>}
-              {group.myRole && <Button onClick={() => { if (!token) { toast.error('Log in'); return } setComposeOpen(true) }} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Post to group</Button>}
+              {group.myRole && <Button onClick={() => { if (!loggedIn) { toast.error('Log in'); return } setComposeOpen(true) }} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Post to group</Button>}
               {(isOrganizer || isStaff) && <Button variant="outline" onClick={() => router.push(`/community/groups/${group.slug || group.id}/settings`)}><Settings className="mr-1 h-4 w-4" /> Settings</Button>}
               {isOrganizer && <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-800">{group.myRole === 'group_admin' ? <><Star className="h-3 w-3" /> Organizer</> : 'Owner'}</Badge>}
             </div>
@@ -165,7 +165,7 @@ export default function GroupDetailPage() {
           )}
           {tab === 'chat' && (
             group.myRole ? (
-              <GroupChatPanel groupId={group.id} token={token} currentUser={user} canPost={true} emptyHint={`Welcome to ${group.name}! Say hi.`} />
+              <GroupChatPanel groupId={group.id} token={loggedIn} currentUser={user} canPost={true} emptyHint={`Welcome to ${group.name}! Say hi.`} />
             ) : (
               <div className="rounded-lg border border-dashed border-neutral-300 bg-white p-8 text-center">
                 <MessageCircle className="mx-auto h-8 w-8 text-neutral-400" />
@@ -199,7 +199,7 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      <GroupComposeDialog open={composeOpen} onOpenChange={setComposeOpen} groupId={group.id} token={token} onPosted={loadPosts} />
+      <GroupComposeDialog open={composeOpen} onOpenChange={setComposeOpen} groupId={group.id} onPosted={loadPosts} />
     </PageShell>
   )
 }
@@ -227,7 +227,7 @@ function GroupPostCard({ post }) {
   )
 }
 
-function GroupComposeDialog({ open, onOpenChange, groupId, token, onPosted }) {
+function GroupComposeDialog({ open, onOpenChange, groupId, onPosted }) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -236,7 +236,7 @@ function GroupComposeDialog({ open, onOpenChange, groupId, token, onPosted }) {
     setSubmitting(true)
     const r = await fetch('/api/community/posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ category: 'general', title, body, groupId }),
     })
     const j = await r.json()

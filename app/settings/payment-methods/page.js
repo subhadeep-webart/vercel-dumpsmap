@@ -25,6 +25,7 @@ import {
   Plus, ShieldCheck, Star, Trash2, AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const CARD_BRAND_LABELS = {
   visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', discover: 'Discover',
@@ -34,11 +35,6 @@ const CARD_BRAND_LABELS = {
 function brandLabel(b) {
   if (!b) return 'Card'
   return CARD_BRAND_LABELS[String(b).toLowerCase()] || (b[0].toUpperCase() + b.slice(1))
-}
-
-function authHeaders() {
-  const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-  return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +73,7 @@ function CardForm({ clientSecret, setupIntentId, onSaved, onCancel }) {
       // Persist on our backend
       const res = await fetch('/api/users/me/payment-methods', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentMethodId: pmId, setupIntentId }),
       })
       const j = await res.json().catch(() => ({}))
@@ -209,14 +205,13 @@ export default function PaymentMethodsPage() {
   // Bootstrap: auth → stripe config → list
   useEffect(() => {
     let cancelled = false
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) {
+    if (!isLikelyLoggedIn()) {
       router.replace('/?login=1&returnTo=/settings/payment-methods')
       return
     }
     ;(async () => {
       try {
-        const meRes = await fetch('/api/auth/me', { headers: authHeaders() })
+        const meRes = await fetch('/api/auth/me')
         const meJ = await meRes.json().catch(() => ({}))
         if (!meJ?.user) {
           if (!cancelled) router.replace('/?login=1&returnTo=/settings/payment-methods')
@@ -235,7 +230,7 @@ export default function PaymentMethodsPage() {
         setStripeMode(cfgJ.mode || null)
         setStripePromise(loadStripe(cfgJ.publishableKey))
 
-        const listRes = await fetch('/api/users/me/payment-methods', { headers: authHeaders() })
+        const listRes = await fetch('/api/users/me/payment-methods')
         const listJ = await listRes.json().catch(() => ({}))
         if (cancelled) return
         if (listRes.status === 403) {
@@ -266,7 +261,7 @@ export default function PaymentMethodsPage() {
     try {
       const res = await fetch('/api/users/me/payment-methods/setup', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: '{}',
       })
       const j = await res.json().catch(() => ({}))
@@ -287,7 +282,7 @@ export default function PaymentMethodsPage() {
     setAdding(false); setIntent(null)
     // Refresh list (server is authoritative on defaults)
     try {
-      const listRes = await fetch('/api/users/me/payment-methods', { headers: authHeaders() })
+      const listRes = await fetch('/api/users/me/payment-methods')
       const listJ = await listRes.json().catch(() => ({}))
       setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
     } catch (_) {
@@ -301,11 +296,11 @@ export default function PaymentMethodsPage() {
     try {
       const res = await fetch(`/api/users/me/payment-methods/${pm.id}/default`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(j.error || 'Failed to set default'); return }
-      const listRes = await fetch('/api/users/me/payment-methods', { headers: authHeaders() })
+      const listRes = await fetch('/api/users/me/payment-methods')
       const listJ = await listRes.json().catch(() => ({}))
       setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
       toast.success('Default card updated')
@@ -318,11 +313,10 @@ export default function PaymentMethodsPage() {
     try {
       const res = await fetch(`/api/users/me/payment-methods/${pm.id}`, {
         method: 'DELETE',
-        headers: authHeaders(),
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) { toast.error(j.error || 'Failed to remove'); return }
-      const listRes = await fetch('/api/users/me/payment-methods', { headers: authHeaders() })
+      const listRes = await fetch('/api/users/me/payment-methods')
       const listJ = await listRes.json().catch(() => ({}))
       setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
       toast.success('Card removed')

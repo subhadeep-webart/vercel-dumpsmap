@@ -11,12 +11,7 @@ import FieldFrame from '@/components/field/FieldFrame'
 import ReportButton from '@/components/ReportButton'
 import { timeAgo } from '@/lib/community-categories'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
-
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 export default function JobDetailPage() {
   const { id } = useParams()
@@ -34,15 +29,14 @@ export default function JobDetailPage() {
   }
 
   useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) return
-    fetch('/api/auth/me', { headers: authHeaders() }).then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
+    if (!isLikelyLoggedIn()) return
+    fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
   }, [])
 
   const load = async () => {
     setLoading(true)
     try {
-      const r = await fetch(`/api/jobs/${id}`, { headers: authHeaders() })
+      const r = await fetch(`/api/jobs/${id}`)
       if (!r.ok) { setErr((await r.json()).error || 'Not found'); return }
       const j = await r.json()
       setJob(j.job || j)
@@ -54,7 +48,7 @@ export default function JobDetailPage() {
     if (!requireAuth('bid')) return
     setActionBusy(true)
     try {
-      const r = await fetch(`/api/jobs/${id}/accept`, { method: 'POST', headers: authHeaders() })
+      const r = await fetch(`/api/jobs/${id}/accept`, { method: 'POST' })
       if (!r.ok) throw new Error((await r.json()).error || 'Could not accept')
       toast.success('Job accepted')
       await load()
@@ -64,7 +58,7 @@ export default function JobDetailPage() {
   const save = async () => {
     if (!requireAuth('save')) return
     try {
-      const r = await fetch(`/api/jobs/${id}/save`, { method: 'POST', headers: authHeaders() })
+      const r = await fetch(`/api/jobs/${id}/save`, { method: 'POST' })
       const j = await r.json()
       toast.success(j.saved ? 'Saved' : 'Unsaved')
       load()

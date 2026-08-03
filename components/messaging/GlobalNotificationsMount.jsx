@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import DmNotificationListener from '@/components/messaging/DmNotificationListener'
-import { api, getAuthToken } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 
 /**
  * Mounts the DM notification listener globally so users get toast/push
@@ -16,8 +16,7 @@ export default function GlobalNotificationsMount() {
     let alive = true
     const probe = async () => {
       try {
-        const token = getAuthToken()
-        if (!token) { if (alive) setUser(null); return }
+        if (!isLikelyLoggedIn()) { if (alive) setUser(null); return }
         const j = await api.get('/api/auth/me')
         if (alive) setUser(j.user || null)
       } catch {

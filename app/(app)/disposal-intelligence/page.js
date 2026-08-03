@@ -14,12 +14,6 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const fmtUSD = (n) => `$${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`
 const fmtTons = (n) => `${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} t`
 
@@ -36,7 +30,7 @@ function DisposalIntelligence() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/receipts/stats', { headers: authHeaders() })
+    fetch('/api/receipts/stats')
       .then((r) => r.json())
       .then((j) => { if (!j.error) setStats(j) })
       .catch(() => {})

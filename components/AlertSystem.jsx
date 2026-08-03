@@ -96,13 +96,11 @@ export function AlertPostDialog({ open, onOpenChange, facility, onPosted }) {
     if (!type || !facility) return
     setSubmitting(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
       const urls = toUrlList(photos)
       const r = await fetch('/api/alerts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           facilityId: facility.id,
@@ -380,10 +378,9 @@ export function LiveFeed({ onJump, refreshKey = 0 }) {
   }, [refreshKey])
 
   const vote = async (id, kind) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
     const r = await fetch(`/api/alerts/${id}/vote`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vote: kind }),
     })
     const j = await r.json()
@@ -398,10 +395,9 @@ export function LiveFeed({ onJump, refreshKey = 0 }) {
   const flag = async (id) => {
     const reason = prompt('Why are you flagging this alert? (e.g., wrong info, spam)')
     if (!reason) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
     await fetch(`/api/alerts/${id}/flag`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason }),
     })
     toast.success('Flagged. Thanks for keeping the feed clean.')
@@ -441,10 +437,9 @@ export function LiveFeed({ onJump, refreshKey = 0 }) {
 // ---------- Inline alert list (for facility detail) ----------
 export function FacilityAlertSection({ facilityId, alerts, onRefresh, onReport }) {
   const vote = async (id, kind) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
     const r = await fetch(`/api/alerts/${id}/vote`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ vote: kind }),
     })
     const j = await r.json()
@@ -458,10 +453,9 @@ export function FacilityAlertSection({ facilityId, alerts, onRefresh, onReport }
   const flag = async (id) => {
     const reason = prompt('Why are you flagging this alert?')
     if (!reason) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
     await fetch(`/api/alerts/${id}/flag`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ reason }),
     })
     toast.success('Flagged')

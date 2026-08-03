@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { resolveMarketplaceRole } from '@/lib/marketplace-roles'
 import { hasContractorAccess } from '@/lib/contractor-access'
 import LayoutModeToggle from '@/components/LayoutModeToggle'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import { toast } from 'sonner'
 
 export default function SettingsPage() {
@@ -25,12 +26,11 @@ export default function SettingsPage() {
 
   useEffect(() => {
     let cancelled = false
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) {
+    if (!isLikelyLoggedIn()) {
       router.replace('/?login=1&returnTo=/settings')
       return
     }
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/auth/me')
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return

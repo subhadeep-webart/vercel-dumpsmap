@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import {
   authHeaders, CONDITIONS, DISTANCE_PRESETS, PRICE_BUCKETS, SORTS, STATUS_CHIPS,
 } from '@/constants/marketplace_constants'
@@ -59,8 +60,7 @@ export function useMarketplace() {
 
   // Load me
   useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) return
+    if (!isLikelyLoggedIn()) return
     fetch('/api/auth/me', { headers: authHeaders() })
       .then((r) => r.ok ? r.json() : null)
       .then((j) => setUser(j?.user || null))

@@ -12,9 +12,11 @@ import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff } from 'lucide-react'
 import ProfileTypeCard from '@/components/home/ProfileTypeCard'
 import { PROFILE_TYPES } from '@/components/home/home-facility-meta'
+import { useAuth } from '@/components/AuthContext'
 
 // ---------- Auth Dialog (signup/login + multi-profile onboarding) ----------
 export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = 'login' }) {
+  const { login } = useAuth()
   const [mode, setMode] = useState(initialMode) // 'signup' | 'login'
   const [step, setStep] = useState(1) // 1: pick profiles, 2: credentials
   const [email, setEmail] = useState('')
@@ -51,7 +53,9 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
     }
   }
 
-  const submit = async () => {
+  const submit = async (e) => {
+    e?.preventDefault?.()
+    if (busy) return
     if (!email || !password) return toast.error('Email and password required')
     if (mode === 'signup' && password !== confirmPassword) return toast.error('Passwords do not match')
     setBusy(true)
@@ -67,7 +71,10 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Failed')
-      localStorage.setItem('dm_token', j.token)
+      // The server set the httpOnly session cookie on this response — nothing to
+      // store in JS. Update global auth state immediately so the header (and any
+      // other surface reading useAuth) reflects the login without a refresh.
+      login(j.user)
       onAuth?.(j.user)
       toast.success(mode === 'signup' ? `Welcome to DumpMaps, ${j.user.name}!` : `Welcome back, ${j.user.name}!`)
       onOpenChange(false)
@@ -86,10 +93,10 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
           <DialogHeader>
             <DialogTitle>Welcome back</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 pt-2">
+          <form onSubmit={submit} className="space-y-3 pt-2">
             <div>
               <Label className="text-xs">Email</Label>
-              <Input data-testid="login-email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="mt-1" />
+              <Input data-testid="login-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" className="mt-1" />
             </div>
             <div>
               <div className="flex items-center justify-between">
@@ -122,16 +129,17 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                 </button>
               </div>
             </div>
-            <Button data-testid="login-submit" onClick={submit} disabled={busy} className="w-full bg-brand-600 hover:bg-brand-700">
+            <Button data-testid="login-submit" type="submit" disabled={busy} className="w-full bg-brand-600 hover:bg-brand-700">
               {busy ? '…' : 'Log in'}
             </Button>
             <button
+              type="button"
               onClick={() => { setMode('signup'); setStep(1) }}
               className="w-full text-center text-xs text-neutral-600 hover:text-neutral-900"
             >
               New? Create an account
             </button>
-          </div>
+          </form>
         </DialogContent>
       </Dialog>
     )
@@ -295,7 +303,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               )}
             </div>
           ) : (
-            <div className="space-y-4">
+            <form id="signup-form" onSubmit={submit} className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {selected.map((k) => {
                   const pt = PROFILE_TYPES.find((p) => p.key === k)
@@ -383,7 +391,9 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                   <p className="mt-1 text-[11px] text-red-600">Passwords do not match</p>
                 )}
               </div>
-            </div>
+              {/* Hidden submit lets Enter submit the form; the visible button lives in the footer below */}
+              <button type="submit" className="sr-only" aria-hidden="true" tabIndex={-1} />
+            </form>
           )}
         </div>
 
@@ -391,6 +401,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
           {step === 1 ? (
             <>
               <Button
+                type="button"
                 onClick={() => setStep(2)}
                 disabled={!selected.length}
                 className="w-full bg-brand-600 hover:bg-brand-700"
@@ -401,6 +412,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               </Button>
 
               <button
+                type="button"
                 onClick={() => setMode('login')}
                 className="mt-3 w-full text-center text-xs text-neutral-600 hover:text-neutral-900"
               >
@@ -410,6 +422,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
           ) : (
             <div className="flex gap-2">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setStep(1)}
                 className="flex-1"
@@ -418,7 +431,8 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               </Button>
 
               <Button
-                onClick={submit}
+                type="submit"
+                form="signup-form"
                 disabled={busy}
                 className="flex-1 bg-brand-600 hover:bg-brand-700"
               >

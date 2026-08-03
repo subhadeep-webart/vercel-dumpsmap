@@ -6,15 +6,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import DmThreadPanel from './DmThreadPanel'
-import { api } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 
+// `token` prop is accepted for backward compat but no longer used — auth rides
+// in the httpOnly cookie the global fetch shim attaches to every /api call, and
+// the login gate uses isLikelyLoggedIn().
 export default function StartDmButton({ targetUserId, targetUserName, currentUser, token, variant = 'default', size = 'default', label = 'Message', className = '' }) {
   const [open, setOpen] = useState(false)
   const [thread, setThread] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const startThread = async () => {
-    if (!token) { toast.error('Log in to send messages'); return }
+    if (!isLikelyLoggedIn()) { toast.error('Log in to send messages'); return }
     if (targetUserId === currentUser?.id) { toast.info("That's you."); return }
     setLoading(true)
     try {
@@ -43,7 +46,7 @@ export default function StartDmButton({ targetUserId, targetUserName, currentUse
           </DialogHeader>
           <div className="px-2 pb-2">
             {thread && (
-              <DmThreadPanel threadId={thread.threadId} token={token} currentUser={currentUser} otherUser={thread} autoFocus />
+              <DmThreadPanel threadId={thread.threadId} token={token} loggedIn currentUser={currentUser} otherUser={thread} autoFocus />
             )}
           </div>
         </DialogContent>

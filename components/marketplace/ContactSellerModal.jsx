@@ -57,12 +57,10 @@ export default function ContactSellerModal({ open, onOpenChange, listing, user }
     if (!form.message.trim() || form.message.trim().length < 5) return toast.error('Please add a short message (min 5 chars)')
     setSubmitting(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
       const r = await fetch('/api/marketplace/contact-seller', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           listingId:   listing.id,

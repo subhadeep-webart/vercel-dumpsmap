@@ -63,6 +63,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import PhotoUploader, { toUrlList } from '@/components/PhotoUploader'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import ReportButton from '@/components/ReportButton'
 import StartDmButton from '@/components/messaging/StartDmButton'
 import ContractorReviewDialog from '@/components/recommendations/ContractorReviewDialog'
@@ -118,11 +119,7 @@ export const STATUS_LABEL = {
 
 const MATERIALS = ['Wood', 'Metal', 'Cardboard', 'Plastic', 'Furniture', 'Mattresses', 'Appliances', 'Electronics', 'Concrete', 'Dirt', 'Yard waste', 'Other']
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
+const authHeaders = () => ({})
 
 // ---------- Helpers ----------
 const isVerifiedPoster = (user) =>
@@ -784,7 +781,7 @@ export function JobDetailDialog({ jobId, onClose, user, onAuthRequest, onMapJump
   const [msgInput, setMsgInput] = useState('')
   const [tab, setTab] = useState('details')
   const [reviewOpen, setReviewOpen] = useState(false)
-  const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
+  const token = isLikelyLoggedIn()
 
   const load = async () => {
     if (!jobId) return

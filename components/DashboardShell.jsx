@@ -21,13 +21,9 @@ import { clearAuthToken } from '@/hooks/use-logout'
 import AppHeader from '@/components/AppHeader'
 import { Card, CardContent } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
-import { api, getAuthToken } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
+const authHeaders = () => ({})
 
 export default function DashboardShell({
   role = 'resident',
@@ -46,8 +42,7 @@ export default function DashboardShell({
     if (bootstrappedRef.current) return undefined
     bootstrappedRef.current = true
     const run = async () => {
-      const token = getAuthToken()
-      if (!token) { router.replace(`/?login=1&returnTo=/dashboard/${role}`); return }
+      if (!isLikelyLoggedIn()) { router.replace(`/?login=1&returnTo=/dashboard/${role}`); return }
       try {
         const j = await api.get('/api/auth/me')
         if (!j?.user) {
@@ -147,7 +142,7 @@ const ROLE_LABEL = {
 export function KpiGrid({ children }) {
   return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
 }
-export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading }) {
+export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading, index = 0 }) {
   const toneCls = ({
     brand:   'text-brand-700 bg-brand-50',
     emerald: 'text-emerald-700 bg-emerald-50',
@@ -157,10 +152,10 @@ export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading
     sky:     'text-sky-700 bg-sky-50',
   })[tone] || 'text-brand-700 bg-brand-50'
   return (
-    <Card>
+    <Card className="dm-lift dm-rise-in group border-neutral-200/80 transition-colors hover:border-emerald-300" style={{ '--dm-i': index }}>
       <CardContent className="p-4">
         <div className="flex items-center gap-2">
-          {Icon && <span className={`inline-flex h-7 w-7 items-center justify-center rounded-md ${toneCls}`}><Icon className="h-3.5 w-3.5" /></span>}
+          {Icon && <span className={`dm-badge inline-flex h-7 w-7 items-center justify-center rounded-md ${toneCls}`}><Icon className="h-3.5 w-3.5" /></span>}
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{label}</span>
         </div>
         <div className="mt-2 text-lg font-extrabold tracking-tight text-neutral-900">

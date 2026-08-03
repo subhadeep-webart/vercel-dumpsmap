@@ -5,9 +5,9 @@
 // Logged-in home feed. Replaces separate Live Feed + Community surfaces.
 // Mobile-first; clean visual cards; story-style filter bar; FAB composer.
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import PageShell from '@/components/PageShell'
 import SafeImage from '@/components/SafeImage'
 import MediaUploader from '@/components/MediaUploader'
@@ -18,12 +18,14 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
 import {
-  Plus, Camera, Video, AlertTriangle, Briefcase, CircleDollarSign, Heart, Building2,
+  Plus, PenLine, Camera, Video, AlertTriangle, Briefcase, CircleDollarSign, Heart, Building2,
   Gift, MessageSquare, Globe, Lightbulb, Landmark, Loader2, X, MapPin, Eye,
-  ThumbsUp, Send, Sparkles, ChevronDown, Bookmark, Share2,
+  ThumbsUp, Send, Sparkles, ChevronDown, Bookmark, Share2, UserRound,
 } from 'lucide-react'
 import { useRequireAuth, SoftLoginModal } from '@/components/SoftLoginModal'
 import RouteFeatureLock from '@/components/RouteFeatureLock'
+import PostOwnerMenu from '@/components/community/detail/PostOwnerMenu'
+import EditPostModal from '@/components/community/detail/EditPostModal'
 
 const FILTERS = [
   { key: 'all',        label: 'All',         icon: Globe,         tone: 'text-brand-600 bg-brand-100' },
@@ -64,16 +66,32 @@ const FEED_TYPE_META = {
 export default function ActivityHubPage() {
   return (
     <RouteFeatureLock featureKey="activityHub">
-      <ActivityHubInner />
+      {/* Suspense boundary required by Next 15 for useSearchParams() inside
+          ActivityHubInner (reads ?filter= from the URL). */}
+      <Suspense fallback={<div className="py-16 text-center text-sm text-neutral-500"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div>}>
+        <ActivityHubInner />
+      </Suspense>
     </RouteFeatureLock>
   )
 }
 
+// Filter keys the feed API understands. The visible FILTERS bar is a subset;
+// `saved` and `mine` are valid API filters that arrive via the URL (e.g. the
+// dashboard links to /activity-hub?filter=saved) even though `saved` has no chip.
+const VALID_FILTER_KEYS = new Set([...FILTERS.map((f) => f.key), 'saved', 'mine'])
+
 function ActivityHubInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, requireAuth, softLogin, setSoftLogin } = useRequireAuth()
   const [feed, setFeed] = useState([])
-  const [filter, setFilter] = useState('all')
+  // Honour ?filter= from the URL on first render; fall back to 'all' for
+  // missing/unknown values.
+  const initialFilter = (() => {
+    const q = (searchParams.get('filter') || '').toLowerCase()
+    return VALID_FILTER_KEYS.has(q) ? q : 'all'
+  })()
+  const [filter, setFilter] = useState(initialFilter)
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
   // Infinite scroll state
@@ -188,7 +206,7 @@ function ActivityHubInner() {
 
       {/* Filter bar (story-style) */}
       <div className="mb-4 -mx-4 flex gap-2.5 overflow-x-auto scroll-smooth px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:gap-3 sm:px-0">
-        {FILTERS.map((f) => {
+        {(user ? [...FILTERS, { key: 'mine', label: 'My Posts', icon: UserRound, tone: 'text-teal-600 bg-teal-100' }] : FILTERS).map((f) => {
           const Icon = f.icon
           const isActive = filter === f.key
           return (
@@ -227,6 +245,7 @@ function ActivityHubInner() {
               user={user}
               requireAuth={requireAuth}
               onUpdate={(updates) => setFeed((arr) => arr.map((c) => (c.id === card.id ? { ...c, ...updates } : c)))}
+              onRemove={() => setFeed((arr) => arr.filter((c) => c.id !== card.id))}
             />
           ))
         )}
@@ -246,7 +265,7 @@ function ActivityHubInner() {
         className="fixed bottom-36 right-4 md:right-6 z-40 inline-flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-green-700 text-white shadow-lg ring-4 ring-white hover:bg-green-800 md:bottom-28"
         title={user ? 'Create post' : 'Sign in to post'}
       >
-        <Plus className="h-5 w-5 md:h-6 md:w-6" />
+        <PenLine className="h-5 w-5 md:h-6 md:w-6" />
       </button>
 
       {composerOpen && user && (
@@ -278,21 +297,47 @@ function ActivityHubInner() {
    • Optimistic UI updates; SoftLoginModal gates for logged-out users.
    • Aggregate cards (jobs / bounties / alerts) keep the simple footer.
    ========================================================================= */
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
-function FeedCard({ card, user, requireAuth, onUpdate }) {
+function FeedCard({ card, user, requireAuth, onUpdate, onRemove }) {
   const meta = FEED_TYPE_META[card.type] || FEED_TYPE_META.general
   const Icon = meta.icon
   const cover = card.photos?.[0] || null
   const isJob = card.type === 'job'
   const isBounty = card.type === 'bounty'
   const isUserPost = card.kind === 'post'
+  const canManage = isUserPost && !!user && card.posterId === user.id
   const [busyAction, setBusyAction] = React.useState(null)
   const [commentsOpen, setCommentsOpen] = React.useState(false)
+  const [editOpen, setEditOpen] = React.useState(false)
+
+  // -- Owner actions (edit / delete) — author only ----------------------
+  const editPost = async (fields) => {
+    // Optimistic: reflect edits in the card immediately, roll back on failure.
+    const prev = { title: card.title, body: card.body }
+    onUpdate(fields)
+    try {
+      const r = await fetch(`/api/community/posts/${card.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Update failed')
+      toast.success('Post updated')
+      return true
+    } catch (e) {
+      onUpdate(prev)
+      toast.error(e.message || 'Could not update post')
+      return false
+    }
+  }
+  const deletePost = async () => {
+    try {
+      const r = await fetch(`/api/community/posts/${card.id}`, { method: 'DELETE' })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Delete failed')
+      toast.success('Post deleted')
+      onRemove?.()
+      return true
+    } catch (e) { toast.error(e.message || 'Could not delete post'); return false }
+  }
 
   // -- Interaction handlers (user posts only) ---------------------------
   const onLike = async () => {
@@ -309,7 +354,7 @@ function FeedCard({ card, user, requireAuth, onUpdate }) {
     try {
       const r = await fetch(`/api/community/posts/${card.id}/react`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'like' }),
       })
       if (!r.ok) {
@@ -337,7 +382,7 @@ function FeedCard({ card, user, requireAuth, onUpdate }) {
     setBusyAction('save')
     try {
       const r = await fetch(`/api/community/posts/${card.id}/save`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
       })
       const j = await r.json().catch(() => ({}))
       if (!r.ok) {
@@ -375,6 +420,7 @@ function FeedCard({ card, user, requireAuth, onUpdate }) {
   }
 
   return (
+    <>
     <Card className="overflow-hidden rounded-2xl border-neutral-200/80 shadow-sm transition hover:shadow-md">
       <CardContent className="p-0">
         {/* Author row (only for user posts) */}
@@ -387,9 +433,12 @@ function FeedCard({ card, user, requireAuth, onUpdate }) {
                 <div className="text-xs text-neutral-500">{timeAgoShort(card.createdAt)}</div>
               </div>
             </div>
-            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${meta.tone}`}>
-              <Icon className="h-3 w-3" /> {meta.label}
-            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${meta.tone}`}>
+                <Icon className="h-3 w-3" /> {meta.label}
+              </span>
+              <PostOwnerMenu canManage={canManage} onEdit={() => setEditOpen(true)} onDelete={deletePost} size="sm" />
+            </div>
           </div>
         )}
 
@@ -487,6 +536,10 @@ function FeedCard({ card, user, requireAuth, onUpdate }) {
         )}
       </CardContent>
     </Card>
+    {canManage && (
+      <EditPostModal open={editOpen} onOpenChange={setEditOpen} post={card} onSave={editPost} />
+    )}
+    </>
   )
 }
 
@@ -543,7 +596,7 @@ function InlineComments({ postId, user, requireAuth, onCommented }) {
     let cancelled = false
     ;(async () => {
       try {
-        const r = await fetch(`/api/community/posts/${postId}`, { headers: authHeaders() })
+        const r = await fetch(`/api/community/posts/${postId}`)
         const j = await r.json()
         if (!cancelled && r.ok) setList(Array.isArray(j.comments) ? j.comments : [])
       } finally { if (!cancelled) setLoading(false) }
@@ -560,7 +613,7 @@ function InlineComments({ postId, user, requireAuth, onCommented }) {
     try {
       const r = await fetch(`/api/community/posts/${postId}/comments`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: value }),
       })
       const j = await r.json()
@@ -636,8 +689,14 @@ function EmptyState({ filter, onPost }) {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100">
           <MessageSquare className="h-6 w-6 text-neutral-400" />
         </div>
-        <h3 className="text-base font-bold text-neutral-800">Nothing here yet</h3>
-        <p className="text-sm text-neutral-600">Be the first to post in the <b>{filter}</b> feed.</p>
+        <h3 className="text-base font-bold text-neutral-800">
+          {filter === 'mine' ? "You haven't posted yet" : 'Nothing here yet'}
+        </h3>
+        <p className="text-sm text-neutral-600">
+          {filter === 'mine'
+            ? 'Your posts will show up here once you share something.'
+            : <>Be the first to post in the <b>{filter}</b> feed.</>}
+        </p>
         <Button onClick={onPost} className="bg-green-700 hover:bg-green-800">
           <Plus className="mr-1.5 h-4 w-4" /> Create a post
         </Button>
@@ -686,10 +745,9 @@ function ComposerModal({ onClose, onCreated, user, router }) {
     }
     setBusy(true)
     try {
-      const token = localStorage.getItem('dm_token')
       const r = await fetch('/api/activity-hub/posts', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, title, body, photos }),
       })
       const j = await r.json()

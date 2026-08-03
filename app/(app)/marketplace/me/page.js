@@ -14,17 +14,12 @@ import {
   ShoppingBag, Plus, X, Trash2, Pencil, BellOff,
 } from 'lucide-react'
 import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 function normalizePhoto(url) {
   if (!url || typeof url !== 'string') return null
   if (url.startsWith('/uploads/')) return `/api/files/${url.slice('/uploads/'.length)}`
   return url
-}
-
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
 const TABS = [
@@ -163,9 +158,8 @@ function BuyerDashboardPageInner() {
   // Load me
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const t = localStorage.getItem('dm_token')
-    if (!t) { router.push('/?login=1&returnTo=/marketplace/me'); return }
-    fetch('/api/auth/me', { headers: authHeaders() })
+    if (!isLikelyLoggedIn()) { router.push('/?login=1&returnTo=/marketplace/me'); return }
+    fetch('/api/auth/me')
       .then((r) => r.ok ? r.json() : null)
       .then((j) => {
         if (!j?.user) { router.push('/?login=1&returnTo=/marketplace/me'); return }
@@ -177,7 +171,7 @@ function BuyerDashboardPageInner() {
   const load = async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/marketplace/me', { headers: authHeaders() })
+      const r = await fetch('/api/marketplace/me')
       if (r.status === 401) { router.push('/?login=1&returnTo=/marketplace/me'); return }
       const j = await r.json()
       setData(j)
@@ -208,7 +202,7 @@ function BuyerDashboardPageInner() {
     try {
       const url = form.id ? `/api/marketplace/saved-searches/${form.id}` : '/api/marketplace/saved-searches'
       const method = form.id ? 'PATCH' : 'POST'
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(form) })
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       if (!r.ok) throw new Error((await r.json()).error || 'Failed')
       toast.success(form.id ? 'Saved search updated' : 'Saved search created')
       setEditorOpen(false)
@@ -219,11 +213,11 @@ function BuyerDashboardPageInner() {
   }
   const onDeleteSearch = async (id) => {
     if (!confirm('Delete this saved search?')) return
-    const r = await fetch(`/api/marketplace/saved-searches/${id}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`/api/marketplace/saved-searches/${id}`, { method: 'DELETE' })
     if (r.ok) { toast.success('Deleted'); load() }
   }
   const onToggleSearch = async (s) => {
-    const r = await fetch(`/api/marketplace/saved-searches/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ enabled: !s.enabled }) })
+    const r = await fetch(`/api/marketplace/saved-searches/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !s.enabled }) })
     if (r.ok) load()
   }
 

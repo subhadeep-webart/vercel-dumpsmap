@@ -23,11 +23,10 @@ export default function ProfileDialog({ open, onOpenChange, user, onUpdated, onL
   const [avatar, setAvatar] = useState(user?.avatarUrl ? [{ url: user.avatarUrl }] : [])
 
   const loadAll = () => {
-    const token = localStorage.getItem('dm_token')
-    fetch('/api/users/me/contributions', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/users/me/contributions')
       .then((r) => r.json())
       .then(setContributions)
-    fetch('/api/favorites', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/favorites')
       .then((r) => r.json())
       .then((j) => setFavorites(j.favorites || []))
   }
@@ -39,10 +38,9 @@ export default function ProfileDialog({ open, onOpenChange, user, onUpdated, onL
   }, [open, user])
 
   const save = async () => {
-    const token = localStorage.getItem('dm_token')
     const r = await fetch('/api/auth/profile', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     })
     const j = await r.json()
@@ -87,10 +85,9 @@ export default function ProfileDialog({ open, onOpenChange, user, onUpdated, onL
                     selected={selected}
                     isPrimary={isPrimary}
                     onClick={async () => {
-                      const token = localStorage.getItem('dm_token')
                       const r = await fetch('/api/auth/profile-types', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(selected ? { remove: pt.key } : { add: pt.key }),
                       })
                       const j = await r.json()
@@ -100,10 +97,9 @@ export default function ProfileDialog({ open, onOpenChange, user, onUpdated, onL
                       }
                     }}
                     onMakePrimary={async () => {
-                      const token = localStorage.getItem('dm_token')
                       const r = await fetch('/api/auth/profile-types', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ primary: pt.key }),
                       })
                       const j = await r.json()
@@ -148,10 +144,9 @@ export default function ProfileDialog({ open, onOpenChange, user, onUpdated, onL
                   onChange={async (next) => {
                     setAvatar(next)
                     const url = (next && next[0]?.url) || null
-                    const token = localStorage.getItem('dm_token')
                     const r = await fetch('/api/auth/profile', {
                       method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ avatarUrl: url }),
                     })
                     const j = await r.json()

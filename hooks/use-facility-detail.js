@@ -20,7 +20,7 @@
 //     back-navigation can't stomp fresh state with a stale response.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, getAuthToken, ApiError } from '@/lib/api-client'
+import { api, isLikelyLoggedIn, ApiError } from '@/lib/api-client'
 import { SAMPLE_FALLBACK_FACILITIES } from '@/components/MapSafety'
 import { canShowSampleFallback } from '@/lib/env-detect'
 
@@ -94,7 +94,7 @@ export function useFacilityDetail(id) {
       .catch(() => {})
 
     // Auth-gated calls run in parallel with the above.
-    if (getAuthToken()) {
+    if (isLikelyLoggedIn()) {
       api.get('/auth/me', { signal })
         .then((j) => { if (alive()) setUser(j?.user || null) })
         .catch(() => {})

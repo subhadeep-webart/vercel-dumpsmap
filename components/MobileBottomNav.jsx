@@ -22,6 +22,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import {
   Home, MapPin, Users, ShoppingBag, User as UserIcon, Plus,
 } from 'lucide-react'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 function inferActive(pathname) {
   if (!pathname) return null
@@ -50,10 +51,9 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
 
   useEffect(() => {
     if (userProp !== undefined) return
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) return
+    if (!isLikelyLoggedIn()) return
     let cancelled = false
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } })
+    fetch('/api/auth/me')
       .then((r) => r.json())
       .then((j) => { if (!cancelled) setUser(j?.user || null) })
       .catch(() => {})
@@ -63,10 +63,9 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
   // Fetch unread count once on mount (when not provided via prop).
   useEffect(() => {
     if (typeof unreadProp === 'number') return undefined
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) return undefined
+    if (!isLikelyLoggedIn()) return undefined
     let cancelled = false
-    fetch('/api/inbox/unread-count', { headers: { Authorization: `Bearer ${t}` } })
+    fetch('/api/inbox/unread-count')
       .then((r) => r.json())
       .then((j) => { if (!cancelled && typeof j?.count === 'number') setUnread(j.count) })
       .catch(() => {})

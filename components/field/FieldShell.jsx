@@ -14,12 +14,6 @@ import { Search, Camera, Image as ImageIcon, AlertCircle, Hand } from 'lucide-re
 import { useViewMode } from '@/lib/view-mode'
 import { useLogout } from '@/hooks/use-logout'
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 async function loadUnifiedFeed({ lat, lng } = {}) {
   // Aggregate posts from existing endpoints into a single feed.
   // Hot spots are surfaced via community_posts with category='illegal_dumping' and jobs?hotSpot=true.
@@ -29,7 +23,7 @@ async function loadUnifiedFeed({ lat, lng } = {}) {
     `/api/marketplace?limit=20`,
     `/api/community/posts?limit=30`,
   ]
-  const settled = await Promise.allSettled(urls.map((u) => fetch(u, { headers: authHeaders() }).then((r) => r.ok ? r.json() : null)))
+  const settled = await Promise.allSettled(urls.map((u) => fetch(u).then((r) => r.ok ? r.json() : null)))
   const [jobsRes, hotJobsRes, mpRes, postsRes] = settled.map((s) => s.status === 'fulfilled' ? s.value : null)
 
   const items = []
@@ -164,7 +158,7 @@ export default function FieldShell({ user, onOpenStandard, onOpenJob, onOpenList
     let alive = true
     const ping = async () => {
       try {
-        const r = await fetch('/api/inbox/unread-count', { headers: authHeaders() })
+        const r = await fetch('/api/inbox/unread-count')
         if (!r.ok) return
         const j = await r.json()
         if (!alive) return
@@ -185,7 +179,7 @@ export default function FieldShell({ user, onOpenStandard, onOpenJob, onOpenList
     setSearchLoading(true)
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/facilities?q=${encodeURIComponent(searchQ)}&limit=20`, { headers: authHeaders() })
+        const r = await fetch(`/api/facilities?q=${encodeURIComponent(searchQ)}&limit=20`)
         const j = r.ok ? await r.json() : { facilities: [] }
         if (alive) setSearchResults(j.facilities || [])
       } finally {
@@ -201,7 +195,7 @@ export default function FieldShell({ user, onOpenStandard, onOpenJob, onOpenList
     // Default to community post
     fetch('/api/community/posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: composerText.trim().slice(0, 80), body: composerText.trim(), category: 'general' }),
     }).then((r) => r.ok ? r.json() : Promise.reject())
       .then(() => { setComposerText(''); toast.success('Posted to your community feed'); reload() })
@@ -341,7 +335,7 @@ function FieldJobs({ onOpenJob }) {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
-    fetch('/api/jobs?limit=40', { headers: authHeaders() })
+    fetch('/api/jobs?limit=40')
       .then((r) => r.json())
       .then((j) => setJobs(j.jobs || j.items || []))
       .finally(() => setLoading(false))
@@ -367,7 +361,7 @@ function FieldAlerts({ user }) {
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     if (!user) { setLoading(false); return }
-    fetch('/api/alerts?recent=1', { headers: authHeaders() })
+    fetch('/api/alerts?recent=1')
       .then((r) => r.ok ? r.json() : { alerts: [] })
       .then((j) => setAlerts(j.alerts || j.items || []))
       .finally(() => setLoading(false))

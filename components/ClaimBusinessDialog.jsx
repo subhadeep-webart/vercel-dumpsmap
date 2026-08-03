@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { KeyRound } from 'lucide-react'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 export default function ClaimBusinessDialog({ open, onOpenChange, facility, onSubmitted }) {
   const [submitting, setSubmitting] = useState(false)
@@ -19,14 +20,13 @@ export default function ClaimBusinessDialog({ open, onOpenChange, facility, onSu
 
   const submit = async (e) => {
     e?.preventDefault?.()
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) { toast.error('Please log in to claim this business'); return }
+    if (!isLikelyLoggedIn()) { toast.error('Please log in to claim this business'); return }
     if (!form.claimantName || !form.businessEmail) { toast.error('Name and business email required'); return }
     setSubmitting(true)
     try {
       const r = await fetch('/api/facility-claims', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ facilityId: facility.id, ...form }),
       })
       const j = await r.json()

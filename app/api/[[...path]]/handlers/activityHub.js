@@ -47,6 +47,7 @@ const FILTER_TO_TYPES = {
   tips:       ['contractor_tip'],
   government: ['government_notice'],
   saved:      VALID_TYPES, // server-side filter applied via savedByMe
+  mine:       VALID_TYPES, // server-side filter applied via authorId (own posts only)
 }
 
 // Map Activity Hub `type` → `community_posts.category` (the storage column).
@@ -185,7 +186,9 @@ export async function handle(ctx) {
 
     // 1) USER-AUTHORED POSTS from community_posts
     const postFilter = { status: { $ne: 'removed' } }
-    if (filter !== 'all' && uniqueCategories.length) postFilter.category = { $in: uniqueCategories }
+    if (filter !== 'all' && filter !== 'mine' && uniqueCategories.length) postFilter.category = { $in: uniqueCategories }
+    // "My Posts" — constrain to the caller's own posts at the DB level.
+    if (filter === 'mine' && auth) postFilter.authorId = auth.id
     if (before) {
       try { postFilter.createdAt = { $lt: new Date(before) } } catch {}
     }
@@ -220,22 +223,24 @@ export async function handle(ctx) {
     }
     const cards = posts.map((p) => postToCard(p, { authorMap, reactionMap, saveSet }))
 
-    // 2) AGGREGATED SYSTEM ACTIVITY (only when filter allows)
-    if (wantTypes.includes('job')) {
+    // 2) AGGREGATED SYSTEM ACTIVITY (only when filter allows).
+    // Skipped entirely for "mine" / "saved", which show only user-authored posts.
+    const wantAggregates = filter !== 'mine' && filter !== 'saved'
+    if (wantAggregates && wantTypes.includes('job')) {
       try {
         const jobs = await db.collection('jobs').find({ state: { $in: ['open', 'in_review', 'awarded'] } })
           .sort({ createdAt: -1 }).limit(limit).toArray()
         cards.push(...jobs.map(jobToCard))
       } catch {}
     }
-    if (wantTypes.includes('bounty')) {
+    if (wantAggregates && wantTypes.includes('bounty')) {
       try {
         const bounties = await db.collection('bounties').find({ state: { $in: ['funding', 'goal_reached'] } })
           .sort({ createdAt: -1 }).limit(limit).toArray()
         cards.push(...bounties.map(bountyToCard))
       } catch {}
     }
-    if (wantTypes.includes('facility_update')) {
+    if (wantAggregates && wantTypes.includes('facility_update')) {
       try {
         const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
         const alerts = await db.collection('facility_alerts').find({
@@ -248,8 +253,12 @@ export async function handle(ctx) {
     cards.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     // If filter=saved, gate to only posts the user saved.
     let final = cards
-    if (filter === 'saved' && auth) {
-      final = final.filter((c) => c.kind === 'post' && c.savedByMe)
+    if (filter === 'saved') {
+      final = auth ? final.filter((c) => c.kind === 'post' && c.savedByMe) : []
+    }
+    // If filter=mine, only the caller's own posts (empty when signed out).
+    if (filter === 'mine') {
+      final = auth ? final.filter((c) => c.kind === 'post' && c.posterId === auth.id) : []
     }
     return handleCORS(NextResponse.json({ feed: final.slice(0, limit), filter, count: final.length }))
   }

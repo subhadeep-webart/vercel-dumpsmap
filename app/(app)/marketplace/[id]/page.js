@@ -13,6 +13,7 @@ import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
 import { timeAgo } from '@/lib/community-categories'
 import { resolveMarketplaceRole, allowedStatusesForUser, STATUS_META } from '@/lib/marketplace-roles'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 // Legacy uploads stored URLs as "/uploads/<name>". We now serve via
 // "/api/files/<name>" which is more reliable (reads from /data/uploads on each
@@ -23,12 +24,6 @@ function normalizePhoto(url) {
   if (typeof url !== 'string') return null
   if (url.startsWith('/uploads/')) return `/api/files/${url.slice('/uploads/'.length)}`
   return url
-}
-
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
 }
 
 export default function MarketplaceListingDetailPage() {
@@ -54,15 +49,14 @@ export default function MarketplaceListingDetailPage() {
   }
 
   useEffect(() => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) return
-    fetch('/api/auth/me', { headers: authHeaders() }).then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
+    if (!isLikelyLoggedIn()) return
+    fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
   }, [])
 
   const load = async () => {
     setLoading(true)
     try {
-      const r = await fetch(`/api/marketplace/${id}`, { headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${id}`)
       if (!r.ok) { setErr((await r.json()).error || 'Not found'); return }
       const j = await r.json()
       const data = j.listing || j
@@ -80,7 +74,7 @@ export default function MarketplaceListingDetailPage() {
     setSaved(!prev)
     setSavingBookmark(true)
     try {
-      const r = await fetch(`/api/marketplace/${id}/save`, { method: 'POST', headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${id}/save`, { method: 'POST' })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Failed')
       setSaved(!!j.saved)
@@ -124,7 +118,7 @@ export default function MarketplaceListingDetailPage() {
     if (!requireAuth('save')) return
     setReserving(true)
     try {
-      const r = await fetch(`/api/marketplace/${id}/reserve`, { method: 'POST', headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${id}/reserve`, { method: 'POST' })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Could not reserve')
       setListing(j.listing)
@@ -139,7 +133,7 @@ export default function MarketplaceListingDetailPage() {
   const cancelReserve = async () => {
     setReserving(true)
     try {
-      const r = await fetch(`/api/marketplace/${id}/reserve/cancel`, { method: 'POST', headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${id}/reserve/cancel`, { method: 'POST' })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Could not cancel')
       setListing(j.listing)
@@ -155,7 +149,7 @@ export default function MarketplaceListingDetailPage() {
     try {
       const r = await fetch(`/api/marketplace/${id}/reserve/complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ finalStatus }),
       })
       const j = await r.json()
@@ -175,7 +169,7 @@ export default function MarketplaceListingDetailPage() {
     try {
       const r = await fetch(`/api/marketplace/${id}/quick-status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ itemStatus }),
       })
       const j = await r.json()

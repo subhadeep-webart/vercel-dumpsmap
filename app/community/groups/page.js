@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import PhotoUploader from '@/components/PhotoUploader'
 import PageShell from '@/components/PageShell'
 import { GroupCategoryIcon } from '@/lib/community-icons'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const GROUP_CATEGORIES = [
   { key: 'haulers',     label: 'Haulers' },
@@ -49,10 +50,9 @@ function GroupsPageInner() {
   const [createOpen, setCreateOpen] = useState(false)
   const [cities, setCities] = useState([])
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+  const loggedIn = isLikelyLoggedIn()
 
-  useEffect(() => { if (token) fetch('/api/auth/me', { headers: authHeaders }).then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [token])
+  useEffect(() => { if (loggedIn) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [loggedIn])
 
   const load = async () => {
     setLoading(true)
@@ -62,7 +62,7 @@ function GroupsPageInner() {
     if (filter.q) p.set('q', filter.q)
     if (filter.mine) p.set('mine', 'true')
     p.set('limit', '60')
-    const r = await fetch(`/api/community/groups?${p}`, { headers: authHeaders })
+    const r = await fetch(`/api/community/groups?${p}`)
     const j = await r.json()
     setGroups(j.groups || [])
     setLoading(false)
@@ -105,7 +105,7 @@ function GroupsPageInner() {
                 </div>
               </CardContent>
             </Card>
-            {token && (
+            {loggedIn && (
               <Card>
                 <CardContent className="p-4">
                   <label className="flex items-center gap-2 text-sm">
@@ -127,17 +127,17 @@ function GroupsPageInner() {
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <Users className="mx-auto h-8 w-8 text-neutral-400" />
                 <p className="mt-2 text-sm text-neutral-600">No groups match this view yet — be the first to start one for your city or trade.</p>
-                {token ? <Button onClick={() => setCreateOpen(true)} className="mt-3 bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Create group</Button> : null}
+                {loggedIn ? <Button onClick={() => setCreateOpen(true)} className="mt-3 bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Create group</Button> : null}
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              {groups.map((g) => <GroupCard key={g.id} group={g} token={token} onChanged={load} />)}
+              {groups.map((g) => <GroupCard key={g.id} group={g} token={loggedIn} onChanged={load} />)}
             </div>
           </main>
         </div>
       </div>
 
-      <CreateGroupDialog open={createOpen} onOpenChange={setCreateOpen} token={token} onCreated={(g) => { setCreateOpen(false); router.push(`/community/groups/${g.slug || g.id}`) }} />
+      <CreateGroupDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={(g) => { setCreateOpen(false); router.push(`/community/groups/${g.slug || g.id}`) }} />
     </PageShell>
   )
 }
@@ -158,7 +158,7 @@ function GroupCard({ group, token, onChanged }) {
   const handleJoin = async () => {
     if (!token) { toast.error('Log in to join'); return }
     setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST' })
     setBusy(false)
     if (r.ok) { toast.success('Joined'); onChanged?.() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
   }
@@ -191,7 +191,7 @@ function GroupCard({ group, token, onChanged }) {
   )
 }
 
-function CreateGroupDialog({ open, onOpenChange, token, onCreated }) {
+function CreateGroupDialog({ open, onOpenChange, onCreated }) {
   const [form, setForm] = useState({ name: '', category: '', description: '', city: '', state: 'CA', tags: '', photoUrl: '', rules: '' })
   const [submitting, setSubmitting] = useState(false)
   const upd = (k, v) => setForm((s) => ({ ...s, [k]: v }))
@@ -204,7 +204,7 @@ function CreateGroupDialog({ open, onOpenChange, token, onCreated }) {
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
       rules: form.rules.split('\n').map((r) => r.trim()).filter(Boolean),
     }
-    const r = await fetch('/api/community/groups', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) })
+    const r = await fetch('/api/community/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     const j = await r.json()
     setSubmitting(false)
     if (!r.ok) { toast.error(j.error || 'Failed'); return }

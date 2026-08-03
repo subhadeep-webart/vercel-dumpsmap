@@ -47,12 +47,6 @@ const MATERIAL_TYPES = [
   'E-Waste', 'Appliances', 'Furniture', 'Dirt', 'Household Junk', 'Other',
 ]
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const fmtUSD = (n) => `$${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`
 const fmtTons = (n) => `${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} t`
 
@@ -77,8 +71,8 @@ function ReceiptsCenter() {
     setLoading(true)
     try {
       const [statsRes, listRes] = await Promise.all([
-        fetch('/api/receipts/stats', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch('/api/receipts?limit=50', { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ receipts: [] })),
+        fetch('/api/receipts/stats').then((r) => r.json()).catch(() => null),
+        fetch('/api/receipts?limit=50').then((r) => r.json()).catch(() => ({ receipts: [] })),
       ])
       if (statsRes && !statsRes.error) setStats(statsRes)
       setReceipts(listRes.receipts || [])
@@ -97,7 +91,7 @@ function ReceiptsCenter() {
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this receipt? This cannot be undone.')) return
-    const r = await fetch(`/api/receipts/${id}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`/api/receipts/${id}`, { method: 'DELETE' })
     if (r.ok) loadAll()
   }
 
@@ -519,7 +513,7 @@ function ReceiptBatchPanel({ onCancel, onSaved }) {
       }
       const res = await fetch('/api/receipts/batch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await res.json()
@@ -687,7 +681,7 @@ function ReceiptForm({ initial, onCancel, onSaved }) {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', headers: authHeaders(), body: fd })
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
       const j = await res.json()
       if (!res.ok) throw new Error(j.error || 'Upload failed')
       update('photoUrl', j.url || j.fileUrl || j.path)
@@ -717,7 +711,7 @@ function ReceiptForm({ initial, onCancel, onSaved }) {
       const method = isEdit ? 'PATCH' : 'POST'
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await res.json()

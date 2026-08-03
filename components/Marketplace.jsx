@@ -57,12 +57,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import PhotoUploader, { toUrlList } from '@/components/PhotoUploader'
 import StartDmButton from '@/components/messaging/StartDmButton'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const timeAgo = (d) => {
   if (!d) return ''
   const diff = (Date.now() - new Date(d).getTime()) / 1000
@@ -203,7 +197,7 @@ function MarketplaceFeed({ segment, user, onOpen, mode = 'browse' }) {
       if (condition !== 'all') p.set('condition', condition)
       if (maxPrice) p.set('maxPrice', maxPrice)
       if (q) p.set('q', q)
-      const r = await fetch(`/api/marketplace?${p.toString()}`, { headers: authHeaders() })
+      const r = await fetch(`/api/marketplace?${p.toString()}`)
       const j = await r.json()
       setListings(j.listings || [])
     } catch {
@@ -372,7 +366,7 @@ export function MarketplacePostDialog({ open, onOpenChange, user, defaultSegment
       }
       const r = await fetch('/api/marketplace', {
         method: existing ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await r.json()
@@ -565,7 +559,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
     if (!listingId) return
     setLoading(true)
     try {
-      const r = await fetch(`/api/marketplace/${listingId}`, { headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${listingId}`)
       const j = await r.json()
       setData(j.listing || null)
     } finally {
@@ -576,7 +570,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
   const loadMessages = async () => {
     if (!listingId || !user) return
     try {
-      const r = await fetch(`/api/marketplace/${listingId}/messages`, { headers: authHeaders() })
+      const r = await fetch(`/api/marketplace/${listingId}/messages`)
       const j = await r.json()
       if (r.ok) setMessages(j.messages || [])
     } catch {}
@@ -600,7 +594,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
     try {
       const r = await fetch(`/api/marketplace/${listingId}${path}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       const j = await r.json()
@@ -618,7 +612,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
     try {
       const r = await fetch(`/api/marketplace/${listingId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msgInput.trim() }),
       })
       if (r.ok) {
@@ -635,7 +629,7 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
     try {
       const r = await fetch(`/api/marketplace/${listingId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sold: true }),
       })
       const j = await r.json()
@@ -767,7 +761,6 @@ export function MarketplaceDetailDialog({ listingId, onClose, user, onAuthReques
                       targetUserId={data.sellerId}
                       targetUserName={data.seller?.name || 'Seller'}
                       currentUser={user}
-                      token={typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null}
                       size="sm"
                       variant="outline"
                       label="DM"
@@ -804,7 +797,7 @@ function ReportDialog({ open, onOpenChange, listingId }) {
     try {
       const r = await fetch(`/api/marketplace/${listingId}/report`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, notes }),
       })
       const j = await r.json()
@@ -863,14 +856,14 @@ export function useInboxBadge(user) {
     const load = async () => {
       try {
         // Try the unified counter (DM + marketplace + jobs + group chats)
-        const r = await fetch('/api/inbox/unread-count', { headers: authHeaders() })
+        const r = await fetch('/api/inbox/unread-count')
         if (r.ok) {
           const j = await r.json()
           if (alive) setUnread(j.count || 0)
           return
         }
         // Fallback to legacy marketplace+jobs counter
-        const r2 = await fetch('/api/marketplace/inbox/threads', { headers: authHeaders() })
+        const r2 = await fetch('/api/marketplace/inbox/threads')
         if (!r2.ok) return
         const j2 = await r2.json()
         if (alive) setUnread(j2.totalUnread || 0)
@@ -891,7 +884,7 @@ export function InboxDialog({ open, onOpenChange, user, onAuthRequest, onOpenLis
     if (!user) return
     setLoading(true)
     try {
-      const r = await fetch('/api/marketplace/inbox/threads', { headers: authHeaders() })
+      const r = await fetch('/api/marketplace/inbox/threads')
       const j = await r.json()
       setData(j)
     } finally { setLoading(false) }

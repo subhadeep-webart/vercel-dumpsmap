@@ -11,6 +11,7 @@ import ContractorReviewDialog from '@/components/recommendations/ContractorRevie
 import StartDmButton from '@/components/messaging/StartDmButton'
 import { timeAgo } from '@/lib/community-categories'
 import PageShell from '@/components/PageShell'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 export default function ContractorProfilePage() {
   const params = useParams()
@@ -19,17 +20,17 @@ export default function ContractorProfilePage() {
   const [user, setUser] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [editingReview, setEditingReview] = useState(null)
-  const [token, setToken] = useState(null)
+  // Logged-in flag (cookie-auth: token is httpOnly, not readable by JS).
+  // Still named `token` because it is threaded to child components as a prop.
+  const [token, setToken] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    setToken(typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null)
+    setToken(isLikelyLoggedIn())
   }, [])
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : {}
-
-  useEffect(() => { if (token) fetch('/api/auth/me', { headers }).then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) /* eslint-disable-line */ }, [token])
+  useEffect(() => { if (token) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) /* eslint-disable-line */ }, [token])
 
   const load = async () => {
     const r = await fetch(`/api/recommendations/contractors/${id}`)

@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { hasContractorAccess } from '@/lib/contractor-access'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const ROLE_OPTIONS = [
   { key: 'contractor',    label: 'General contractor' },
@@ -47,8 +48,7 @@ export default function ContractorToolsGate({ children, toolName = 'this tool' }
 
   useEffect(() => {
     let cancelled = false
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) {
+    if (!isLikelyLoggedIn()) {
       setStatus('redirecting')
       router.replace(`/?login=1&returnTo=${encodeURIComponent(pathname)}`)
       return
@@ -63,7 +63,7 @@ export default function ContractorToolsGate({ children, toolName = 'this tool' }
         setStatus('unauthorized')
       }
     }, 8000)
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` }, signal: ctrl.signal })
+    fetch('/api/auth/me', { signal: ctrl.signal })
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return
@@ -78,7 +78,7 @@ export default function ContractorToolsGate({ children, toolName = 'this tool' }
           setStatus('authorized')
         } else {
           setStatus('unauthorized')
-          fetch('/api/contractor-applications/me', { headers: { Authorization: `Bearer ${token}` } })
+          fetch('/api/contractor-applications/me')
             .then((r) => r.ok ? r.json() : null)
             .then((d) => { if (!cancelled && d?.application) setApplication(d.application) })
             .catch(() => {})
@@ -126,10 +126,9 @@ function ApplyForContractorTools({ toolName, existing, onSubmitted, user }) {
     if (!form.desiredRoles.length) { toast.error('Pick at least one role'); return }
     setBusy(true)
     try {
-      const token = localStorage.getItem('dm_token')
       const r = await fetch('/api/contractor-applications', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           businessName: form.businessName.trim(),
           phone: form.phone.trim(),

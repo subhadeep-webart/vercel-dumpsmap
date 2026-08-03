@@ -21,13 +21,7 @@ import { Loader2, Camera, AlertTriangle, CircleDollarSign, Lock, X, MapPin, Chec
 import { toast } from 'sonner'
 import MediaUploader from '@/components/MediaUploader'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
-import { getAuthToken } from '@/lib/api-client'
-
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 // Wait-time pills → backend signal + display label
 // `ring`  — status color used for the selected pill's ring AND the white tick's
@@ -63,7 +57,7 @@ export default function QuickCheckInModal({ open, onClose, facility, onSubmitted
   // Gate on auth the moment the modal is asked to open. No token = guaranteed
   // logged-out (the token is set synchronously on login), so we can decide
   // without waiting on /api/auth/me — no async race, no flash of the form.
-  const needsAuth = open && !getAuthToken()
+  const needsAuth = open && !isLikelyLoggedIn()
 
   useEffect(() => {
     if (!open) return
@@ -105,7 +99,7 @@ export default function QuickCheckInModal({ open, onClose, facility, onSubmitted
       }
       const r = await fetch('/api/activity-hub/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       if (!r.ok) {
@@ -118,7 +112,7 @@ export default function QuickCheckInModal({ open, onClose, facility, onSubmitted
       const flagSignals = Object.entries(flags).filter(([, v]) => v).map(([k]) => k)
       for (const fsig of flagSignals) {
         fetch('/api/activity-hub/posts', {
-          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             type: 'facility_update',
             title: `${ISSUE_FLAGS.find((f) => f.key === fsig)?.label || 'Issue'} at ${facility.name}`,

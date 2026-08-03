@@ -15,12 +15,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Loader2, ImagePlus, X, Building2, Truck, Wrench, Package, Boxes, Tag, ArrowRight, Camera } from 'lucide-react'
 import { toast } from 'sonner'
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const CATEGORY_DEFS = [
   { key: 'equipment',             label: 'Equipment',             icon: Wrench,    helper: 'Heavy machinery, tools, attachments, rentals' },
   { key: 'materials',             label: 'Materials',             icon: Package,   helper: 'Aggregates, lumber, metals, fill, salvage' },
@@ -82,7 +76,7 @@ export default function PostCommercialListingDialog({ open, onClose, onCreated }
     try {
       const fd = new FormData()
       for (const f of files) fd.append('file', f)
-      const r = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders() })
+      const r = await fetch('/api/upload', { method: 'POST', body: fd })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Upload failed')
       const next = (j.uploads || []).map((u) => ({ id: u.id, url: u.url }))
@@ -121,7 +115,7 @@ export default function PostCommercialListingDialog({ open, onClose, onCreated }
       }
       const r = await fetch('/api/marketplace/commercial', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await r.json()

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const REASONS = [
   { value: 'spam',         label: 'Spam / promotional' },
@@ -39,15 +40,14 @@ export default function ReportButton({ kind, targetId, targetUserId, className =
     if (!reason) return toast.error('Pick a reason')
     setSubmitting(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-      if (!token) {
+      if (!isLikelyLoggedIn()) {
         toast.error('Please log in to report content')
         setSubmitting(false)
         return
       }
       const r = await fetch('/api/reports', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetKind: kind, targetId, targetUserId, reason, detail }),
       })
       const j = await r.json()

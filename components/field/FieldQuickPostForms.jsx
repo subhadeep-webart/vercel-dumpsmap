@@ -28,12 +28,6 @@ const OPTIONS = [
 /* Shared helpers                                                             */
 /* -------------------------------------------------------------------------- */
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 async function tryGeolocation() {
   if (typeof window === 'undefined' || !navigator?.geolocation) return null
   return new Promise((resolve) => {
@@ -130,7 +124,7 @@ function HotSpotForm({ onDone, onBack, user }) {
     try {
       const r = await fetch('/api/community/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: 'Hot spot reported',
           category: 'illegal_dumping',
@@ -194,7 +188,7 @@ function JobForm({ onDone, onBack, user }) {
     try {
       const r = await fetch('/api/jobs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
           category: 'junk_removal',
@@ -285,7 +279,7 @@ function MarketplaceForm({ onDone, onBack, kind = 'sell' }) {
     try {
       const r = await fetch('/api/marketplace', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(),
           category: 'other',
@@ -360,7 +354,7 @@ function FacilityAlertForm({ onDone, onBack }) {
     setSearching(true)
     const t = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/facilities?q=${encodeURIComponent(q)}&limit=15`, { headers: authHeaders() })
+        const r = await fetch(`/api/facilities?q=${encodeURIComponent(q)}&limit=15`)
         const j = r.ok ? await r.json() : { facilities: [] }
         if (alive) setResults(j.facilities || [])
       } finally { if (alive) setSearching(false) }
@@ -374,7 +368,7 @@ function FacilityAlertForm({ onDone, onBack }) {
     try {
       const r = await fetch('/api/alerts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ facilityId: chosen.id, type: alertType, text }),
       })
       if (!r.ok) throw new Error((await r.json()).error || 'Could not post alert')
@@ -463,7 +457,7 @@ function CommunityForm({ onDone, onBack }) {
     try {
       const r = await fetch('/api/community/posts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), category: 'general', body: body.trim(), photos: urlsOf(photos) }),
       })
       if (!r.ok) throw new Error((await r.json()).error || 'Could not post')

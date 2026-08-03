@@ -7,7 +7,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Star } from 'lucide-react'
 import { toast } from 'sonner'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
+// `token` prop is retained for backward compat but no longer used — auth rides
+// in the httpOnly cookie the global fetch shim attaches to every /api call.
 export default function ContractorReviewDialog({ open, onOpenChange, contractorId, contractorName, token, existing, onSaved }) {
   const [rating, setRating] = useState(5)
   const [text, setText] = useState('')
@@ -23,13 +26,13 @@ export default function ContractorReviewDialog({ open, onOpenChange, contractorI
   }, [open, existing])
 
   const save = async () => {
-    if (!token) { toast.error('Log in to review'); return }
+    if (!isLikelyLoggedIn()) { toast.error('Log in to review'); return }
     if (rating < 1 || rating > 5) { toast.error('Pick a star rating'); return }
     setSubmitting(true)
     try {
       const r = await fetch('/api/reviews/contractor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contractorUserId: contractorId, rating, text, jobType }),
       })
       const j = await r.json()
@@ -46,7 +49,7 @@ export default function ContractorReviewDialog({ open, onOpenChange, contractorI
     if (!confirm('Delete your review?')) return
     setSubmitting(true)
     try {
-      const r = await fetch(`/api/reviews/${existing.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } })
+      const r = await fetch(`/api/reviews/${existing.id}`, { method: 'DELETE' })
       if (!r.ok) { toast.error('Failed'); return }
       toast.success('Review removed')
       onSaved?.()

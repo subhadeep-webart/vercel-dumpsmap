@@ -200,6 +200,63 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is required — set it in /app/.env or your deployment environment.')
 }
 
+// ---------------------------------------------------------------------------
+// Auth cookies (httpOnly session + readable CSRF token)
+// ---------------------------------------------------------------------------
+// The JWT now lives in an httpOnly cookie so page JavaScript can never read it
+// (an XSS can't exfiltrate a 30-day session token). The client no longer sends
+// Authorization: Bearer from localStorage — the browser attaches the cookie
+// automatically. We keep reading the Bearer header as a fallback so native /
+// test clients and any not-yet-migrated call site keep working.
+//
+// CSRF: the session cookie is SameSite=Lax, which already blocks the classic
+// cross-site POST. As defense-in-depth we also run a double-submit check on
+// mutating requests — a readable `dm_csrf` cookie whose value the client must
+// echo back in an `X-CSRF-Token` header. Same-origin JS can read the cookie and
+// set the header; a cross-site attacker can do neither.
+const AUTH_COOKIE = 'dm_token'
+const CSRF_COOKIE = 'dm_csrf' // enforced in middleware.js; still written here on login
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60 // 30 days, in seconds — matches the JWT exp
+const COOKIE_SECURE = process.env.NODE_ENV === 'production'
+
+function newCsrfToken() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID().replace(/-/g, '')
+  return uuidv4().replace(/-/g, '')
+}
+
+// Attach the session + CSRF cookies to a NextResponse after a successful
+// login/signup. Session cookie is httpOnly (JS can't read it); the CSRF cookie
+// is intentionally readable so the client can echo it in a header.
+function setAuthCookies(response, token) {
+  response.cookies.set(AUTH_COOKIE, token, {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_MAX_AGE,
+  })
+  response.cookies.set(CSRF_COOKIE, newCsrfToken(), {
+    httpOnly: false,
+    secure: COOKIE_SECURE,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: SESSION_MAX_AGE,
+  })
+  return response
+}
+
+// Expire both cookies on logout.
+function clearAuthCookies(response) {
+  response.cookies.set(AUTH_COOKIE, '', { httpOnly: true, secure: COOKIE_SECURE, sameSite: 'lax', path: '/', maxAge: 0 })
+  response.cookies.set(CSRF_COOKIE, '', { httpOnly: false, secure: COOKIE_SECURE, sameSite: 'lax', path: '/', maxAge: 0 })
+  return response
+}
+
+// NOTE: The double-submit CSRF check that used to live here now runs at the
+// edge in middleware.js. The cookie *names* it compares (dm_token / dm_csrf)
+// are still defined and written here via setAuthCookies(); the enforcement is
+// centralized in middleware so it's prominent and runs before this handler.
+
 // ---------- Alert constants ----------
 const ALERT_TYPES = {
   WAIT_TIME:      { label: 'Wait Time',       severity: 'warn', expiryHours: 2 },
@@ -708,10 +765,33 @@ function clean(doc) {
   return rest
 }
 
+// Attach author info (+ the caller's own reaction) to a set of community
+// comments. Shared by the post-detail endpoint (first page) and the paginated
+// /comments endpoint (older pages) so both return identically-shaped rows.
+async function hydrateCommunityComments(db, comments, auth) {
+  if (!comments?.length) return []
+  const authorIds = [...new Set(comments.map((c) => c.authorId).filter(Boolean))]
+  const authors = authorIds.length ? await db.collection('users').find({ id: { $in: authorIds } }).toArray() : []
+  const resolvePT = (u) => {
+    if (!u) return 'resident'
+    if (u.communityProfileType) return u.communityProfileType
+    const legacy = u.primaryProfile || (Array.isArray(u.profileTypes) ? u.profileTypes[0] : '') || ''
+    const map = { hauler: 'hauler', contractor: 'contractor', recycler: 'recycler', donor: 'volunteer', facility_owner: 'facility_owner', normal_user: 'resident' }
+    return map[legacy] || u.accountType || 'resident'
+  }
+  const authorMap = Object.fromEntries(authors.map((u) => [u.id, { id: u.id, name: u.name || u.email?.split('@')[0], profileType: resolvePT(u), verificationLevel: u.verificationLevel || 'normal_user' }]))
+  const myRx = {}
+  if (auth) {
+    const rxs = await db.collection('community_reactions').find({ userId: auth.id, targetKind: 'comment', targetId: { $in: comments.map((c) => c.id) } }).toArray()
+    for (const r of rxs) myRx[r.targetId] = r.type
+  }
+  return comments.map((c) => ({ ...clean(c), author: authorMap[c.authorId] || null, myReaction: myRx[c.id] || null }))
+}
+
 function handleCORS(response) {
   response.headers.set('Access-Control-Allow-Origin', process.env.CORS_ORIGINS || '*')
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
   response.headers.set('Access-Control-Allow-Credentials', 'true')
   return response
 }
@@ -728,8 +808,12 @@ function distanceKm(lat1, lng1, lat2, lng2) {
 
 function getAuth(request) {
   try {
+    // Prefer the httpOnly session cookie; fall back to Authorization: Bearer
+    // for native / test clients and any not-yet-migrated call site.
+    const cookieToken = request.cookies?.get?.(AUTH_COOKIE)?.value || null
     const h = request.headers.get('authorization') || ''
-    const token = h.startsWith('Bearer ') ? h.slice(7) : null
+    const headerToken = h.startsWith('Bearer ') ? h.slice(7) : null
+    const token = cookieToken || headerToken
     if (!token) return null
     return jwt.verify(token, JWT_SECRET)
   } catch {
@@ -895,6 +979,11 @@ async function handleRoute(request, context) {
     const db = await connectToMongo()
     const url = new URL(request.url)
 
+    // CSRF is enforced at the edge in middleware.js (double-submit check on
+    // mutating, cookie-authenticated requests) — see that file. It runs before
+    // this handler and before the DB connection above on the reject path.
+    // Authentication/authorization remain here in getAuth()/requireStaff().
+
     if ((route === '/' || route === '/root') && method === 'GET') {
       return handleCORS(NextResponse.json({ message: 'DumpMaps API ok' }))
     }
@@ -927,7 +1016,9 @@ async function handleRoute(request, context) {
       }
       await db.collection('users').insertOne(user)
       const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' })
-      return handleCORS(NextResponse.json({ token, user: clean(user) }))
+      // `token` is still returned for backward compat with Bearer-based clients,
+      // but browsers now authenticate via the httpOnly cookie set here.
+      return setAuthCookies(handleCORS(NextResponse.json({ token, user: clean(user) })), token)
     }
 
     if (route === '/auth/login' && method === 'POST') {
@@ -946,7 +1037,7 @@ async function handleRoute(request, context) {
       const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' })
       // Stamp lastLoginAt so admins can see when each user last signed in. Fire-and-forget.
       db.collection('users').updateOne({ id: user.id }, { $set: { lastLoginAt: new Date() } }).catch(() => {})
-      return handleCORS(NextResponse.json({ token, user: clean(user) }))
+      return setAuthCookies(handleCORS(NextResponse.json({ token, user: clean(user) })), token)
     }
 
     if (route === '/auth/me' && method === 'GET') {
@@ -5835,22 +5926,17 @@ async function handleRoute(request, context) {
       await db.collection('community_posts').updateOne({ id }, { $inc: { viewCount: 1 } })
       const author = post.authorId ? await db.collection('users').findOne({ id: post.authorId }) : null
       const myReaction = auth ? await db.collection('community_reactions').findOne({ userId: auth.id, targetKind: 'post', targetId: id }) : null
-      const comments = await db.collection('community_comments').find({ postId: id, status: { $ne: 'removed' } }).sort({ createdAt: 1 }).toArray()
-      const cAuthorIds = [...new Set(comments.map((c) => c.authorId).filter(Boolean))]
-      const cAuthors = cAuthorIds.length ? await db.collection('users').find({ id: { $in: cAuthorIds } }).toArray() : []
-      const resolvePT2 = (u) => {
-        if (!u) return 'resident'
-        if (u.communityProfileType) return u.communityProfileType
-        const legacy = u.primaryProfile || (Array.isArray(u.profileTypes) ? u.profileTypes[0] : '') || ''
-        const map = { hauler: 'hauler', contractor: 'contractor', recycler: 'recycler', donor: 'volunteer', facility_owner: 'facility_owner', normal_user: 'resident' }
-        return map[legacy] || u.accountType || 'resident'
-      }
-      const cMap = Object.fromEntries(cAuthors.map((u) => [u.id, { id: u.id, name: u.name || u.email?.split('@')[0], profileType: resolvePT2(u), verificationLevel: u.verificationLevel || 'normal_user' }]))
-      const myCommentRx = {}
-      if (auth) {
-        const rxs = await db.collection('community_reactions').find({ userId: auth.id, targetKind: 'comment', targetId: { $in: comments.map((c) => c.id) } }).toArray()
-        for (const r of rxs) myCommentRx[r.targetId] = r.type
-      }
+
+      // Comments are paginated newest-first; the detail response carries just the
+      // first page plus totals so the client can offer "Load more" (older ones).
+      const commentFilter = { postId: id, status: { $ne: 'removed' } }
+      const commentTotal = await db.collection('community_comments').countDocuments(commentFilter)
+      const pageSize = Math.min(Math.max(parseInt(url.searchParams.get('commentLimit') || '15', 10) || 15, 1), 50)
+      const pageDesc = await db.collection('community_comments').find(commentFilter).sort({ createdAt: -1 }).limit(pageSize).toArray()
+      const comments = pageDesc.reverse() // display oldest→newest within the page
+      const commentsHasMore = commentTotal > comments.length
+
+      const hydrated = await hydrateCommunityComments(db, comments, auth)
       return handleCORS(NextResponse.json({
         post: {
           ...clean(post),
@@ -5858,7 +5944,9 @@ async function handleRoute(request, context) {
           author: author ? { id: author.id, name: author.name || author.email?.split('@')[0], profileType: author.communityProfileType || (author.primaryProfile === 'hauler' ? 'hauler' : author.primaryProfile === 'contractor' ? 'contractor' : author.primaryProfile === 'recycler' ? 'recycler' : author.primaryProfile === 'donor' ? 'volunteer' : author.primaryProfile === 'facility_owner' ? 'facility_owner' : 'resident'), verificationLevel: author.verificationLevel || 'normal_user' } : null,
           myReaction: myReaction?.type || null,
         },
-        comments: comments.map((c) => ({ ...clean(c), author: cMap[c.authorId] || null, myReaction: myCommentRx[c.id] || null })),
+        comments: hydrated,
+        commentTotal,
+        commentsHasMore,
       }))
     }
 
@@ -5944,11 +6032,29 @@ async function handleRoute(request, context) {
     }
 
 
-    // List comments
+    // List comments — paginated newest-first for "Load more".
+    // Query params:
+    //   limit  — page size (default 15, capped 50)
+    //   before — ISO timestamp cursor; returns comments strictly older than this
+    // Returns author-hydrated comments in display order (oldest→newest within the
+    // page) plus a `hasMore` flag and the `nextCursor` to pass as the next `before`.
     if (route.match(/^\/community\/posts\/[^/]+\/comments$/) && method === 'GET') {
       const id = route.split('/')[3]
-      const comments = await db.collection('community_comments').find({ postId: id, status: { $ne: 'removed' } }).sort({ createdAt: 1 }).toArray()
-      return handleCORS(NextResponse.json({ comments: comments.map(clean) }))
+      const auth = getAuth(request)
+      const filter = { postId: id, status: { $ne: 'removed' } }
+      const before = url.searchParams.get('before')
+      if (before) {
+        const d = new Date(before)
+        if (!isNaN(d.getTime())) filter.createdAt = { $lt: d }
+      }
+      const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '15', 10) || 15, 1), 50)
+      const pageDesc = await db.collection('community_comments').find(filter).sort({ createdAt: -1 }).limit(limit + 1).toArray()
+      const hasMore = pageDesc.length > limit
+      const page = pageDesc.slice(0, limit)
+      const nextCursor = hasMore ? new Date(page[page.length - 1].createdAt).toISOString() : null
+      const comments = page.reverse() // oldest→newest within the page
+      const hydrated = await hydrateCommunityComments(db, comments, auth)
+      return handleCORS(NextResponse.json({ comments: hydrated, hasMore, nextCursor }))
     }
 
     // Create comment (flat — parentCommentId nullable for future threading)

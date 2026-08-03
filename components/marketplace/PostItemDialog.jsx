@@ -16,12 +16,6 @@ function normalizePhoto(url) {
   return url
 }
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const PRICE_TYPES = [
   { value: 'free',     label: 'Free' },
   { value: 'fixed',    label: 'For Sale' },
@@ -127,7 +121,7 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
       // them as "file" lets us upload up to 10 photos in a single request.
       const fd = new FormData()
       for (const f of files) fd.append('file', f)
-      const r = await fetch('/api/upload', { method: 'POST', body: fd, headers: authHeaders() })
+      const r = await fetch('/api/upload', { method: 'POST', body: fd })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Upload failed')
       const next = (j.uploads || []).map((u) => ({ id: u.id, url: u.url }))
@@ -170,7 +164,7 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
         leavingInMinutes: Number(leavingInMinutes) || 0,
         kind: priceType === 'free' || priceType === 'donation' ? 'free' : priceType === 'trade' ? 'trade' : 'sell',
       }
-      const r = await fetch('/api/marketplace', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(body) })
+      const r = await fetch('/api/marketplace', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Failed')
       onCreated?.(j.listing)

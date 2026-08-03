@@ -21,13 +21,8 @@ import CommercialAccessApplyDialog from './CommercialAccessApplyDialog'
 import PostCommercialListingDialog from './PostCommercialListingDialog'
 import SafeImage from '@/components/SafeImage'
 
-function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
 function authFetch(url, opts = {}) {
-  return fetch(url, { ...opts, headers: { ...(opts.headers || {}), ...authHeaders() } })
+  return fetch(url, opts)
 }
 function fmtUSD(n) {
   try { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: Number.isInteger(n) ? 0 : 2 }).format(n) }

@@ -89,10 +89,9 @@ export default function DonatePage() {
     if (!amt || amt <= 0) return toast.error('Pick or enter a donation amount')
     setSubmitting(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
       const r = await fetch('/api/donations/intent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, amount: amt, tier, message, recurring }),
       })
       const j = await r.json()

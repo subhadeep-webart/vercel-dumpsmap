@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CircleDollarSign, MapPin, Users, Plus, Loader2, Heart, CheckCircle2, AlertTriangle, ArrowRight, Trash2, Award } from 'lucide-react'
 import { toast } from 'sonner'
 import FeatureLock from '@/components/FeatureLock'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 const STATE_META = {
   draft:         { label: 'Draft',         tone: 'bg-neutral-100 text-neutral-700' },
@@ -38,11 +39,6 @@ const FILTERS = [
   { key: 'verified',     label: 'Completed' },
 ]
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
 const fmtMoney = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
 const daysUntil = (date) => {
   if (!date) return null
@@ -72,9 +68,8 @@ function BountiesPageInner() {
   useEffect(() => {
     let cancelled = false
     const run = async () => {
-      const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-      if (t) {
-        const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } }).catch(() => null)
+      if (isLikelyLoggedIn()) {
+        const r = await fetch('/api/auth/me').catch(() => null)
         if (r?.ok) {
           const j = await r.json()
           if (!cancelled) setUser(j.user || null)
@@ -110,7 +105,7 @@ function BountiesPageInner() {
   const claim = async (bounty) => {
     if (!requireAuth('save')) return
     if (!confirm(`Claim "${bounty.title}"? This creates a Work Order assigned to you.`)) return
-    const r = await fetch(`/api/bounties/${bounty.id}/claim`, { method: 'POST', headers: authHeaders() })
+    const r = await fetch(`/api/bounties/${bounty.id}/claim`, { method: 'POST' })
     const j = await r.json()
     if (!r.ok) { toast.error(j.error || 'Claim failed'); return }
     toast.success('Bounty claimed! Work order created.')
@@ -335,7 +330,7 @@ function ContributeDialog({ bounty, onClose, onContributed }) {
     try {
       const r = await fetch(`/api/bounties/${bounty.id}/contribute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amountUsd: n, note }),
       })
       const j = await r.json()
@@ -405,7 +400,7 @@ function PostBountyDialog({ open, onClose, onCreated }) {
       // Create as draft, then transition to funding
       const r = await fetch('/api/bounties', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: form.title.trim(),
           description: form.description.trim(),
@@ -418,7 +413,7 @@ function PostBountyDialog({ open, onClose, onCreated }) {
       // Transition to funding so it shows up publicly
       await fetch(`/api/bounties/${j.bounty.id}/state`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state: 'funding' }),
       }).catch(() => {})
       toast.success('Bounty posted!')

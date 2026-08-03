@@ -31,12 +31,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 const STATUS_META = {
   active:   { label: 'Active',   cls: 'bg-emerald-100 text-emerald-800 ring-emerald-200',  icon: CheckCircle2 },
   trial:    { label: 'On trial', cls: 'bg-amber-100 text-amber-800 ring-amber-200',         icon: Hourglass },
@@ -71,8 +65,8 @@ export default function FeatureGrantsDrawer({ open, onClose, scope, scopeId, sco
     setLoading(true)
     try {
       const [f, g] = await Promise.all([
-        fetch('/api/admin/feature-flags', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch(`/api/admin/feature-grants?scope=${scope}&scopeId=${encodeURIComponent(scopeId)}`, { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ grants: [] })),
+        fetch('/api/admin/feature-flags').then((r) => r.json()).catch(() => null),
+        fetch(`/api/admin/feature-grants?scope=${scope}&scopeId=${encodeURIComponent(scopeId)}`).then((r) => r.json()).catch(() => ({ grants: [] })),
       ])
       if (f?.flags) setFlags(f.flags)
       setGrants(g?.grants || [])
@@ -93,7 +87,7 @@ export default function FeatureGrantsDrawer({ open, onClose, scope, scopeId, sco
     try {
       const res = await fetch('/api/admin/feature-grants', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scope, scopeId, featureKey, ...payload }),
       })
       const j = await res.json()
@@ -111,7 +105,7 @@ export default function FeatureGrantsDrawer({ open, onClose, scope, scopeId, sco
     try {
       const res = await fetch(`/api/admin/feature-grants/${grantId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await res.json()
@@ -129,7 +123,6 @@ export default function FeatureGrantsDrawer({ open, onClose, scope, scopeId, sco
     try {
       const res = await fetch(`/api/admin/feature-grants/${grantId}`, {
         method: 'DELETE',
-        headers: authHeaders(),
       })
       const j = await res.json()
       if (!res.ok) { toast.error(j.error || 'Revoke failed'); return }

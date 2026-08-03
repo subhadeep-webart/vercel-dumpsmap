@@ -11,7 +11,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { clearAuthToken } from '@/hooks/use-logout'
-import { api, ApiError } from '@/lib/api-client'
+import { api, ApiError, isLikelyLoggedIn } from '@/lib/api-client'
 import PageShell from '@/components/PageShell'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -44,8 +44,7 @@ export default function ProfileSetupPage() {
   useEffect(() => {
     let cancelled = false
     const run = async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-      if (!token) {
+      if (!isLikelyLoggedIn()) {
         router.replace('/?login=1&returnTo=/profile/setup')
         return
       }

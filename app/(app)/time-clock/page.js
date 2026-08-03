@@ -33,11 +33,6 @@ import { toast } from 'sonner'
 // ============================================================================
 // Helpers
 // ============================================================================
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
 const fmtMinutes = (m = 0) => {
   const total = Math.max(0, Math.round(m))
   const h = Math.floor(total / 60)
@@ -110,11 +105,11 @@ function TimeClock20() {
     setLoading(true)
     try {
       const [c, l, s, st, meR] = await Promise.all([
-        fetch('/api/time-clock/current', { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ entry: null })),
-        fetch('/api/time-clock/entries?limit=200', { headers: authHeaders() }).then((r) => r.json()).catch(() => ({ entries: [] })),
-        fetch('/api/time-clock/summary', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch('/api/time-clock/settings', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
-        fetch('/api/auth/me', { headers: authHeaders() }).then((r) => r.json()).catch(() => null),
+        fetch('/api/time-clock/current').then((r) => r.json()).catch(() => ({ entry: null })),
+        fetch('/api/time-clock/entries?limit=200').then((r) => r.json()).catch(() => ({ entries: [] })),
+        fetch('/api/time-clock/summary').then((r) => r.json()).catch(() => null),
+        fetch('/api/time-clock/settings').then((r) => r.json()).catch(() => null),
+        fetch('/api/auth/me').then((r) => r.json()).catch(() => null),
       ])
       setActive(c?.entry || null)
       setEntries(l?.entries || [])
@@ -154,7 +149,7 @@ function TimeClock20() {
     setBusy(true)
     try {
       const res = await fetch('/api/time-clock/clock-in', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload || {}),
       })
       const j = await res.json()
@@ -165,7 +160,7 @@ function TimeClock20() {
   const onClockOut = async () => {
     setBusy(true)
     try {
-      const res = await fetch('/api/time-clock/clock-out', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({}) })
+      const res = await fetch('/api/time-clock/clock-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
       const j = await res.json()
       if (!res.ok) { toast.error(j.error || 'Failed to clock out'); return }
       toast.success(`Clocked out · ${fmtMinutes(j.entry?.netMinutes || 0)} worked`); await load()
@@ -174,7 +169,7 @@ function TimeClock20() {
   const onBreakStart = async () => {
     setBusy(true)
     try {
-      const r = await fetch('/api/time-clock/break/start', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() } })
+      const r = await fetch('/api/time-clock/break/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       if (!r.ok) toast.error((await r.json()).error || 'Could not start break'); else toast.success('Break started')
       await load()
     } finally { setBusy(false) }
@@ -182,19 +177,19 @@ function TimeClock20() {
   const onBreakEnd = async () => {
     setBusy(true)
     try {
-      const r = await fetch('/api/time-clock/break/end', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() } })
+      const r = await fetch('/api/time-clock/break/end', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       if (!r.ok) toast.error((await r.json()).error || 'Could not end break'); else toast.success('Back to work')
       await load()
     } finally { setBusy(false) }
   }
   const onSubmit = async (id) => {
-    const r = await fetch(`/api/time-clock/entries/${id}/submit`, { method: 'POST', headers: authHeaders() })
+    const r = await fetch(`/api/time-clock/entries/${id}/submit`, { method: 'POST' })
     if (!r.ok) toast.error((await r.json()).error || 'Submit failed'); else toast.success('Submitted for approval')
     await load()
   }
   const onDelete = async (id) => {
     if (!confirm('Delete this entry? This cannot be undone.')) return
-    const r = await fetch(`/api/time-clock/entries/${id}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`/api/time-clock/entries/${id}`, { method: 'DELETE' })
     if (!r.ok) toast.error('Delete failed'); else toast.success('Deleted')
     await load()
   }
@@ -202,16 +197,15 @@ function TimeClock20() {
     const targetDate = prompt('Duplicate to date (YYYY-MM-DD)?', ymd())
     if (!targetDate) return
     const r = await fetch(`/api/time-clock/entries/${id}/duplicate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetDate }),
     })
     if (!r.ok) toast.error((await r.json()).error || 'Duplicate failed'); else toast.success('Shift duplicated')
     await load()
   }
   const onExportCsv = async () => {
-    const t = localStorage.getItem('dm_token')
     const url = `/api/time-clock/export.csv?from=&to=`
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${t}` } })
+    const r = await fetch(url)
     if (!r.ok) { toast.error('Export failed'); return }
     const blob = await r.blob()
     const a = document.createElement('a')
@@ -220,7 +214,7 @@ function TimeClock20() {
     toast.success('CSV downloaded')
   }
   const onEmailExport = async () => {
-    const r = await fetch('/api/time-clock/email-payload', { headers: authHeaders() })
+    const r = await fetch('/api/time-clock/email-payload')
     const j = await r.json()
     if (!r.ok) { toast.error(j.error || 'Email payload failed'); return }
     const params = new URLSearchParams({ subject: j.subject || 'Timesheet', body: j.body || '' })
@@ -586,7 +580,7 @@ function ApprovalsView() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/time-clock/manager/queue?status=submitted', { headers: authHeaders() })
+      const r = await fetch('/api/time-clock/manager/queue?status=submitted')
       const j = await r.json()
       if (!r.ok) { toast.error(j.error || 'Could not load'); setQueue([]); return }
       setQueue(j.entries || [])
@@ -597,7 +591,7 @@ function ApprovalsView() {
     setBusyId(id)
     try {
       const r = await fetch(`/api/time-clock/manager/${id}/approve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({}),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
       })
       if (!r.ok) toast.error((await r.json()).error || 'Approve failed'); else toast.success('Approved')
       await load()
@@ -609,7 +603,7 @@ function ApprovalsView() {
     setBusyId(id)
     try {
       const r = await fetch(`/api/time-clock/manager/${id}/reject`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify({ reason }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),
       })
       if (!r.ok) toast.error((await r.json()).error || 'Reject failed'); else toast.success('Rejected')
       await load()
@@ -677,7 +671,7 @@ function SettingsView({ settings, onSaved }) {
     setBusy(true)
     try {
       const r = await fetch('/api/time-clock/settings', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roundToMinutes: Number(form.roundToMinutes),
           roundDirection: form.roundDirection,
@@ -919,7 +913,7 @@ function EntryDialog({ open, entry, initialDate, onClose, onSaved }) {
       }
       const url = isEdit ? `/api/time-clock/entries/${entry.id}` : '/api/time-clock/entries'
       const method = isEdit ? 'PATCH' : 'POST'
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(payload) })
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await r.json()
       if (!r.ok) { toast.error(j.error || 'Save failed'); return }
       toast.success(isEdit ? 'Entry updated' : 'Manual entry created')

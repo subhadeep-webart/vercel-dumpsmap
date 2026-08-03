@@ -50,12 +50,6 @@ const CHECKLIST = [
   ['strapsTools',     'Straps / tools secured'],
 ]
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 export default function NewInspectionPage() {
   return (
     <ContractorToolsGate toolName="Vehicle Inspections">
@@ -105,7 +99,7 @@ function NewInspection() {
     try {
       const fd = new FormData()
       fd.append('file', file)
-      const r = await fetch('/api/upload', { method: 'POST', headers: authHeaders(), body: fd })
+      const r = await fetch('/api/upload', { method: 'POST', body: fd })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Upload failed')
       const url = j.url || j.fileUrl || j.path
@@ -128,7 +122,7 @@ function NewInspection() {
       }
       const r = await fetch('/api/vehicle-inspections', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await r.json()

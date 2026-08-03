@@ -26,7 +26,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sparkles } from 'lucide-react'
-import { api, getAuthToken } from '@/lib/api-client'
+import { api } from '@/lib/api-client'
 
 const HEADLINES = {
   post: 'Sign in to share a post',
@@ -55,8 +55,8 @@ export function useRequireAuth() {
 
   useEffect(() => {
     let cancelled = false
-    const token = getAuthToken()
-    if (!token) return undefined
+    // Session lives in an httpOnly cookie (unreadable by JS); just ask the
+    // server. A null user simply means "not logged in".
     api.get('/api/auth/me')
       .then((j) => { if (!cancelled && j?.user) setUser(j.user) })
       .catch(() => {})

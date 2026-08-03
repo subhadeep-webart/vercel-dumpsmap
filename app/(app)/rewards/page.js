@@ -25,12 +25,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import RouteFeatureLock from '@/components/RouteFeatureLock'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
 const fmtPts = (n) => Number(n || 0).toLocaleString()
 const fmtDollars = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`
 
@@ -78,15 +74,13 @@ function RewardsPageInner() {
   const [softLogin, setSoftLogin] = useState(null)
 
   const loadAll = useCallback(async () => {
-    const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!t) { setBootstrapping(false); return }
+    if (!isLikelyLoggedIn()) { setBootstrapping(false); return }
     try {
-      const headers = { Authorization: `Bearer ${t}` }
       const [meR, balR, histR, redR] = await Promise.all([
-        fetch('/api/auth/me', { headers }).then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/balance', { headers }).then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/history?limit=20', { headers }).then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/redemptions', { headers }).then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/users/me/rewards/balance').then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/users/me/rewards/history?limit=20').then((r) => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/users/me/rewards/redemptions').then((r) => r.ok ? r.json() : null).catch(() => null),
       ])
       setUser(meR?.user || null)
       setBalance(balR || null)
@@ -408,7 +402,7 @@ function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
     if (!open || !tier) return
     let active = true
     ;(async () => {
-      const r = await fetch('/api/users/me/cashout-methods', { headers: authHeaders() })
+      const r = await fetch('/api/users/me/cashout-methods')
       const j = await r.json().catch(() => ({}))
       if (!active) return
       setMethods(j.methods || [])
@@ -416,7 +410,7 @@ function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
       setMethodId(def?.id || '')
       const pr = await fetch('/api/users/me/rewards/redeem/preview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ points: tier.points }),
       })
       const pj = await pr.json().catch(() => ({}))
@@ -428,7 +422,7 @@ function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
   const addMethod = async () => {
     if (!newMethod.label.trim()) { toast.error('Add a label'); return }
     const r = await fetch('/api/users/me/cashout-methods', {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(newMethod),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMethod),
     })
     const j = await r.json()
     if (!r.ok) { toast.error(j.error || 'Failed'); return }
@@ -443,7 +437,7 @@ function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
     setBusy(true)
     try {
       const r = await fetch('/api/users/me/rewards/redeem', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ points: tier.points, cashoutMethodId: methodId }),
       })
       const j = await r.json()

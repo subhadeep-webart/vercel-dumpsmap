@@ -18,6 +18,8 @@ import SubmitFacilityDialog from '@/components/home/SubmitFacilityDialog'
 import AdminDialog from '@/components/home/AdminDialog'
 import AuthDialog from '@/components/home/AuthDialog'
 import ProfileDialog from '@/components/home/ProfileDialog'
+import { clearAuthToken } from '@/hooks/use-logout'
+import { api } from '@/lib/api-client'
 
 // ---------- App ----------
 // useSearchParams() must live inside a <Suspense> boundary (see the App wrapper
@@ -59,14 +61,15 @@ function AppInner() {
   }, [searchParams])
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) return
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    // Auth now rides in an httpOnly cookie (attached automatically by the global
+    // fetch shim), so we can't gate on a JS-readable token — just ask the server.
+    // A 200 with a null user simply means "not logged in".
+    fetch('/api/auth/me')
       .then((r) => r.json())
       .then((j) => {
         if (j.user) {
           setUser(j.user)
-          fetch('/api/users/me/contributions', { headers: { Authorization: `Bearer ${token}` } })
+          fetch('/api/users/me/contributions')
             .then((r) => r.json())
             .then((c) => setFavoriteIds(c.favoriteIds || []))
           // Logged-in users landing on "/" should be sent to their dashboard
@@ -81,7 +84,10 @@ function AppInner() {
       })
   }, [router, searchParams])
 
-  const logout = () => {
+  const logout = async () => {
+    // Expire the httpOnly session cookie server-side (JS can't delete it),
+    // then clear any legacy localStorage token and local state.
+    try { await api.post('/api/auth/logout') } catch { /* best-effort */ }
     clearAuthToken()
     setUser(null)
     setFavoriteIds([])
@@ -95,11 +101,8 @@ function AppInner() {
       setAuthOpen(true)
       return
     }
-    const token = localStorage.getItem('dm_token')
-    const r = await fetch(`/api/favorites/${facilityId}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // Cookie + CSRF header are attached automatically by the global fetch shim.
+    const r = await fetch(`/api/favorites/${facilityId}`, { method: 'POST' })
     const j = await r.json()
     if (j.favorited) {
       setFavoriteIds((arr) => [...arr, facilityId])

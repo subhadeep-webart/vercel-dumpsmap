@@ -23,12 +23,6 @@ const LOAD_LABEL = { empty: 'Empty', half: 'Half full', full: 'Full' }
 const CLEAN_LABEL = { clean: 'Clean', dirty: 'Dirty', needs_wash: 'Needs wash', needs_interior: 'Needs interior cleaning' }
 const FUEL = ['empty', '1_4', '1_2', '3_4', 'full']
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 export default function InspectionDetailPage() {
   return (
     <ContractorToolsGate toolName="Vehicle Inspections">
@@ -50,7 +44,7 @@ function InspectionDetail() {
   const load = useCallback(async () => {
     setLoading(true); setError(null)
     try {
-      const r = await fetch(`/api/vehicle-inspections/${id}`, { headers: authHeaders() })
+      const r = await fetch(`/api/vehicle-inspections/${id}`)
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`)
       setIns(j.inspection)
@@ -80,7 +74,7 @@ function InspectionDetail() {
         endTime: draft.endTime || '',
         phase: draft.mileageEnd && draft.fuelEnd ? 'both' : ins.phase,
       }
-      const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(payload) })
+      const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Save failed')
       setIns(j.inspection); setEditMode(false)
@@ -89,7 +83,7 @@ function InspectionDetail() {
 
   const onDelete = async () => {
     if (!confirm('Delete this inspection? This soft-deletes the record.')) return
-    const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'DELETE', headers: authHeaders() })
+    const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'DELETE' })
     if (r.ok) router.push('/vehicle-inspections')
   }
 

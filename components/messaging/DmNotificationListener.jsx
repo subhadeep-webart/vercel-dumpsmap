@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { MessageCircle, Bell, BellOff } from 'lucide-react'
-import { api, getAuthToken } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 
 const POLL_MS = 5000
 const STORAGE_KEY = 'dm_notify_perm_asked'
@@ -100,8 +100,7 @@ export default function DmNotificationListener({ user }) {
       // skip notifications when the inbox tab is currently open — they'd be noisy
       const onInbox = window.location.pathname === '/inbox'
       try {
-        const token = getAuthToken()
-        if (!token) return
+        if (!isLikelyLoggedIn()) return
         // 1) DM threads — granular per-sender notifications
         let j
         try {

@@ -8,12 +8,13 @@ import { toast } from 'sonner'
 
 // ---------- Admin Dialog ----------
 export default function AdminDialog({ open, onOpenChange }) {
-  const [token, setToken] = useState(typeof window !== 'undefined' ? localStorage.getItem('dm_token') || '' : '')
   const [email, setEmail] = useState('admin@dumpmaps.com')
   const [password, setPassword] = useState('admin123')
   const [pending, setPending] = useState([])
   const [me, setMe] = useState(null)
 
+  // Auth rides in the httpOnly session cookie (attached automatically by the
+  // global fetch shim on every /api call), so there's no token to track in JS.
   const login = async () => {
     const r = await fetch('/api/auth/login', {
       method: 'POST',
@@ -21,40 +22,36 @@ export default function AdminDialog({ open, onOpenChange }) {
       body: JSON.stringify({ email, password }),
     })
     const j = await r.json()
-    if (j.token) {
-      setToken(j.token)
-      localStorage.setItem('dm_token', j.token)
+    if (r.ok && j.user) {
       setMe(j.user)
       toast.success(`Welcome, ${j.user.name}`)
-      loadPending(j.token)
+      loadPending()
     } else {
       toast.error(j.error || 'Login failed')
     }
   }
 
-  const loadPending = async (t = token) => {
-    if (!t) return
-    const r = await fetch('/api/admin/pending', { headers: { Authorization: `Bearer ${t}` } })
+  const loadPending = async () => {
+    const r = await fetch('/api/admin/pending')
     const j = await r.json()
     if (j.facilities) setPending(j.facilities)
   }
 
   useEffect(() => {
     if (!open) return
-    if (token) {
-      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => r.json())
-        .then((j) => {
-          setMe(j.user)
-          if (j.user?.role === 'admin') loadPending()
-        })
-    }
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((j) => {
+        setMe(j.user)
+        if (j.user?.role === 'admin') loadPending()
+      })
+      .catch(() => {})
   }, [open])
 
   const moderate = async (id, payload) => {
     const r = await fetch(`/api/admin/facilities/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
     if (r.ok) {
@@ -63,9 +60,8 @@ export default function AdminDialog({ open, onOpenChange }) {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem('dm_token')
-    setToken('')
+  const logout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST' }) } catch { /* best-effort */ }
     setMe(null)
   }
 

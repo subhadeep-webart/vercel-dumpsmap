@@ -63,11 +63,10 @@ export const PRICE_BUCKETS = [
 ]
 
 // ---------------- Helpers ----------------
-// Auth header for API calls. Reads the token from localStorage; no-op on server.
+// Auth header for API calls. Auth now rides on an httpOnly cookie added by the
+// global fetch shim, so no Authorization header is needed here.
 export function authHeaders() {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
+  return {}
 }
 
 // Legacy uploads stored URLs as "/uploads/<name>". We now serve via

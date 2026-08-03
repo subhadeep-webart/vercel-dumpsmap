@@ -116,13 +116,19 @@ export async function handle(ctx) {
     return handleCORS(NextResponse.json({ ok: true }))
   }
 
-  // POST /auth/logout — records the event; client clears its token.
+  // POST /auth/logout — records the event and expires the auth cookies. Bearer
+  // clients additionally drop their own stored token client-side.
   if (route === '/auth/logout' && method === 'POST') {
     const auth = getAuth(request)
     if (auth?.id) {
       await db.collection('users').updateOne({ id: auth.id }, { $set: { lastLogoutAt: new Date() } }).catch(() => {})
     }
-    return handleCORS(NextResponse.json({ ok: true }))
+    const res = handleCORS(NextResponse.json({ ok: true }))
+    // Expire both the httpOnly session cookie and the readable CSRF cookie.
+    const secure = process.env.NODE_ENV === 'production'
+    res.cookies.set('dm_token', '', { httpOnly: true, secure, sameSite: 'lax', path: '/', maxAge: 0 })
+    res.cookies.set('dm_csrf', '', { httpOnly: false, secure, sameSite: 'lax', path: '/', maxAge: 0 })
+    return res
   }
 
   // --------------------------------------------------------------------------

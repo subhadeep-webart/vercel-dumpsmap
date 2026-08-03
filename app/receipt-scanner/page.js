@@ -24,16 +24,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useFeatureAccess } from '@/lib/useFeatureAccess'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import {
   ArrowLeft, ArrowRight, Camera, CheckCircle2, FileText, Loader2,
   RefreshCw, ScanLine, Sparkles, Upload, AlertTriangle, Lock,
 } from 'lucide-react'
 import { toast } from 'sonner'
-
-function authHeaders() {
-  const t = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
 
 const MATERIALS = ['', 'MSW', 'C&D', 'Green Waste', 'Mixed', 'Metal', 'Cardboard', 'E-waste', 'Yard Waste', 'Other']
 const LOADS = ['mixed', 'clean', 'cnd', 'green', 'metal', 'other']
@@ -57,8 +53,7 @@ export default function ReceiptScannerPage() {
   // Auth bootstrap (with 8s safety timeout so mobile users never get stuck)
   useEffect(() => {
     let cancelled = false
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) {
+    if (!isLikelyLoggedIn()) {
       router.replace('/?login=1&returnTo=/receipt-scanner')
       return
     }
@@ -68,7 +63,7 @@ export default function ReceiptScannerPage() {
       // Don't strand the user on a spinner — let them through.
       if (!cancelled) setAuthStatus('ready')
     }, 8000)
-    fetch('/api/auth/me', { headers: authHeaders(), signal: ctrl.signal })
+    fetch('/api/auth/me', { signal: ctrl.signal })
       .then((r) => r.json())
       .then((j) => {
         if (cancelled) return
@@ -101,7 +96,6 @@ export default function ReceiptScannerPage() {
     try {
       const res = await fetch('/api/receipts/scan', {
         method: 'POST',
-        headers: authHeaders(),
         body: fd,
       })
       const j = await res.json().catch(() => ({}))
@@ -153,7 +147,7 @@ export default function ReceiptScannerPage() {
     try {
       const res = await fetch('/api/receipts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const j = await res.json().catch(() => ({}))

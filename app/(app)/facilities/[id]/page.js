@@ -44,7 +44,7 @@ import ClaimBusinessDialog from '@/components/ClaimBusinessDialog'
 import { useFieldBack } from '@/lib/field-back'
 import { useRequireAuth, SoftLoginModal } from '@/components/SoftLoginModal'
 import QuickCheckInModal from '@/components/QuickCheckInModal'
-import { getAuthToken } from '@/lib/api-client'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 import { useFacilityDetail } from '@/hooks/use-facility-detail'
 import { useFacilityActions } from '@/hooks/use-facility-actions'
 import { useShare } from '@/hooks/use-share'
@@ -120,10 +120,10 @@ export default function FacilityProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Still needed as a prop for children that talk to non-/api services
-  // (StartDmButton). All /api calls below go through the api client, which
-  // attaches the token itself.
-  const token = getAuthToken()
+  // A "logged in?" hint passed to children (PrimaryActionBar, StartDmButton)
+  // that gate messaging UI on it. All /api calls go through the api client /
+  // fetch shim, which attaches the session cookie itself.
+  const token = isLikelyLoggedIn()
 
   const populateEdit = (f) => setEditForm({
     hours: f.hours || '', phone: f.phone || '', website: f.website || '',

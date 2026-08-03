@@ -7,20 +7,12 @@ import { toast } from 'sonner'
 const MAX_BYTES = 8 * 1024 * 1024
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,image/*'
 
-const authHeaders = () => {
-  if (typeof window === 'undefined') return {}
-  const t = localStorage.getItem('dm_token')
-  return t ? { Authorization: `Bearer ${t}` } : {}
-}
-
 // Uploads a single File via XHR so we get progress events.
 // Resolves to { id, url, size, mime } returned by the server.
 function uploadOne(file, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', '/api/upload')
-    const headers = authHeaders()
-    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v))
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100))
     }
@@ -112,7 +104,7 @@ export default function PhotoUploader({
     onChange?.(next)
     if (item?.id) {
       // Fire-and-forget delete on the server
-      try { await fetch(`/api/upload/${item.id}`, { method: 'DELETE', headers: authHeaders() }) } catch {}
+      try { await fetch(`/api/upload/${item.id}`, { method: 'DELETE' }) } catch {}
     }
   }
 

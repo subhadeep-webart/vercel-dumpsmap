@@ -27,6 +27,7 @@ import FacilitiesHero from '@/components/facilities/FacilitiesHero'
 import MapPage from '@/components/home/MapPage'
 import AuthDialog from '@/components/home/AuthDialog'
 import { clearAuthToken } from '@/hooks/use-logout'
+import { isLikelyLoggedIn } from '@/lib/api-client'
 
 export default function FacilitiesIndexPage() {
   return (
@@ -49,8 +50,8 @@ function FacilitiesIndexInner() {
   const openLogin = (mode = 'login') => { setAuthMode(mode); setAuthOpen(true) }
 
   // Load favorites for the signed-in user (used on bootstrap and after login).
-  const loadFavorites = (token) => {
-    fetch('/api/users/me/contributions', { headers: { Authorization: `Bearer ${token}` } })
+  const loadFavorites = () => {
+    fetch('/api/users/me/contributions')
       .then((r) => r.json())
       .then((c) => setFavoriteIds(c.favoriteIds || []))
       .catch(() => {})
@@ -60,25 +61,23 @@ function FacilitiesIndexInner() {
   // right account state and favorites light up. No redirect side-effects here —
   // this page is not the landing page.
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (!token) return
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    if (!isLikelyLoggedIn()) return
+    fetch('/api/auth/me')
       .then((r) => r.json())
       .then((j) => {
         if (j.user) {
           setUser(j.user)
-          loadFavorites(token)
+          loadFavorites()
         }
       })
       .catch(() => {})
   }, [])
 
   // AuthDialog success: adopt the user in place (no navigation) and load their
-  // favorites. AuthDialog has already stored the token in localStorage.
+  // favorites. The session cookie is already set by the time this fires.
   const onAuthSuccess = (u) => {
     setUser(u)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('dm_token') : null
-    if (token) loadFavorites(token)
+    loadFavorites()
   }
 
   const logout = () => {
@@ -93,10 +92,8 @@ function FacilitiesIndexInner() {
       toast('Log in to save favorites')
       return
     }
-    const token = localStorage.getItem('dm_token')
     const r = await fetch(`/api/favorites/${facilityId}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
     })
     const j = await r.json()
     if (j.favorited) {
