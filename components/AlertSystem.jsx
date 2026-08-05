@@ -131,14 +131,17 @@ export function AlertPostDialog({ open, onOpenChange, facility, onPosted }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-        <DialogHeader>
+      {/* Flex column with capped height so the header + footer stay fixed and
+          only the body scrolls. Override the primitive's own padding/overflow
+          (p-6, overflow-y-auto) which would otherwise scroll the whole modal. */}
+      <DialogContent className="flex max-h-[90dvh] max-w-xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-none border-b border-neutral-200 px-6 py-4">
           <DialogTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-orange-500" />
             Report what&apos;s happening at {facility?.name}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
           <div className="text-sm text-neutral-600">
             Help other haulers and contractors. Pick what you&apos;re seeing right now:
           </div>
@@ -232,7 +235,10 @@ export function AlertPostDialog({ open, onOpenChange, facility, onPosted }) {
               compact
             />
           </div>
+        </div>
 
+        {/* Fixed footer — stays put while the body scrolls */}
+        <div className="flex-none space-y-2 border-t border-neutral-200 px-6 py-4">
           <Button
             onClick={submit}
             disabled={!type || submitting}

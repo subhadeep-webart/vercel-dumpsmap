@@ -43,19 +43,26 @@ function labelFromHref(href) {
 function Breadcrumbs({ crumbs }) {
   if (!crumbs?.length) return null
   return (
-    <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
+    <nav aria-label="Breadcrumb" className="min-w-0 flex-1 overflow-hidden">
       <ol className="flex min-w-0 items-center gap-1 text-[11px] font-medium text-neutral-500">
         {crumbs.map((c, i) => {
           const last = i === crumbs.length - 1
+          // Only the final crumb is guaranteed visible; the intermediate crumbs
+          // are hidden on the narrowest screens (sm:flex) so a long trail can
+          // never push the row wider than its column and collide with the
+          // right-hand actions (e.g. the Report button).
           const content = (
-            <span className={`inline-flex items-center gap-1 ${last ? 'truncate font-bold text-neutral-900' : ''}`}>
+            <span className={`inline-flex items-center gap-1 ${last ? 'min-w-0 truncate font-bold text-neutral-900' : ''}`}>
               {c.icon ? <c.icon className="h-3 w-3 shrink-0" /> : null}
-              {c.label}
+              {last ? <span className="truncate">{c.label}</span> : c.label}
             </span>
           )
           return (
-            <li key={i} className="flex min-w-0 items-center gap-1">
-              {i > 0 && <ChevronRight className="h-3 w-3 shrink-0 text-neutral-300" />}
+            <li
+              key={i}
+              className={`min-w-0 items-center gap-1 ${last ? 'flex' : 'hidden sm:flex'}`}
+            >
+              {i > 0 && <ChevronRight className="hidden h-3 w-3 shrink-0 text-neutral-300 sm:block" />}
               {last || !c.href ? (
                 <span className="min-w-0" aria-current={last ? 'page' : undefined}>{content}</span>
               ) : (

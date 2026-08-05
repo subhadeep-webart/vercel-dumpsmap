@@ -31,6 +31,9 @@ export function useFacilityDetail(id) {
   const [impact, setImpact] = useState(null)
   const [user, setUser] = useState(null)
   const [myClaim, setMyClaim] = useState(null)
+  // Whether this facility is in the logged-in user's saved (favorites) list —
+  // drives the Save button's filled/active state.
+  const [saved, setSaved] = useState(false)
 
   // Guards state writes against stale responses after the id changes / unmount.
   const activeId = useRef(id)
@@ -101,6 +104,14 @@ export function useFacilityDetail(id) {
       api.get(`/facility-claims/mine?facilityId=${id}`, { signal })
         .then((j) => { if (alive()) setMyClaim((j?.claims || [])[0] || null) })
         .catch(() => {})
+      // Is this facility already saved? Seeds the Save button's filled state.
+      api.get('/favorites', { signal })
+        .then((j) => {
+          if (!alive()) return
+          const ids = (j?.favorites || []).map((f) => f.id || f.facilityId)
+          setSaved(ids.includes(id))
+        })
+        .catch(() => {})
     }
 
     return () => { ctrl.abort() }
@@ -113,6 +124,8 @@ export function useFacilityDetail(id) {
     user,
     myClaim,
     setMyClaim,
+    saved,
+    setSaved,
     reload,
   }
 }

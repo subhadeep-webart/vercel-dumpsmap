@@ -120,7 +120,12 @@ export default function FacilityMap({ facility, directionsUrl, className = '' })
   }
 
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border border-neutral-200 shadow-sm ${className}`}>
+    // `isolate` + `z-0` traps Leaflet's internal panes (which reach z-index
+    // ~400-700) inside this element's own stacking context. Without it those
+    // high z-indexes compete with the page's fixed overlays (modals, dropdowns,
+    // popovers at z-50) and win — making them appear to open *below* the map.
+    // Isolating caps the whole map at z-0 against the rest of the page.
+    <div className={`group relative isolate z-0 overflow-hidden rounded-2xl border border-neutral-200 shadow-sm ${className}`}>
       {/* Map canvas */}
       <div ref={containerRef} className="facility-leaflet h-full min-h-[240px] w-full" />
 

@@ -5926,6 +5926,9 @@ async function handleRoute(request, context) {
       await db.collection('community_posts').updateOne({ id }, { $inc: { viewCount: 1 } })
       const author = post.authorId ? await db.collection('users').findOne({ id: post.authorId }) : null
       const myReaction = auth ? await db.collection('community_reactions').findOne({ userId: auth.id, targetKind: 'post', targetId: id }) : null
+      // Whether the viewer has this post saved — mirrors the Activity Hub feed's
+      // `savedByMe` so the detail page can show the correct saved state on load.
+      const mySave = auth ? await db.collection('community_saves').findOne({ userId: auth.id, postId: id }) : null
 
       // Comments are paginated newest-first; the detail response carries just the
       // first page plus totals so the client can offer "Load more" (older ones).
@@ -5943,6 +5946,7 @@ async function handleRoute(request, context) {
           viewCount: (post.viewCount || 0) + 1,
           author: author ? { id: author.id, name: author.name || author.email?.split('@')[0], profileType: author.communityProfileType || (author.primaryProfile === 'hauler' ? 'hauler' : author.primaryProfile === 'contractor' ? 'contractor' : author.primaryProfile === 'recycler' ? 'recycler' : author.primaryProfile === 'donor' ? 'volunteer' : author.primaryProfile === 'facility_owner' ? 'facility_owner' : 'resident'), verificationLevel: author.verificationLevel || 'normal_user' } : null,
           myReaction: myReaction?.type || null,
+          savedByMe: !!mySave,
         },
         comments: hydrated,
         commentTotal,

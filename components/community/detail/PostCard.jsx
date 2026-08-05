@@ -56,8 +56,8 @@ export default function PostCard({ post, commentCount, actions }) {
       {post.photos?.length > 0 && (
         <div className={`mt-3 grid gap-0.5 ${post.photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {post.photos.map((p, i) => (
-            <div key={i} className={`bg-neutral-100 ${post.photos.length === 1 ? 'aspect-[16/10]' : 'aspect-square'}`}>
-              <img src={p} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <div key={i} className={`relative overflow-hidden bg-neutral-100 ${post.photos.length === 1 ? 'pb-[62.5%]' : 'pb-[100%]'}`}>
+              <img src={p} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
             </div>
           ))}
         </div>

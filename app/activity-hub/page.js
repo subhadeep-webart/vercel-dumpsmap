@@ -523,7 +523,12 @@ function FeedCard({ card, user, requireAuth, onUpdate, onRemove }) {
             consistently without dominating the feed. */}
         {cover && (
           <Link href={card.href || '#'} className="block">
-            <div className="relative aspect-[16/9] max-h-56 w-full overflow-hidden bg-neutral-100">
+            {/* Padding-based aspect box (pb-[56.25%] = 16:9). Using a
+                padding spacer instead of `aspect-ratio` so the height is
+                reserved even on mobile Safari/Android WebView, where an
+                aspect-ratio box whose only child is position:absolute can
+                collapse to zero height and hide the image. */}
+            <div className="relative w-full overflow-hidden bg-neutral-100 pb-[56.25%]">
               <SafeImage src={cover} alt={card.title || ''} kind="post" className="absolute inset-0 h-full w-full object-cover" />
             </div>
           </Link>

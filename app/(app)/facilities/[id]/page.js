@@ -59,7 +59,6 @@ import PricingTab from '@/components/facilities/detail/PricingTab'
 import RewardsTab from '@/components/facilities/detail/RewardsTab'
 import UpdatesTab from '@/components/facilities/detail/UpdatesTab'
 import ReviewsTab from '@/components/facilities/detail/ReviewsTab'
-import MobileStickyActions from '@/components/facilities/detail/MobileStickyActions'
 import WriteReviewModal from '@/components/facilities/detail/WriteReviewModal'
 import {
   SidebarContactCard, SidebarHoursCard, SidebarMapCard,
@@ -77,7 +76,7 @@ export default function FacilityProfilePage() {
   // All page data fetching lives in the hook (facility, impact, user, claim).
   const {
     facility, reviews, error: err, usedFallback, loading,
-    impact, user, myClaim, setMyClaim, reload: load,
+    impact, user, myClaim, setMyClaim, saved, setSaved, reload: load,
   } = useFacilityDetail(id)
 
   const [claimOpen, setClaimOpen] = useState(false)
@@ -181,7 +180,12 @@ export default function FacilityProfilePage() {
     text: `Check out ${facility.name} on DumpMaps`,
   })
 
-  const onSave = watch
+  // Toggle saved (favorite) and reflect the new state on the Save button. watch()
+  // returns the new saved boolean (or null on failure/auth-cancel).
+  const onSave = async () => {
+    const next = await watch()
+    if (next !== null && next !== undefined) setSaved(next)
+  }
 
   // Open the community check-in modal (auth-gated). Wired to the previously
   // dead "Check In & Earn" / "Earn" buttons.
@@ -226,10 +230,12 @@ export default function FacilityProfilePage() {
         editing={editing}
         onShare={onShare}
         onSave={onSave}
+        saved={saved}
         saving={pending.watch}
         onClaim={() => { if (!requireAuth('claim')) return; setClaimOpen(true) }}
         onToggleEdit={() => setEditing((e) => !e)}
         onCheckIn={openCheckIn}
+        onReview={openReview}
       />
 
       {myClaim && (
@@ -247,7 +253,7 @@ export default function FacilityProfilePage() {
                          scrolls (position: sticky), followed by the place-info
                          cards — mirroring a Google Maps place page.
           On mobile the columns stack: stats → map → info cards → tabs body. */}
-      <main className="container mx-auto grid grid-cols-1 gap-6 px-4 py-6 pb-28 lg:grid-cols-5 lg:items-start lg:pb-10">
+      <main className="container mx-auto grid grid-cols-1 gap-6 px-4 py-6 pb-10 lg:grid-cols-5 lg:items-start">
 
         {/* ---------- LEFT: scrollable info panel ---------- */}
         <div className="min-w-0 lg:col-span-3">
@@ -384,14 +390,6 @@ export default function FacilityProfilePage() {
           <SidebarReportRow facility={facility} />
         </div>
       </main>
-
-      {/* ============== MOBILE STICKY ACTION BAR ============== */}
-      <MobileStickyActions
-        facility={facility}
-        directionsUrl={directionsUrl}
-        onCheckIn={openCheckIn}
-        onReview={openReview}
-      />
 
       <ClaimBusinessDialog open={claimOpen} onOpenChange={setClaimOpen} facility={facility} onSubmitted={(c) => setMyClaim(c)} />
       {softLogin && <SoftLoginModal action={softLogin} onClose={() => setSoftLogin(null)} />}

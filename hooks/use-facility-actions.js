@@ -88,17 +88,19 @@ export function useFacilityActions({ id, requireAuth, onMutated } = {}) {
     }
   }, [id, onMutated])
 
-  // Add the facility to the current user's saved/watched list.
+  // Toggle the facility in the current user's saved list. Backed by the
+  // favorites endpoint (POST /favorites/:id toggles and returns { favorited }).
   const watch = useCallback(async () => {
     if (!gate('save')) return false
     setBusy('watch', true)
     try {
-      await api.post(`/facilities/${id}/watch`)
-      toast.success('Saved to your facilities')
-      return true
+      const res = await api.post(`/favorites/${id}`)
+      const nowSaved = res?.favorited !== false
+      toast.success(nowSaved ? 'Saved to your facilities' : 'Removed from your facilities')
+      return nowSaved
     } catch {
       toast.error('Could not save')
-      return false
+      return null
     } finally {
       setBusy('watch', false)
     }

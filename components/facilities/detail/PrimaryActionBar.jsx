@@ -6,9 +6,9 @@
 
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Navigation, Phone, Gift, Save, Share2, KeyRound, Edit3, ShieldAlert, Loader2 } from 'lucide-react'
+import { Navigation, Phone, Gift, Bookmark, Share2, KeyRound, Edit3, ShieldAlert, Loader2, Star } from 'lucide-react'
 
-export default function PrimaryActionBar({ facility, directionsUrl, isClaimed, isOwner, isStaffUser, token, editing, onShare, onSave, saving, onClaim, onToggleEdit, onCheckIn }) {
+export default function PrimaryActionBar({ facility, directionsUrl, isClaimed, isOwner, isStaffUser, token, editing, onShare, onSave, saved, saving, onClaim, onToggleEdit, onCheckIn, onReview }) {
   return (
     <section className="border-b border-neutral-200 bg-white">
       <div className="container mx-auto flex flex-wrap items-center gap-2 px-4 py-3">
@@ -29,10 +29,21 @@ export default function PrimaryActionBar({ facility, directionsUrl, isClaimed, i
             <Gift className="mr-1.5 h-4 w-4" /> Check In & Earn
           </Button>
         )}
-        <Button variant="outline" onClick={onSave} disabled={saving}>
+        {onReview && (
+          <Button variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-50" onClick={onReview}>
+            <Star className="mr-1.5 h-4 w-4" /> Review
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          onClick={onSave}
+          disabled={saving}
+          aria-pressed={saved}
+          className={saved ? 'border-brand-500 bg-brand-50 text-brand-700 hover:bg-brand-100' : ''}
+        >
           {saving
             ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…</>
-            : <><Save className="mr-1.5 h-4 w-4" /> Save</>}
+            : <><Bookmark className={`mr-1.5 h-4 w-4 ${saved ? 'fill-brand-600 text-brand-600' : ''}`} /> {saved ? 'Saved' : 'Save'}</>}
         </Button>
         <Button variant="outline" onClick={onShare}>
           <Share2 className="mr-1.5 h-4 w-4" /> Share

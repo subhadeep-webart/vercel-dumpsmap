@@ -10,7 +10,7 @@
 // optimistic via the `setPost` updater passed in from useCommunityPost, then
 // reconciled with a `reload()`.
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
@@ -21,6 +21,15 @@ export function useCommunityPostActions({ id, user, post, setPost, reload }) {
   const [reacting, setReacting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedByMe, setSavedByMe] = useState(false)
+
+  // Seed the saved state from the post the server returned (savedByMe), so a
+  // post already saved on the Activity Hub shows as saved here on load. Only
+  // syncs while no save toggle is in flight, so an optimistic update isn't
+  // clobbered by a stale post snapshot mid-request.
+  useEffect(() => {
+    if (!saving && typeof post?.savedByMe === 'boolean') setSavedByMe(post.savedByMe)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.savedByMe])
 
   const submitComment = useCallback(async (body) => {
     const text = (body || '').trim()
