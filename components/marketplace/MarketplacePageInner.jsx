@@ -55,7 +55,10 @@ export default function MarketplacePageInner() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px]">
             {/* Mobile filter trigger — opens the sidebar in a slide-in sheet.
-                Hidden on lg+ where the sidebar is always in view. */}
+                Hidden on lg+ where the sidebar is always in view.
+                Note: the "Clear all" action lives with the active-filter chips
+                (ActiveFilterChips) below, so we deliberately don't repeat it
+                here — otherwise two "Clear all" buttons show on mobile. */}
             <div className="flex items-center justify-between gap-2 lg:hidden">
               <button
                 type="button"
@@ -70,15 +73,6 @@ export default function MarketplacePageInner() {
                   </span>
                 )}
               </button>
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={m.clearFilters}
-                  className="text-xs font-semibold text-neutral-500 hover:text-neutral-800"
-                >
-                  Clear all
-                </button>
-              )}
             </div>
 
             {/* Active filters + current sort, shown above the results in the

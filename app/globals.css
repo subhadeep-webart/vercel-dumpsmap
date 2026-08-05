@@ -453,6 +453,34 @@ code {
 }
 
 /* ------------------------------------------------------------------
+   Responsive input placeholders.
+   On phones the default placeholder text (which inherits the input's
+   font-size, often 14–16px) is too large and gets clipped/wraps in the
+   narrow fields. Shrink placeholder text on small screens only — the
+   typed value keeps the input's real font-size, this only affects the
+   placeholder glyphs. Scoped to <768px so desktop is untouched.
+   ------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 12px;
+  }
+  /* Some browsers need the vendor-prefixed selectors to apply the size. */
+  input::-webkit-input-placeholder,
+  textarea::-webkit-input-placeholder {
+    font-size: 12px;
+  }
+  input::-moz-placeholder,
+  textarea::-moz-placeholder {
+    font-size: 12px;
+  }
+  input:-ms-input-placeholder,
+  textarea:-ms-input-placeholder {
+    font-size: 12px;
+  }
+}
+
+/* ------------------------------------------------------------------
    Dashboard motion + polish helpers.
    Pure CSS, GPU-friendly (opacity / transform / box-shadow only) and
    fully disabled under prefers-reduced-motion. Reuses the .dm-card-in
