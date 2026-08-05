@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
               <p className="mt-1 text-sm text-neutral-600">
                 {sent
                   ? 'If an account exists for that email, we just sent a reset link. The link expires in 1 hour.'
-                  : 'Enter the email on your DumpMaps account and we\u2019ll send a link to reset your password.'}
+                  : 'Enter the email on your DumpMaps account and we’ll send a link to reset your password.'}
               </p>
             </div>
 
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
                 {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</div>}
                 <Button type="submit" disabled={loading || !email} className="w-full bg-brand-600 hover:bg-brand-700">
                   {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-                  {loading ? 'Sending\u2026' : 'Send reset link'}
+                  {loading ? 'Sending…' : 'Send reset link'}
                 </Button>
               </form>
             )}
@@ -90,7 +90,7 @@ export default function ForgotPasswordPage() {
             {sent && (
               <div className="space-y-2 text-center">
                 <p className="text-xs text-neutral-500">
-                  Didn\u2019t get an email? Check your spam folder or{' '}
+                  Didn&rsquo;t get an email? Check your spam folder or{' '}
                   <button onClick={() => { setSent(false); setEmail('') }} className="text-brand-700 underline">try a different email</button>.
                 </p>
                 <Button asChild variant="outline" className="w-full">

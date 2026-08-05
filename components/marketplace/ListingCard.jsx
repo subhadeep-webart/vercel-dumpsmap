@@ -71,9 +71,9 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
         </span>
       </div>
 
-      <CardContent className="flex flex-1 flex-col gap-1.5 p-3.5">
-        <div className="line-clamp-1 text-sm font-bold text-neutral-900">{l.title}</div>
-        <div className="flex items-center justify-between text-xs text-neutral-500">
+      <CardContent className="flex flex-1 flex-col gap-1.5 p-3">
+        <div className="line-clamp-1 text-[13px] font-bold text-neutral-900">{l.title}</div>
+        <div className="flex items-center justify-between text-[11px] text-neutral-500">
           <span className="inline-flex min-w-0 items-center gap-1">
             <MapPin className="h-3 w-3 shrink-0" />
             <span className="truncate">{miles != null ? `${miles.toFixed(1)} mi · ` : ''}{l.city || '—'}</span>
@@ -86,7 +86,7 @@ export default function ListingCard({ l, onSave, isSaved, onClick }) {
               <div className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-neutral-200">
                 {l.seller.avatarUrl ? <SafeImage src={l.seller.avatarUrl} alt="" kind="avatar" className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-[10px] font-bold text-neutral-500">{(l.seller.name || '?')[0].toUpperCase()}</div>}
               </div>
-              <span className="truncate text-xs font-medium text-neutral-700">{l.seller.name}</span>
+              <span className="truncate text-[11px] font-medium text-neutral-700">{l.seller.name}</span>
             </div>
             {l.seller.badge && (
               <span className={`inline-flex shrink-0 items-center gap-0.5 rounded-full border px-1.5 py-[3px] text-[9px] font-medium leading-none ${sellerBadgeStyle(l.seller.badge)}`}>

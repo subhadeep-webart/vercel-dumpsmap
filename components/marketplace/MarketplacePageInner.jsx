@@ -1,6 +1,8 @@
 'use client'
 
-import { Plus } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, SlidersHorizontal } from 'lucide-react'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import PostItemDialog from '@/components/marketplace/PostItemDialog'
 import QuickViewModal from '@/components/marketplace/QuickViewModal'
 import ContactSellerModal from '@/components/marketplace/ContactSellerModal'
@@ -20,6 +22,11 @@ import { useMarketplace } from '@/hooks/use-marketplace'
 // Container: owns state via useMarketplace and wires presentational pieces.
 export default function MarketplacePageInner() {
   const m = useMarketplace()
+  // Mobile-only filter drawer. On desktop the FilterSidebar is always visible in
+  // the left column; on small screens it collapses behind a single "Filters"
+  // button (e-commerce pattern) so it doesn't push the listings way down.
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const activeFilterCount = m.activeChips?.length || 0
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -47,6 +54,33 @@ export default function MarketplacePageInner() {
           </FeatureLock>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[260px_1fr_320px]">
+            {/* Mobile filter trigger — opens the sidebar in a slide-in sheet.
+                Hidden on lg+ where the sidebar is always in view. */}
+            <div className="flex items-center justify-between gap-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 shadow-sm transition hover:border-brand-400 hover:text-brand-700"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[11px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={m.clearFilters}
+                  className="text-xs font-semibold text-neutral-500 hover:text-neutral-800"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
             {/* Active filters + current sort, shown above the results in the
                 center column (spans the sidebar gutter on large screens). */}
             {(m.activeChips.length > 0 || m.sortLabel) && (
@@ -58,18 +92,21 @@ export default function MarketplacePageInner() {
                 />
               </div>
             )}
-            <FilterSidebar
-              coordsLabel={m.coordsLabel}
-              onUseMyLocation={m.useMyLocation}
-              distancePreset={m.distancePreset}
-              onDistanceChange={m.setDistancePreset}
-              cat={m.cat}
-              onCatChange={m.setCat}
-              condition={m.condition}
-              onConditionChange={m.setCondition}
-              priceBucket={m.priceBucket}
-              onPriceBucketChange={m.setPriceBucket}
-            />
+            {/* Desktop sidebar — always visible from lg up. */}
+            <div className="hidden lg:block">
+              <FilterSidebar
+                coordsLabel={m.coordsLabel}
+                onUseMyLocation={m.useMyLocation}
+                distancePreset={m.distancePreset}
+                onDistanceChange={m.setDistancePreset}
+                cat={m.cat}
+                onCatChange={m.setCat}
+                condition={m.condition}
+                onConditionChange={m.setCondition}
+                priceBucket={m.priceBucket}
+                onPriceBucketChange={m.setPriceBucket}
+              />
+            </div>
 
             <ListingsPanel
               q={m.q}
@@ -88,12 +125,59 @@ export default function MarketplacePageInner() {
               onClearFilters={m.clearFilters}
             />
 
-            <MarketplaceRightRail user={m.user} myListings={m.myListings} />
+            {/* Seller/CTA rail — desktop only; on mobile it just pushed the
+                listings down without adding browsing value. */}
+            <div className="hidden lg:block">
+              <MarketplaceRightRail user={m.user} myListings={m.myListings} />
+            </div>
           </div>
         )}
 
         <AudienceBar />
       </main>
+
+      {/* Mobile filter drawer — same FilterSidebar, slides in from the left. */}
+      <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <SheetContent side="left" className="flex w-[88vw] max-w-sm flex-col gap-0 p-0 lg:hidden">
+          <SheetHeader className="border-b border-neutral-200 px-4 py-3 text-left">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <SlidersHorizontal className="h-4 w-4 text-brand-600" /> Filters
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-4">
+            <FilterSidebar
+              coordsLabel={m.coordsLabel}
+              onUseMyLocation={m.useMyLocation}
+              distancePreset={m.distancePreset}
+              onDistanceChange={m.setDistancePreset}
+              cat={m.cat}
+              onCatChange={m.setCat}
+              condition={m.condition}
+              onConditionChange={m.setCondition}
+              priceBucket={m.priceBucket}
+              onPriceBucketChange={m.setPriceBucket}
+            />
+          </div>
+          <div className="flex items-center gap-2 border-t border-neutral-200 p-3">
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={m.clearFilters}
+                className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-600 hover:bg-neutral-50"
+              >
+                Clear
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(false)}
+              className="flex-1 rounded-full bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700"
+            >
+              Show results
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Floating + on mobile */}
       <button

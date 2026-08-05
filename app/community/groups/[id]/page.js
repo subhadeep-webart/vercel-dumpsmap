@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
+import { StyledAutoResizeTextarea } from '@/components/ui/auto-resize-textarea'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ArrowLeft, Users, MapPin, Settings, Shield, Plus, LogOut, BadgeCheck, Pin, MessageCircle, AlertTriangle, Star } from 'lucide-react'
@@ -17,6 +17,7 @@ import { GroupCategoryIcon, CategoryIcon } from '@/lib/community-icons'
 import GroupChatPanel from '@/components/messaging/GroupChatPanel'
 import PageShell from '@/components/PageShell'
 import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useCurrentUser } from '@/lib/useCurrentUser'
 
 const GROUP_CATS = {
   haulers: { label: 'Haulers' }, cleanup: { label: 'Cleanup Crew' },
@@ -30,7 +31,7 @@ export default function GroupDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id
-  const [user, setUser] = useState(null)
+  const { user } = useCurrentUser()
   const [group, setGroup] = useState(null)
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
@@ -47,8 +48,6 @@ export default function GroupDetailPage() {
   }, [])
 
   const loggedIn = isLikelyLoggedIn()
-
-  useEffect(() => { if (loggedIn) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [loggedIn])
 
   const loadGroup = async () => {
     const r = await fetch(`/api/community/groups/${id}`)
@@ -250,7 +249,7 @@ function GroupComposeDialog({ open, onOpenChange, groupId, onPosted }) {
         <DialogHeader><DialogTitle>Post to group</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div><label className="text-xs font-bold uppercase">Title</label><Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} /></div>
-          <div><label className="text-xs font-bold uppercase">Body</label><Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} maxLength={4000} /></div>
+          <div><label className="text-xs font-bold uppercase">Body</label><StyledAutoResizeTextarea value={body} onChange={(e) => setBody(e.target.value)} maxLength={4000} minHeight={96} maxHeight={280} /></div>
           <Button onClick={submit} disabled={submitting} className="w-full bg-brand-600 hover:bg-brand-700">{submitting ? 'Posting…' : 'Post'}</Button>
         </div>
       </DialogContent>

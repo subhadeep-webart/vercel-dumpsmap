@@ -1,12 +1,17 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Bell, Crosshair, Heart, LayoutGrid, MapPin } from 'lucide-react'
+import { Bell, ChevronDown, ChevronUp, Crosshair, Heart, LayoutGrid, MapPin } from 'lucide-react'
 import MarketDropdown from '@/components/marketplace/MarketDropdown'
 import {
   CATEGORIES, CONDITIONS, DISTANCE_PRESETS, PRICE_BUCKETS,
 } from '@/constants/marketplace_constants'
+
+// How many categories to reveal before the "See more" toggle. Keeps the filter
+// list short and scannable instead of a long wall of 16 categories.
+const CATEGORY_PREVIEW_COUNT = 5
 
 // Distance presets mapped to the shared dropdown's { value, label } shape.
 // `null` (Statewide) is encoded as the sentinel string 'state' for the dropdown.
@@ -51,6 +56,18 @@ export default function FilterSidebar({
   condition, onConditionChange,
   priceBucket, onPriceBucketChange,
 }) {
+  const [showAllCats, setShowAllCats] = useState(false)
+
+  // Collapse the category list to a short preview. If the currently selected
+  // category sits past the cutoff, keep it visible so the active filter never
+  // hides behind "See more".
+  const selectedIdx = CATEGORIES.indexOf(cat)
+  const cutoff = showAllCats
+    ? CATEGORIES.length
+    : Math.max(CATEGORY_PREVIEW_COUNT, selectedIdx + 1)
+  const visibleCats = CATEGORIES.slice(0, cutoff)
+  const hiddenCount = CATEGORIES.length - visibleCats.length
+
   return (
     <aside className="space-y-4">
       <Card className="border-neutral-200">
@@ -73,9 +90,22 @@ export default function FilterSidebar({
           <Section title="Categories">
             <FilterRadio value="" label="All Categories" current={cat} onChange={onCatChange} icon={LayoutGrid} />
             <FilterRadio value="free-cat" label="Free" current={cat} onChange={onCatChange} icon={Heart} disabled />
-            {CATEGORIES.map((c) => (
+            {visibleCats.map((c) => (
               <FilterRadio key={c} value={c} label={c} current={cat} onChange={onCatChange} />
             ))}
+            {(hiddenCount > 0 || showAllCats) && (
+              <button
+                type="button"
+                onClick={() => setShowAllCats((v) => !v)}
+                className="mt-1 inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
+              >
+                {showAllCats ? (
+                  <>Show less <ChevronUp className="h-3.5 w-3.5" /></>
+                ) : (
+                  <>See more <span className="text-neutral-400">({hiddenCount})</span> <ChevronDown className="h-3.5 w-3.5" /></>
+                )}
+              </button>
+            )}
           </Section>
           <Section title="Condition">
             {CONDITIONS.map((c) => (

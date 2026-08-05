@@ -127,22 +127,22 @@ export default function ListingsPanel({
         <>
         <div className="space-y-2">
           {visibleListings.map((l) => (
-            <Card key={l.id} onClick={() => onOpenListing(l)} className="cursor-pointer hover:bg-neutral-50">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="h-20 w-28 shrink-0 overflow-hidden rounded-md bg-neutral-100">
+            <Card key={l.id} onClick={() => onOpenListing(l)} className="cursor-pointer border-neutral-200/70 transition hover:border-brand-200 hover:bg-neutral-50">
+              <CardContent className="flex items-center gap-3 p-2.5">
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-neutral-100 sm:h-[68px] sm:w-[68px]">
                   <ListingThumb photo={l.photos?.[0]} category={l.category} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${statusBadgeStyle(l.itemStatus)}`}>{statusLabel(l.itemStatus)}</span>
+                  <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+                    <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none tracking-wide ${statusBadgeStyle(l.itemStatus)}`}>{statusLabel(l.itemStatus)}</span>
                     {l.leavingInMinutes != null && l.leavingInMinutes > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded bg-black/80 px-1.5 py-0.5 text-[10px] font-bold text-white"><Clock className="h-3 w-3" />Leaving in {l.leavingInMinutes} min</span>
+                      <span className="inline-flex items-center gap-1 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white"><Clock className="h-2.5 w-2.5" />{l.leavingInMinutes} min left</span>
                     )}
                   </div>
-                  <div className="line-clamp-1 text-sm font-bold">{l.title}</div>
-                  <div className="text-xs text-neutral-500">{l.city} · {timeAgoShort(l.createdAt)}</div>
+                  <div className="line-clamp-1 text-[13px] font-bold text-neutral-900">{l.title}</div>
+                  <div className="mt-0.5 truncate text-[11px] text-neutral-500">{l.city || '—'} · {timeAgoShort(l.createdAt)}</div>
                 </div>
-                <div className={`shrink-0 text-lg font-extrabold ${l.priceType === 'free' || l.price === 0 ? 'text-emerald-600' : 'text-neutral-900'}`}>{priceLabel(l)}</div>
+                <div className={`shrink-0 text-sm font-extrabold ${l.priceType === 'free' || l.price === 0 ? 'text-emerald-600' : 'text-neutral-900'}`}>{priceLabel(l)}</div>
               </CardContent>
             </Card>
           ))}

@@ -140,7 +140,7 @@ const ROLE_LABEL = {
 
 // Re-exported building blocks for role pages -------------------------------
 export function KpiGrid({ children }) {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 [&>*]:min-w-0">{children}</div>
 }
 export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading, index = 0 }) {
   const toneCls = ({
@@ -158,10 +158,10 @@ export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading
           {Icon && <span className={`dm-badge inline-flex h-7 w-7 items-center justify-center rounded-md ${toneCls}`}><Icon className="h-3.5 w-3.5" /></span>}
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{label}</span>
         </div>
-        <div className="mt-2 text-lg font-extrabold tracking-tight text-neutral-900">
+        <div className="mt-2 truncate text-base font-extrabold tracking-tight text-neutral-900 sm:text-lg">
           {loading ? <Loader2 className="h-4 w-4 animate-spin text-neutral-400" /> : value}
         </div>
-        {sub && <div className="mt-0.5 truncate text-[11px] text-neutral-500">{sub}</div>}
+        {sub && <div className="mt-0.5 truncate text-[10px] text-neutral-500 sm:text-[11px]">{sub}</div>}
       </CardContent>
     </Card>
   )
@@ -169,12 +169,12 @@ export function KpiTile({ icon: Icon, label, value, sub, tone = 'brand', loading
 export function SectionHeader({ icon: Icon, title, subtitle, action }) {
   return (
     <div className="mb-2 mt-6 flex items-end justify-between gap-2">
-      <div>
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-4 w-4 text-neutral-500" />}
-          <h2 className="text-base font-extrabold tracking-tight text-neutral-900">{title}</h2>
+          {Icon && <Icon className="h-3.5 w-3.5 shrink-0 text-neutral-500 sm:h-4 sm:w-4" />}
+          <h2 className="truncate text-sm font-extrabold tracking-tight text-neutral-900 sm:text-base">{title}</h2>
         </div>
-        {subtitle && <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 truncate text-[11px] text-neutral-500 sm:text-xs">{subtitle}</p>}
       </div>
       {action}
     </div>

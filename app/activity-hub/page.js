@@ -50,6 +50,22 @@ const POST_TYPES = [
   { value: 'government_notice', label: 'Gov Notice',       icon: Landmark,      tone: 'text-purple-600 bg-purple-50',     desc: 'Official notice (gov accounts)' },
 ]
 
+// Post types that open inline in the composer (i.e. not the ones that route
+// away to a dedicated page like /jobs/new or /bounties/new).
+const INLINE_POST_TYPES = new Set(POST_TYPES.filter((p) => !p.href).map((p) => p.value))
+
+// Resolve a ?compose=<value> query param to a valid inline composer type.
+// Also accepts a couple of aliases the GlobalFab uses (e.g. illegal_dumping),
+// mapping them onto the canonical POST_TYPES value. Returns null when the value
+// is missing/unknown or points at a type that routes away instead of composing.
+const COMPOSE_ALIASES = { illegal_dumping: 'safety_alert', alert: 'safety_alert', community: 'general' }
+function resolveComposeType(raw) {
+  if (!raw) return null
+  const key = String(raw).toLowerCase()
+  const resolved = COMPOSE_ALIASES[key] || key
+  return INLINE_POST_TYPES.has(resolved) ? resolved : null
+}
+
 const FEED_TYPE_META = {
   facility_update:    { label: 'FACILITY UPDATE', tone: 'bg-amber-100 text-amber-800',     icon: Building2 },
   job:                { label: 'JOB POSTED',      tone: 'bg-blue-100 text-blue-800',       icon: Briefcase },
@@ -94,6 +110,9 @@ function ActivityHubInner() {
   const [filter, setFilter] = useState(initialFilter)
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
+  // When the composer is opened via ?compose=<type> (e.g. from the GlobalFab),
+  // jump straight to that post type instead of the "pick a type" step.
+  const [composerType, setComposerType] = useState(null)
   // Infinite scroll state
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -101,6 +120,25 @@ function ActivityHubInner() {
   const feedRef = React.useRef([])  // ref-mirror so the IO callback sees latest array
 
   useEffect(() => { feedRef.current = feed }, [feed])
+
+  // Deep-link: ?compose=<type> opens the composer straight to that post type
+  // (used by the GlobalFab's quick actions, e.g. ?compose=donation_need). We
+  // gate on auth like the pen FAB, then strip the param so a refresh/back
+  // doesn't re-open the modal.
+  useEffect(() => {
+    const composeType = resolveComposeType(searchParams.get('compose'))
+    if (!composeType) return
+    if (requireAuth('post')) {
+      setComposerType(composeType)
+      setComposerOpen(true)
+    }
+    // Remove ?compose= from the URL without adding a history entry.
+    const sp = new URLSearchParams(searchParams.toString())
+    sp.delete('compose')
+    const qs = sp.toString()
+    router.replace(qs ? `/activity-hub?${qs}` : '/activity-hub', { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
@@ -259,10 +297,13 @@ function ActivityHubInner() {
         )}
       </div>
 
-      {/* Floating compose button */}
+      {/* Floating compose button (pen). Shown on all breakpoints. The extra
+          third FAB on mobile came from MobileBottomNav's generic "Quick post" +
+          button — that one is suppressed on /activity-hub (see MobileBottomNav)
+          so mobile now shows just this pen + the GlobalFab quick-actions +. */}
       <button
         onClick={() => { if (requireAuth('post')) setComposerOpen(true) }}
-        className="fixed bottom-36 right-4 md:right-6 z-40 inline-flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-green-700 text-white shadow-lg ring-4 ring-white hover:bg-green-800 md:bottom-28"
+        className="fixed bottom-32 right-4 md:right-6 z-40 inline-flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full bg-green-700 text-white shadow-lg ring-4 ring-white hover:bg-green-800 md:bottom-28"
         title={user ? 'Create post' : 'Sign in to post'}
       >
         <PenLine className="h-5 w-5 md:h-6 md:w-6" />
@@ -270,7 +311,8 @@ function ActivityHubInner() {
 
       {composerOpen && user && (
         <ComposerModal
-          onClose={() => setComposerOpen(false)}
+          initialType={composerType}
+          onClose={() => { setComposerOpen(false); setComposerType(null) }}
           onCreated={onPostCreated}
           user={user}
           router={router}
@@ -723,9 +765,11 @@ function FeedSkeleton() {
 /* =========================================================================
    COMPOSER MODAL
    ========================================================================= */
-function ComposerModal({ onClose, onCreated, user, router }) {
-  const [stage, setStage] = useState('pick') // 'pick' | 'compose'
-  const [type, setType] = useState('general')
+function ComposerModal({ initialType, onClose, onCreated, user, router }) {
+  // When opened via a deep link (?compose=<type>), skip the type picker and go
+  // straight to composing that type.
+  const [stage, setStage] = useState(initialType ? 'compose' : 'pick') // 'pick' | 'compose'
+  const [type, setType] = useState(initialType || 'general')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [photos, setPhotos] = useState([])
@@ -762,7 +806,7 @@ function ComposerModal({ onClose, onCreated, user, router }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
       <div className="w-full max-w-lg overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
         <header className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
           <button onClick={stage === 'compose' ? () => setStage('pick') : onClose} className="text-neutral-500 hover:text-neutral-900">

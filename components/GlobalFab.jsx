@@ -75,7 +75,7 @@ export default function GlobalFab() {
       {open && <button aria-label="Close menu" onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-brand-navy/20 backdrop-blur-sm transition-opacity" />}
 
       {/* Action labels + buttons (vertical stack, anchored above the FAB) */}
-      <div className={`fixed bottom-24 right-4 z-50 flex flex-col-reverse items-end gap-3 sm:bottom-24 sm:right-6 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+      <div className={`fixed bottom-[8.5rem] right-4 z-50 flex flex-col-reverse items-end gap-3 sm:bottom-32 sm:right-6 ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}>
         {ACTIONS.map((a, idx) => {
           const Icon = a.icon
           return (
@@ -101,7 +101,7 @@ export default function GlobalFab() {
 
       {/* Main FAB */}
       <button onClick={() => setOpen((v) => !v)} aria-label={open ? 'Close quick actions' : 'Open quick actions'}
-        className={`fixed bottom-12 right-4 z-50 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full shadow-lg ring-1 transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 active:scale-95 md:bottom-10 md:right-6 ${open ? 'rotate-[135deg] bg-neutral-100 text-neutral-600 ring-neutral-300 shadow-brand-navy/10' : 'bg-emerald-50 text-emerald-700 ring-emerald-200 shadow-emerald-600/20 hover:scale-110 hover:bg-emerald-100'}`}>
+        className={`fixed bottom-20 right-4 z-50 flex h-9 w-9 md:h-12 md:w-12 items-center justify-center rounded-full shadow-lg ring-1 transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 active:scale-95 md:bottom-14 md:right-6 ${open ? 'rotate-[135deg] bg-neutral-100 text-neutral-600 ring-neutral-300 shadow-brand-navy/10' : 'bg-emerald-50 text-emerald-700 ring-emerald-200 shadow-emerald-600/20 hover:scale-110 hover:bg-emerald-100'}`}>
         {open ? <X className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.25} /> : <Plus className="h-5 w-5 md:h-7 md:w-7" strokeWidth={2.25} />}
       </button>
 

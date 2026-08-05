@@ -74,7 +74,7 @@ function ResidentBody({ user }) {
       ) : saved.length === 0 ? (
         <EmptyCard>You haven&apos;t saved anything yet. Tap the bookmark icon on any post to add it here.</EmptyCard>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
           {saved.slice(0, 6).map((p, i) => (
             <SavedPostCard key={p.id} post={p} index={i} />
           ))}
@@ -88,7 +88,7 @@ function ResidentBody({ user }) {
         <EmptyCard>No recent activity. Be the first to post! <Link href="/activity-hub" className="inline-flex items-center gap-1 font-bold text-emerald-700 hover:text-emerald-800"><PenLine className="h-3.5 w-3.5" /> Compose</Link></EmptyCard>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 [&>*]:min-w-0">
             {recentPosts.slice(0, visiblePosts).map((p, i) => (
               <CommunityPostCard key={p.id} post={p} index={i % POSTS_STEP} />
             ))}
@@ -130,13 +130,13 @@ function SavedPostCard({ post, index }) {
   return (
     <Link href={post.href || `/community/posts/${post.id}`} className="group block dm-rise-in" style={{ '--dm-i': index }}>
       <Card className="dm-lift dm-accent relative h-full overflow-hidden border-neutral-200/80 group-hover:border-emerald-300" style={{ '--dm-accent-from': '16 185 129', '--dm-accent-to': '5 150 105' }}>
-        <CardContent className="space-y-1.5 p-3.5">
+        <CardContent className="space-y-1.5 p-3 sm:p-3.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">{String(post.type || 'post').replace(/_/g, ' ')}</span>
+            <span className="inline-flex items-center truncate rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700 sm:text-[10px]">{String(post.type || 'post').replace(/_/g, ' ')}</span>
             <Bookmark className="h-3.5 w-3.5 shrink-0 fill-emerald-500 text-emerald-500" />
           </div>
-          <div className="truncate text-sm font-bold text-neutral-900 transition-colors group-hover:text-emerald-700">{post.title || 'Saved post'}</div>
-          {post.description && <p className="line-clamp-2 text-[11px] leading-relaxed text-neutral-500">{post.description}</p>}
+          <div className="truncate text-[13px] font-bold text-neutral-900 transition-colors group-hover:text-emerald-700 sm:text-sm">{post.title || 'Saved post'}</div>
+          {post.description && <p className="line-clamp-2 text-[10px] leading-relaxed text-neutral-500 sm:text-[11px]">{post.description}</p>}
         </CardContent>
       </Card>
     </Link>
@@ -149,16 +149,16 @@ function CommunityPostCard({ post, index }) {
   return (
     <Link href={post.href || `/community/posts/${post.id}`} className="group block dm-rise-in" style={{ '--dm-i': index }}>
       <Card className="dm-lift relative h-full overflow-hidden border-neutral-200/80 group-hover:border-emerald-300">
-        <CardContent className="flex items-center gap-3 p-3.5">
-          <span className="dm-badge inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700">
-            <Activity className="h-5 w-5" />
+        <CardContent className="flex items-center gap-2.5 p-3 sm:gap-3 sm:p-3.5">
+          <span className="dm-badge inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 sm:h-10 sm:w-10">
+            <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-bold text-neutral-900 transition-colors group-hover:text-emerald-700">{post.title || 'Update'}</div>
+            <div className="truncate text-[13px] font-bold text-neutral-900 transition-colors group-hover:text-emerald-700 sm:text-sm">{post.title || 'Update'}</div>
             {place ? (
-              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-neutral-500"><MapPin className="h-3 w-3" /> {place}</div>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1 text-[10px] text-neutral-500 sm:text-[11px]"><MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{place}</span></div>
             ) : (
-              <div className="mt-0.5 text-[11px] text-neutral-400">Community update</div>
+              <div className="mt-0.5 truncate text-[10px] text-neutral-400 sm:text-[11px]">Community update</div>
             )}
           </div>
           <ArrowRight className="dm-nudge h-4 w-4 shrink-0 text-neutral-300 transition-colors group-hover:text-emerald-600" />

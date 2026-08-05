@@ -146,13 +146,15 @@ export default function DonatePage() {
             </div>
           </div>
 
-          {/* Mission collage */}
-          <div className="relative grid h-[480px] grid-cols-6 grid-rows-6 gap-3">
+          {/* Mission collage — height scales with the breakpoint so the 6×6
+              tiles stay proportional instead of cramming into a fixed 480px on
+              small screens. */}
+          <div className="relative grid h-[300px] grid-cols-6 grid-rows-6 gap-2 sm:h-[400px] sm:gap-3 md:h-[480px]">
             <div className="relative col-span-4 row-span-4 overflow-hidden rounded-2xl border border-neutral-200 shadow-xl">
               <img src="https://images.unsplash.com/photo-1532601224476-15c79f2f7a51?auto=format&fit=crop&w=900&q=80" alt="Hauler at a transfer station" className="h-full w-full object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                <div className="text-xs font-semibold uppercase tracking-wide text-brand-300">Field intelligence</div>
-                <div className="text-sm font-bold text-white">Real haulers · Real time</div>
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 sm:p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-brand-300 sm:text-xs">Field intelligence</div>
+                <div className="text-xs font-bold text-white sm:text-sm">Real haulers · Real time</div>
               </div>
             </div>
             <div className="col-span-2 row-span-3 overflow-hidden rounded-2xl border border-neutral-200 shadow">
@@ -161,19 +163,19 @@ export default function DonatePage() {
             <div className="col-span-2 row-span-3 overflow-hidden rounded-2xl border border-neutral-200 shadow">
               <img src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=600&q=80" alt="Community donation" className="h-full w-full object-cover" />
             </div>
-            <div className="col-span-3 row-span-2 overflow-hidden rounded-2xl border border-brand-200 bg-brand-50 p-3 shadow">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand-800">
-                <Activity className="h-4 w-4" /> Live alert
+            <div className="col-span-3 row-span-2 overflow-hidden rounded-2xl border border-brand-200 bg-brand-50 p-2.5 shadow sm:p-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-800 sm:gap-2 sm:text-xs">
+                <Activity className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /> Live alert
               </div>
-              <div className="mt-1 text-sm font-bold text-neutral-900">Newby Island — gate closed early</div>
-              <div className="text-[11px] text-neutral-600">Routed 7 haulers to GreenWaste in 22 min</div>
+              <div className="mt-1 line-clamp-1 text-xs font-bold text-neutral-900 sm:text-sm">Newby Island — gate closed early</div>
+              <div className="line-clamp-2 text-[10px] text-neutral-600 sm:text-[11px]">Routed 7 haulers to GreenWaste in 22 min</div>
             </div>
-            <div className="col-span-3 row-span-2 overflow-hidden rounded-2xl border border-purple-200 bg-purple-50 p-3 shadow">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-purple-800">
-                <HeartHandshake className="h-4 w-4" /> Reuse saved
+            <div className="col-span-3 row-span-2 overflow-hidden rounded-2xl border border-purple-200 bg-purple-50 p-2.5 shadow sm:p-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-purple-800 sm:gap-2 sm:text-xs">
+                <HeartHandshake className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" /> Reuse saved
               </div>
-              <div className="mt-1 text-sm font-bold text-neutral-900">12 office chairs → community center</div>
-              <div className="text-[11px] text-neutral-600">Same day, before the landfill</div>
+              <div className="mt-1 line-clamp-1 text-xs font-bold text-neutral-900 sm:text-sm">12 office chairs → community center</div>
+              <div className="line-clamp-2 text-[10px] text-neutral-600 sm:text-[11px]">Same day, before the landfill</div>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
 import { timeAgo } from '@/lib/community-categories'
 import { resolveMarketplaceRole, allowedStatusesForUser, STATUS_META } from '@/lib/marketplace-roles'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
-import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useCurrentUser } from '@/lib/useCurrentUser'
 
 // Legacy uploads stored URLs as "/uploads/<name>". We now serve via
 // "/api/files/<name>" which is more reliable (reads from /data/uploads on each
@@ -26,10 +26,25 @@ function normalizePhoto(url) {
   return url
 }
 
+// Pickup windows are now stored as a "YYYY-MM-DDTHH:mm" datetime value from the
+// post form's date-time picker. Render those in a friendly local format; older
+// listings stored a free-text phrase, so fall back to the raw string for those.
+function formatPickupWindow(v) {
+  if (!v || typeof v !== 'string') return v
+  const isDateTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)
+  if (!isDateTime) return v
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return v
+  return d.toLocaleString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: 'numeric', minute: '2-digit',
+  })
+}
+
 export default function MarketplaceListingDetailPage() {
   const { id } = useParams()
   const router = useRouter()
-  const [user, setUser] = useState(null)
+  const { user } = useCurrentUser()
   const [listing, setListing] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
@@ -48,10 +63,6 @@ export default function MarketplaceListingDetailPage() {
     return false
   }
 
-  useEffect(() => {
-    if (!isLikelyLoggedIn()) return
-    fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
-  }, [])
 
   const load = async () => {
     setLoading(true)
@@ -288,7 +299,7 @@ export default function MarketplaceListingDetailPage() {
               </div>
             )}
             {listing.pickupWindow && (
-              <div className="text-xs text-neutral-600"><span className="font-semibold text-neutral-700">Pickup window:</span> {listing.pickupWindow}</div>
+              <div className="text-xs text-neutral-600"><span className="font-semibold text-neutral-700">Pickup window:</span> {formatPickupWindow(listing.pickupWindow)}</div>
             )}
             <header className="mt-1 flex items-center gap-2.5 border-t border-neutral-100 pt-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-bold text-white shadow-sm">

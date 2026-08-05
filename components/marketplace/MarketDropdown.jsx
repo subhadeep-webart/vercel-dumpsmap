@@ -36,7 +36,7 @@ export default function MarketDropdown({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-11 z-50 ${menuWidth} max-w-[min(90vw,16rem)] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg`}>
+          <div className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-11 z-50 ${menuWidth} max-w-[min(90vw,16rem)] max-h-64 overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-lg`}>
             {options.map((opt) => (
               <button
                 key={opt.value}

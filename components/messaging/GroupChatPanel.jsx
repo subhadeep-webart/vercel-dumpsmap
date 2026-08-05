@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
+import { StyledAutoResizeTextarea } from '@/components/ui/auto-resize-textarea'
 import { Send, Trash2, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { timeAgo } from '@/lib/community-categories'
@@ -117,14 +117,12 @@ export default function GroupChatPanel({ groupId, token, currentUser, canPost = 
       {canPost ? (
         <div className="border-t border-neutral-200 p-2">
           <div className="flex items-end gap-2">
-            <Textarea
+            <StyledAutoResizeTextarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-              rows={2}
               maxLength={2000}
               placeholder="Type a message… (Enter to send · Shift+Enter for new line)"
-              className="min-h-[44px] resize-none"
             />
             <Button onClick={send} disabled={sending || !body.trim()} className="bg-brand-600 hover:bg-brand-700">
               <Send className="h-4 w-4" />

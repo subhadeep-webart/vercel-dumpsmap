@@ -8,12 +8,23 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Camera, ImagePlus, X, Loader2, MapPin, CircleDollarSign, Truck, Package, ChevronRight, ChevronLeft, Eye, Check } from 'lucide-react'
 import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
+import MarketDropdown from '@/components/marketplace/MarketDropdown'
 import { allowedStatusesForUser, STATUS_META, resolveMarketplaceRole } from '@/lib/marketplace-roles'
 
 function normalizePhoto(url) {
   if (!url || typeof url !== 'string') return null
   if (url.startsWith('/uploads/')) return `/api/files/${url.slice('/uploads/'.length)}`
   return url
+}
+
+// Minimum lead time before an item can be picked up.
+const PICKUP_MIN_LEAD_HOURS = 3
+
+// Format a Date into the local "YYYY-MM-DDTHH:mm" string that <input
+// type="datetime-local"> expects (it works in local time, not UTC/ISO).
+function toLocalDatetimeValue(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 const PRICE_TYPES = [
@@ -136,6 +147,13 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
   }
   const removePhoto = (id) => setPhotos((p) => p.filter((x) => x.id !== id))
 
+  // Earliest allowed pickup time = now + PICKUP_MIN_LEAD_HOURS. Recomputed each
+  // render so it never goes stale while the modal is open. Used both as the
+  // input's `min` and to validate a manually-typed value.
+  const pickupMinDate = new Date(Date.now() + PICKUP_MIN_LEAD_HOURS * 60 * 60 * 1000)
+  const pickupMin = toLocalDatetimeValue(pickupMinDate)
+  const pickupTooEarly = !!pickupWindow && new Date(pickupWindow).getTime() < pickupMinDate.getTime()
+
   const canNext = () => {
     if (step === 1) return true // photos optional
     if (step === 2) return !!title && !!category
@@ -143,7 +161,7 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
       if (priceType === 'fixed' || priceType === 'obo') return price !== '' && Number(price) >= 0
       return true
     }
-    if (step === 4) return !!city
+    if (step === 4) return !!city && !pickupTooEarly
     return true
   }
 
@@ -176,7 +194,7 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
   }
 
   const Steps = () => (
-    <div className="mb-4 flex items-center justify-between text-xs">
+    <div className="mt-4 flex items-center justify-between text-xs">
       {[1, 2, 3, 4, 5].map((n) => (
         <div key={n} className="flex flex-1 items-center">
           <div className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold ${step >= n ? 'bg-brand-600 text-white' : 'bg-neutral-200 text-neutral-500'}`}>{step > n ? <Check className="h-4 w-4" /> : n}</div>
@@ -188,12 +206,15 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose?.()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col gap-0 p-0">
+        {/* Pinned header — title + step indicator stay in view while the body scrolls. */}
+        <DialogHeader className="shrink-0 border-b border-neutral-200 px-6 pb-4 pt-6">
           <DialogTitle>Create New Listing — Step {step} of 5</DialogTitle>
+          <Steps />
         </DialogHeader>
-        <Steps />
 
+        {/* Scrollable step body — only this region overflows, not the whole modal. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {step === 1 && (
           <div className="space-y-3">
             <div className="rounded-2xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-6 text-center">
@@ -235,15 +256,20 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="Category">
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
-                  <option value="">Choose a category…</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <MarketDropdown
+                  options={[{ value: '', label: 'Choose a category…' }, ...categories.map((c) => ({ value: c, label: c }))]}
+                  value={category}
+                  onChange={setCategory}
+                  menuWidth="w-full"
+                />
               </Field>
               <Field label="Condition">
-                <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
-                  {conditions.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
+                <MarketDropdown
+                  options={conditions.map((c) => ({ value: c.value, label: c.label }))}
+                  value={condition}
+                  onChange={setCondition}
+                  menuWidth="w-full"
+                />
               </Field>
             </div>
             <Field label="Description">
@@ -257,10 +283,12 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
                 <Input value={dimensions} onChange={(e) => setDimensions(e.target.value)} placeholder='86" W x 34" D x 32" H' />
               </Field>
               <Field label="Type">
-                <select value={segment} onChange={(e) => setSegment(e.target.value)} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
-                  <option value="residential">Residential</option>
-                  <option value="commercial">Commercial</option>
-                </select>
+                <MarketDropdown
+                  options={[{ value: 'residential', label: 'Residential' }, { value: 'commercial', label: 'Commercial' }]}
+                  value={segment}
+                  onChange={setSegment}
+                  menuWidth="w-full"
+                />
               </Field>
             </div>
           </div>
@@ -321,7 +349,17 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
             </div>
             <p className="text-xs text-neutral-500">Exact address is <b>hidden</b> from public listings — only revealed after a buyer reserves the item or you message them directly.</p>
             <Field label="Pickup window">
-              <Input value={pickupWindow} onChange={(e) => setPickupWindow(e.target.value)} placeholder="e.g. Available until 5:00 PM today" />
+              <Input
+                type="datetime-local"
+                value={pickupWindow}
+                min={pickupMin}
+                onChange={(e) => setPickupWindow(e.target.value)}
+              />
+              <p className={`mt-1 text-xs ${pickupTooEarly ? 'text-red-600' : 'text-neutral-500'}`}>
+                {pickupTooEarly
+                  ? `Pickup must be at least ${PICKUP_MIN_LEAD_HOURS} hours from now.`
+                  : `Choose a date & time at least ${PICKUP_MIN_LEAD_HOURS} hours from now — past times aren't allowed.`}
+              </p>
             </Field>
             <div className="grid gap-3 md:grid-cols-2">
               <Field label={`Item status (${roleLabel})`}>
@@ -335,9 +373,12 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
                 <p className="mt-1 text-[10px] text-neutral-500">Statuses tailored for your account type.</p>
               </Field>
               <Field label="Leaving in… (optional)">
-                <select value={leavingInMinutes} onChange={(e) => setLeavingInMinutes(Number(e.target.value))} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
-                  {LEAVING_PRESETS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-                </select>
+                <MarketDropdown
+                  options={LEAVING_PRESETS.map((l) => ({ value: String(l.value), label: l.label }))}
+                  value={String(leavingInMinutes)}
+                  onChange={(v) => setLeavingInMinutes(Number(v))}
+                  menuWidth="w-full"
+                />
                 <p className="mt-1 text-xs text-neutral-500">Adds a "Leaving in X min" countdown to your listing.</p>
               </Field>
             </div>
@@ -374,8 +415,10 @@ export default function PostItemDialog({ open, onClose, onCreated, categories = 
             </div>
           </div>
         )}
+        </div>
 
-        <DialogFooter className="flex items-center justify-between gap-2 sm:justify-between">
+        {/* Pinned footer — nav buttons always reachable regardless of body height. */}
+        <DialogFooter className="flex shrink-0 items-center justify-between gap-2 border-t border-neutral-200 px-6 py-4 sm:justify-between">
           <div>
             {step > 1 && (
               <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={submitting}>

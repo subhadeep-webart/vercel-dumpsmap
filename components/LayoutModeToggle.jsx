@@ -77,9 +77,9 @@ export default function LayoutModeToggle({ variant = 'compact', className = '' }
               role="radio"
               aria-checked={Active}
               onClick={() => setViewPreference(o.key)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm transition ${Active ? 'bg-brand-50 font-bold text-brand-700' : 'text-neutral-600 hover:bg-neutral-100'}`}
+              className={`inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition sm:flex-none ${Active ? 'bg-brand-50 font-bold text-brand-700' : 'text-neutral-600 hover:bg-neutral-100'}`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               <span>{o.label}</span>
             </button>
           )

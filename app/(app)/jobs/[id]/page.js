@@ -11,12 +11,12 @@ import FieldFrame from '@/components/field/FieldFrame'
 import ReportButton from '@/components/ReportButton'
 import { timeAgo } from '@/lib/community-categories'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
-import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useCurrentUser } from '@/lib/useCurrentUser'
 
 export default function JobDetailPage() {
   const { id } = useParams()
   const router = useRouter()
-  const [user, setUser] = useState(null)
+  const { user } = useCurrentUser()
   const [job, setJob] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
@@ -28,10 +28,6 @@ export default function JobDetailPage() {
     return false
   }
 
-  useEffect(() => {
-    if (!isLikelyLoggedIn()) return
-    fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).then((j) => setUser(j?.user || null)).catch(() => {})
-  }, [])
 
   const load = async () => {
     setLoading(true)

@@ -11,10 +11,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { ArrowLeft, Plus, Users, Search, MapPin, Star, Shield, BadgeCheck, ChevronRight, Globe } from 'lucide-react'
 import { toast } from 'sonner'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import PhotoUploader from '@/components/PhotoUploader'
 import PageShell from '@/components/PageShell'
+import FieldError from '@/components/FieldError'
 import { GroupCategoryIcon } from '@/lib/community-icons'
 import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useCurrentUser } from '@/lib/useCurrentUser'
+import { createGroupSchema } from '@/validator/community-group'
 
 const GROUP_CATEGORIES = [
   { key: 'haulers',     label: 'Haulers' },
@@ -43,7 +48,7 @@ export default function GroupsPage() {
 function GroupsPageInner() {
   const router = useRouter()
   const sp = useSearchParams()
-  const [user, setUser] = useState(null)
+  const { user } = useCurrentUser()
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ city: sp.get('city') || '', category: sp.get('category') || '', q: '', mine: false })
@@ -51,8 +56,6 @@ function GroupsPageInner() {
   const [cities, setCities] = useState([])
 
   const loggedIn = isLikelyLoggedIn()
-
-  useEffect(() => { if (loggedIn) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) }, [loggedIn])
 
   const load = async () => {
     setLoading(true)
@@ -191,68 +194,105 @@ function GroupCard({ group, token, onChanged }) {
   )
 }
 
-function CreateGroupDialog({ open, onOpenChange, onCreated }) {
-  const [form, setForm] = useState({ name: '', category: '', description: '', city: '', state: 'CA', tags: '', photoUrl: '', rules: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const upd = (k, v) => setForm((s) => ({ ...s, [k]: v }))
+const GROUP_FORM_DEFAULTS = { name: '', category: '', description: '', city: '', state: 'CA', tags: '', photoUrl: '', rules: '' }
 
-  const submit = async () => {
-    if (!form.name || !form.category) { toast.error('Name and category required'); return }
-    setSubmitting(true)
+function CreateGroupDialog({ open, onOpenChange, onCreated }) {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(createGroupSchema),
+    mode: 'onChange',
+    defaultValues: GROUP_FORM_DEFAULTS,
+  })
+
+  // The category picker is a button grid, so it's registered manually and driven
+  // via watch()/setValue() rather than a native input.
+  const category = watch('category')
+
+  // Reset back to a clean slate whenever the modal is (re)opened.
+  useEffect(() => { if (open) reset(GROUP_FORM_DEFAULTS) }, [open, reset])
+
+  // Only runs once zod validation passes (RHF blocks submit otherwise).
+  const onSubmit = async (values) => {
     const payload = {
-      ...form,
-      tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
-      rules: form.rules.split('\n').map((r) => r.trim()).filter(Boolean),
+      ...values,
+      tags: values.tags.split(',').map((t) => t.trim()).filter(Boolean),
+      rules: values.rules.split('\n').map((r) => r.trim()).filter(Boolean),
     }
     const r = await fetch('/api/community/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     const j = await r.json()
-    setSubmitting(false)
     if (!r.ok) { toast.error(j.error || 'Failed'); return }
     toast.success('Group created — you are the organizer')
-    setForm({ name: '', category: '', description: '', city: '', state: 'CA', tags: '', photoUrl: '', rules: '' })
+    reset(GROUP_FORM_DEFAULTS)
     onCreated?.(j.group)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-xl flex-col gap-0 p-0">
+        {/* Pinned header — stays put while the form body scrolls. */}
+        <DialogHeader className="shrink-0 border-b border-neutral-200 px-6 pb-4 pt-6">
           <DialogTitle>Create a new group</DialogTitle>
           <DialogDescription>You&apos;ll be added as the organizer with pin, edit, and member-management rights. Keep it operational and hyper-local.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-bold uppercase">Group name *</label>
-            <Input value={form.name} onChange={(e) => upd('name', e.target.value)} maxLength={80} placeholder="e.g. South Bay Haulers" />
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase">Category *</label>
-            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-              {GROUP_CATEGORIES.map((c) => (
-                <button key={c.key} onClick={() => upd('category', c.key)} className={`flex items-center gap-1.5 rounded-lg border p-2 text-left text-xs transition ${form.category === c.key ? 'border-brand-500 bg-brand-50 font-bold text-brand-900' : 'border-neutral-200 bg-white hover:border-neutral-400'}`}>
-                  <GroupCategoryIcon categoryKey={c.key} className="h-3.5 w-3.5" /><span>{c.label}</span>
-                </button>
-              ))}
+        {/* handleSubmit gates on zod; the footer button submits this form. */}
+        <form onSubmit={handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+          {/* Scrollable body — only this region overflows, not the whole modal. */}
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4">
+            <div>
+              <label className="text-xs font-bold uppercase">Group name *</label>
+              <Input {...register('name')} maxLength={80} placeholder="e.g. South Bay Haulers" aria-invalid={!!errors.name} />
+              <FieldError msg={errors.name?.message} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase">Category *</label>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                {GROUP_CATEGORIES.map((c) => (
+                  <button key={c.key} type="button" onClick={() => setValue('category', c.key, { shouldValidate: true, shouldDirty: true })} className={`flex items-center gap-1.5 rounded-lg border p-2 text-left text-xs transition ${category === c.key ? 'border-brand-500 bg-brand-50 font-bold text-brand-900' : 'border-neutral-200 bg-white hover:border-neutral-400'}`}>
+                    <GroupCategoryIcon categoryKey={c.key} className="h-3.5 w-3.5" /><span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+              <FieldError msg={errors.category?.message} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase">Description</label>
+              <Textarea rows={3} {...register('description')} maxLength={1000} placeholder="What is this group about? Who should join?" aria-invalid={!!errors.description} />
+              <FieldError msg={errors.description?.message} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="col-span-2">
+                <label className="text-xs font-bold uppercase">City</label>
+                <Input {...register('city')} placeholder="Hayward" aria-invalid={!!errors.city} />
+                <FieldError msg={errors.city?.message} />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase">State</label>
+                <Input {...register('state')} maxLength={2} aria-invalid={!!errors.state} />
+                <FieldError msg={errors.state?.message} />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase">Tags (comma-separated)</label>
+              <Input {...register('tags')} placeholder="haulers, south-bay, junk-removal" aria-invalid={!!errors.tags} />
+              <FieldError msg={errors.tags?.message} />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase">Group rules (one per line, optional)</label>
+              <Textarea rows={3} {...register('rules')} placeholder="No scams. No harassment. Operational posts only." aria-invalid={!!errors.rules} />
+              <FieldError msg={errors.rules?.message} />
             </div>
           </div>
-          <div>
-            <label className="text-xs font-bold uppercase">Description</label>
-            <Textarea rows={3} value={form.description} onChange={(e) => upd('description', e.target.value)} maxLength={1000} placeholder="What is this group about? Who should join?" />
+          {/* Pinned footer — the primary action stays reachable. */}
+          <div className="shrink-0 border-t border-neutral-200 px-6 py-4">
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-brand-600 hover:bg-brand-700">{isSubmitting ? 'Creating…' : 'Create group'}</Button>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-2"><label className="text-xs font-bold uppercase">City</label><Input value={form.city} onChange={(e) => upd('city', e.target.value)} placeholder="Hayward" /></div>
-            <div><label className="text-xs font-bold uppercase">State</label><Input value={form.state} onChange={(e) => upd('state', e.target.value)} maxLength={2} /></div>
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase">Tags (comma-separated)</label>
-            <Input value={form.tags} onChange={(e) => upd('tags', e.target.value)} placeholder="haulers, south-bay, junk-removal" />
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase">Group rules (one per line, optional)</label>
-            <Textarea rows={3} value={form.rules} onChange={(e) => upd('rules', e.target.value)} placeholder="No scams. No harassment. Operational posts only." />
-          </div>
-          <Button onClick={submit} disabled={submitting} className="w-full bg-brand-600 hover:bg-brand-700">{submitting ? 'Creating…' : 'Create group'}</Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   )

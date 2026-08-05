@@ -36,7 +36,7 @@ export default function ProfileHero({ user, form, availability, onChangeCover, o
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">{user.name || user.email}</h1>
+              <h1 className="max-w-full truncate text-2xl font-extrabold tracking-tight text-neutral-900 sm:text-3xl">{user.name || user.email}</h1>
               {user.verified && (
                 <Badge variant="outline" className="border-green-300 bg-green-50 text-green-800">
                   <ShieldCheck className="mr-0.5 h-3 w-3" /> Verified
@@ -47,9 +47,9 @@ export default function ProfileHero({ user, form, availability, onChangeCover, o
               </Badge>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-neutral-600">
-              <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {user.email}</span>
-              {user.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {user.phone}</span>}
-              {(user.city || user.state) && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {[user.city, user.state].filter(Boolean).join(', ')}</span>}
+              <span className="inline-flex min-w-0 max-w-full items-start gap-1"><Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" /> <span className="min-w-0 break-all">{user.email}</span></span>
+              {user.phone && <span className="inline-flex min-w-0 max-w-full items-center gap-1"><Phone className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{user.phone}</span></span>}
+              {(user.city || user.state) && <span className="inline-flex min-w-0 max-w-full items-center gap-1"><MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{[user.city, user.state].filter(Boolean).join(', ')}</span></span>}
             </div>
           </div>
           {/* Availability quick pill (mirrors the Preferences status) */}

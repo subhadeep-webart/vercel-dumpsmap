@@ -83,15 +83,17 @@ export default function MobileBottomNav({ active, onPost, user: userProp, unread
     }
   }
 
-  const handlePost = () => {
-    if (onPost) { onPost(); return }
-    router.push('/?post=1')
-  }
+  // Only reachable when a page opts into the FAB by passing `onPost` (see the
+  // hideFab note below); the button isn't rendered otherwise.
+  const handlePost = () => { onPost?.() }
 
-  // Hide the compose FAB on the Facilities Directory — the P0 mobile rebuild
-  // provides contextual "Check In" buttons per card, so a floating + would only
-  // obstruct card actions and duplicate the primary CTA.
-  const hideFab = pathname === '/facilities' || pathname.startsWith('/facilities?')
+  // The app-wide GlobalFab (app/layout.js) is now the single compose FAB across
+  // the site, so this generic "Quick post" + is hidden by default — showing both
+  // left a redundant second floating button in the bottom-right on every page.
+  // It only renders when a page explicitly opts in by passing an `onPost`
+  // handler (a deliberate, page-specific quick-post action). The default
+  // GlobalMobileNav mount passes none, so the button stays hidden everywhere.
+  const hideFab = !onPost
 
   return (
     <>
