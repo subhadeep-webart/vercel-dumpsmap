@@ -20,21 +20,16 @@ export default function ActiveFilterChips({ chips = [], onClearAll, sortLabel, c
   // Render nothing only when there are neither filter chips nor a sort to show.
   if (!chips.length && !sortLabel) return null
   return (
-    // On mobile we keep everything on ONE line and let it scroll sideways so the
-    // "Sorted by" pill sits inline with the filter chips instead of wrapping to
-    // its own row. From sm+ we allow normal wrapping.
-    <div
-      className={`-mx-1 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 ${className}`}
-    >
+    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       {sortLabel && (
-        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-2 pr-2.5 text-xs font-medium text-neutral-600">
+        <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-50 py-1 pl-2 pr-2.5 text-xs font-medium text-neutral-600">
           <ArrowUpDown className="h-3 w-3 text-emerald-600" />
           <span className="text-neutral-400">Sorted by</span>
           <span className="font-semibold text-neutral-700">{sortLabel}</span>
         </span>
       )}
       {chips.length > 0 && (
-        <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
           Filters
         </span>
       )}
@@ -43,7 +38,7 @@ export default function ActiveFilterChips({ chips = [], onClearAll, sortLabel, c
           key={c.key}
           type="button"
           onClick={c.onRemove}
-          className="group inline-flex shrink-0 items-center gap-1 rounded-full border border-brand-200 bg-brand-50 py-1 pl-2.5 pr-1.5 text-xs font-medium text-brand-800 transition hover:border-brand-300 hover:bg-brand-100"
+          className="group inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 py-1 pl-2.5 pr-1.5 text-xs font-medium text-brand-800 transition hover:border-brand-300 hover:bg-brand-100"
           aria-label={`Remove filter ${c.label}`}
         >
           <span className="max-w-[160px] truncate">{c.label}</span>
@@ -56,7 +51,7 @@ export default function ActiveFilterChips({ chips = [], onClearAll, sortLabel, c
         <button
           type="button"
           onClick={onClearAll}
-          className="ml-0.5 shrink-0 text-xs font-semibold text-neutral-500 underline-offset-2 hover:text-neutral-800 hover:underline"
+          className="ml-0.5 text-xs font-semibold text-neutral-500 underline-offset-2 hover:text-neutral-800 hover:underline"
         >
           Clear all
         </button>
