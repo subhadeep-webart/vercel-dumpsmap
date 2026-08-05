@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Recycle, ArrowRight, Search, Bell, Menu, X, ChevronDown, HeartHandshake,
-  Compass, BookOpen, Sparkles, Info, LifeBuoy, MessageSquare, BarChart3, Star, Users,
-  User as UserIcon, LogOut, Settings, ShieldCheck, Layers, Send } from 'lucide-react'
+  Compass, MessageSquare, BarChart3, Star,
+  User as UserIcon, LogOut, Settings, ShieldCheck, Send } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator,
@@ -14,6 +14,11 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { PRIMARY_NAV, MORE_MENU, MOBILE_MORE_NAV } from '@/constants/site_header_constants'
+
+// Shared props for a primary-nav <Link>: opens external items in a new tab,
+// internal ones in place. Keeps the desktop + mobile markup DRY.
+const navLinkProps = (n) => (n.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})
 
 /**
  * SiteHeader — premium, modern marketing/app header (Notion/Linear/Stripe vibe).
@@ -48,16 +53,6 @@ export default function SiteHeader({
   }, [])
 
   const isAdmin = user && ['super_admin', 'admin', 'moderator'].includes(user.role)
-
-  // V1 nav + Marketplace revival (July 2026). 6-item public nav.
-  const primaryNav = [
-    { key: 'facilities',  label: 'Facilities',  onClick: () => router.push('/facilities'),  match: 'facilities' },
-    // { key: 'community',   label: 'Community',   onClick: () => router.push('/community'),   match: 'community' },
-    { key: 'marketplace', label: 'Marketplace', onClick: () => router.push('/marketplace'), match: 'marketplace' },
-    { key: 'business',    label: 'Business',    onClick: () => window.open('/business', '_blank', 'noopener,noreferrer'), match: 'business' },
-    { key: 'donate',      label: 'Donate',      onClick: () => router.push('/donate'),      match: 'donate' },
-    { key: 'about',       label: 'About',       onClick: () => router.push('/#about'),      match: 'about' },
-  ]
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault()
@@ -98,12 +93,13 @@ export default function SiteHeader({
         {/* CENTER — primary navigation (desktop ≥1024px) */}
         <nav className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
           <ul className="flex items-center gap-0.5 xl:gap-1">
-            {primaryNav.map((n) => {
+            {PRIMARY_NAV.map((n) => {
               const isActive = (active === n.match) || (active === n.key)
               return (
                 <li key={n.key}>
-                  <button
-                    onClick={n.onClick}
+                  <Link
+                    href={n.href}
+                    {...navLinkProps(n)}
                     className={`relative inline-flex items-center whitespace-nowrap rounded-md px-2 py-1.5 text-[12.5px] font-medium transition xl:px-3 xl:text-[13.5px] ${
                       isActive
                         ? 'text-neutral-900'
@@ -112,7 +108,7 @@ export default function SiteHeader({
                   >
                     {n.label}
                     {isActive && <span className="absolute inset-x-2 -bottom-[1px] h-0.5 rounded-full bg-brand-500" />}
-                  </button>
+                  </Link>
                 </li>
               )
             })}
@@ -124,33 +120,22 @@ export default function SiteHeader({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" className="w-56">
-                  <DropdownMenuLabel className="text-xs uppercase tracking-wide text-neutral-500">Explore</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => router.push('/community/groups')}>
-                    <Users className="mr-2 h-4 w-4" /> Community groups
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); router.push('/#categories') }}>
-                    <Layers className="mr-2 h-4 w-4" /> Categories
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/#how')}>
-                    <BookOpen className="mr-2 h-4 w-4" /> How it works
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/#pilot')}>
-                    <Sparkles className="mr-2 h-4 w-4" /> Pilot program
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/community/guidelines')}>
-                    <ShieldCheck className="mr-2 h-4 w-4" /> Community guidelines
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs uppercase tracking-wide text-neutral-500">Support DumpMaps</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => router.push('/donate')}>
-                    <HeartHandshake className="mr-2 h-4 w-4 text-brand-600" /> Donate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/#about')}>
-                    <Info className="mr-2 h-4 w-4" /> About
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push('/#support')}>
-                    <LifeBuoy className="mr-2 h-4 w-4" /> Help &amp; support
-                  </DropdownMenuItem>
+                  {MORE_MENU.map((group, gi) => (
+                    <Fragment key={group.heading}>
+                      {gi > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="text-xs uppercase tracking-wide text-neutral-500">{group.heading}</DropdownMenuLabel>
+                      {group.items.map((item) => {
+                        const Icon = item.icon
+                        return (
+                          <DropdownMenuItem key={item.key} asChild className={item.emphasis ? 'text-emerald-700 focus:text-emerald-800' : undefined}>
+                            <Link href={item.href}>
+                              <Icon className={`mr-2 h-4 w-4 ${item.emphasis ? 'text-brand-600' : ''}`} /> {item.label}
+                            </Link>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </Fragment>
+                  ))}
                 </DropdownMenuContent>
               </DropdownMenu>
             </li>
@@ -356,22 +341,36 @@ export default function SiteHeader({
                 {/* nav links */}
                 <nav className="mt-3 flex-1 px-2">
                   <p className="px-3 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Explore</p>
-                  {primaryNav.map((n) => (
-                    <button
+                  {PRIMARY_NAV.map((n) => (
+                    <Link
                       key={n.key}
-                      onClick={() => { setMobileOpen(false); n.onClick?.() }}
+                      href={n.href}
+                      {...navLinkProps(n)}
+                      onClick={() => setMobileOpen(false)}
                       className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-[15px] font-medium text-neutral-800 hover:bg-neutral-100"
                     >
                       {n.label}
                       <ArrowRight className="h-4 w-4 text-neutral-400" />
-                    </button>
+                    </Link>
                   ))}
                   <p className="mt-3 px-3 text-[10px] font-semibold uppercase tracking-wide text-neutral-400">More</p>
-                  <button onClick={() => { setMobileOpen(false); router.push('/donate') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] font-semibold text-emerald-700 hover:bg-emerald-50"><HeartHandshake className="h-4 w-4 text-emerald-600" /> Support Our Mission</button>
-                  <button onClick={() => { setMobileOpen(false); router.push('/community/guidelines') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] font-medium text-neutral-800 hover:bg-neutral-100"><ShieldCheck className="h-4 w-4 text-neutral-500" /> Community guidelines</button>
-                  <button onClick={() => { setMobileOpen(false); router.push('/#how') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] font-medium text-neutral-800 hover:bg-neutral-100"><BookOpen className="h-4 w-4 text-neutral-500" /> How it works</button>
-                  <button onClick={() => { setMobileOpen(false); router.push('/#about') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] font-medium text-neutral-800 hover:bg-neutral-100"><Info className="h-4 w-4 text-neutral-500" /> About</button>
-                  <button onClick={() => { setMobileOpen(false); router.push('/#support') }} className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] font-medium text-neutral-800 hover:bg-neutral-100"><LifeBuoy className="h-4 w-4 text-neutral-500" /> Help &amp; support</button>
+                  {MOBILE_MORE_NAV.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.key}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={`flex w-full items-center gap-2 rounded-lg px-3 py-3 text-left text-[15px] ${
+                          item.emphasis
+                            ? 'font-semibold text-emerald-700 hover:bg-emerald-50'
+                            : 'font-medium text-neutral-800 hover:bg-neutral-100'
+                        }`}
+                      >
+                        <Icon className={`h-4 w-4 ${item.emphasis ? 'text-emerald-600' : 'text-neutral-500'}`} /> {item.label}
+                      </Link>
+                    )
+                  })}
                 </nav>
 
                 {/* Sticky bottom: profile / CTA */}

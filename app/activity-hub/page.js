@@ -40,7 +40,7 @@ export default function ActivityHubPage() {
 function ActivityHubInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, requireAuth, softLogin, setSoftLogin } = useRequireAuth()
+  const { user, requireAuth, softLogin, setSoftLogin, authReady } = useRequireAuth()
 
   const [filter, setFilter] = useState(() => resolveFilter(searchParams.get('filter')))
   const [composerOpen, setComposerOpen] = useState(false)
@@ -57,7 +57,13 @@ function ActivityHubInner() {
   // (used by the GlobalFab's quick actions, e.g. ?compose=donation_need). We
   // gate on auth like the pen FAB, then strip the param so a refresh/back
   // doesn't re-open the modal.
+  //
+  // Wait for `authReady` before deciding: on a fresh navigation from the FAB,
+  // /api/auth/me hasn't resolved yet, so gating immediately would flash the
+  // sign-in modal at an already-logged-in user. Once auth is known, requireAuth
+  // judges correctly.
   useEffect(() => {
+    if (!authReady) return
     const composeType = resolveComposeType(searchParams.get('compose'))
     if (!composeType) return
     if (requireAuth('post')) {
@@ -69,7 +75,7 @@ function ActivityHubInner() {
     const qs = sp.toString()
     router.replace(qs ? `/activity-hub?${qs}` : '/activity-hub', { scroll: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams])
+  }, [searchParams, authReady])
 
   // Infinite scroll: fetch the next page when the sentinel scrolls into view.
   useEffect(() => {

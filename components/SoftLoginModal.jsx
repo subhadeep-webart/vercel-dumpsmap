@@ -26,7 +26,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sparkles } from 'lucide-react'
-import { api } from '@/lib/api-client'
+import { api, isLikelyLoggedIn } from '@/lib/api-client'
 
 const HEADLINES = {
   post: 'Sign in to share a post',
@@ -45,12 +45,19 @@ const HEADLINES = {
 }
 
 /**
- * Hook: returns { user, requireAuth, softLogin, setSoftLogin }
+ * Hook: returns { user, requireAuth, softLogin, setSoftLogin, authReady, maybeLoggedIn }
  * - `user` is auto-loaded from /api/auth/me once on mount.
  * - `requireAuth(action)` returns true when authed, otherwise opens the modal.
+ * - `authReady` is false until /api/auth/me resolves, so callers can avoid
+ *   gating an action before we actually know who the user is (which used to pop
+ *   the sign-in modal at logged-in users on first render — e.g. the GlobalFab
+ *   deep-linking into /activity-hub?compose=… before `user` had loaded).
+ * - `maybeLoggedIn` is a synchronous best-guess (readable CSRF cookie) available
+ *   immediately on mount, before the /api/auth/me round-trip completes.
  */
 export function useRequireAuth() {
   const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(false)
   const [softLogin, setSoftLogin] = useState(null)
 
   useEffect(() => {
@@ -60,16 +67,21 @@ export function useRequireAuth() {
     api.get('/api/auth/me')
       .then((j) => { if (!cancelled && j?.user) setUser(j.user) })
       .catch(() => {})
+      .finally(() => { if (!cancelled) setAuthReady(true) })
     return () => { cancelled = true }
   }, [])
 
   const requireAuth = (action = 'default') => {
     if (user) return true
+    // Don't judge a not-yet-loaded session as logged-out: if the synchronous
+    // login hint says we're probably signed in, treat it as authed and let the
+    // server re-validate rather than flashing the sign-in modal.
+    if (!authReady && isLikelyLoggedIn()) return true
     setSoftLogin(action)
     return false
   }
 
-  return { user, requireAuth, softLogin, setSoftLogin }
+  return { user, requireAuth, softLogin, setSoftLogin, authReady, maybeLoggedIn: isLikelyLoggedIn() }
 }
 
 /**

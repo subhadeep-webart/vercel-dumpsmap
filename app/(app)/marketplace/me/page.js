@@ -98,7 +98,7 @@ function MetricCard({ icon: Icon, label, value, accent = 'brand' }) {
     purple: 'from-purple-50 to-white text-purple-700',
   }[accent]
   return (
-    <Card className="border-neutral-200">
+    <Card className="overflow-hidden border-neutral-200">
       <CardContent className={`flex items-center gap-3 bg-gradient-to-br p-4 ${accents}`}>
         <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-current shadow-sm">
           <Icon className="h-5 w-5" />
@@ -323,9 +323,9 @@ function BuyerDashboardPageInner() {
               )}
               {tab === 'searches' && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-sm text-neutral-600">Create alerts that fire when a matching listing posts. Email-out comes online once mail provider is configured — for now, alerts appear in this dashboard.</p>
-                    <Button onClick={() => { setEditing(null); setEditorOpen(true) }} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> New saved search</Button>
+                    <Button onClick={() => { setEditing(null); setEditorOpen(true) }} className="w-full shrink-0 bg-brand-600 hover:bg-brand-700 sm:w-auto"><Plus className="mr-1 h-4 w-4" /> New saved search</Button>
                   </div>
                   {data?.savedSearches?.length === 0 ? (
                     <Empty icon={Sparkles} title="No saved searches yet" cta="Create your first one" onClick={() => { setEditing(null); setEditorOpen(true) }} />
