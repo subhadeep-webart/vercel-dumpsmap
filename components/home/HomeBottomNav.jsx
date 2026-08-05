@@ -20,7 +20,7 @@ export default function HomeBottomNav({
   return (
     <nav className="z-30 grid flex-none grid-cols-6 items-stretch gap-0.5 border-t border-neutral-200 bg-white px-1 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-1.5 md:hidden">
       <BottomNavBtn active={tab === 'feed'} onClick={() => setTab('feed')} icon={Activity} label="Home" />
-      <BottomNavBtn active={false} onClick={() => { window.location.href = '/community' }} icon={Users} label="Community" />
+      <BottomNavBtn active={false} onClick={() => { window.location.href = '/community' }} icon={Users} label="Activity Hub" />
       <button
         onClick={onPost}
         className="flex flex-col items-center justify-center"

@@ -38,7 +38,7 @@ const TABS = [
   { key: 'home',        label: 'Home',        icon: Home,        href: '/activity-hub' },
   { key: 'facilities',  label: 'Facilities',  icon: MapPin,      href: '/facilities' },
   { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag, href: '/marketplace' },
-  { key: 'community',   label: 'Community',   icon: Users,       href: '/community' },
+  { key: 'community',   label: 'Activity Hub', icon: Users,       href: '/community' },
   { key: 'profile',     label: 'Profile',     icon: UserIcon,    href: '/profile' },
 ]
 
