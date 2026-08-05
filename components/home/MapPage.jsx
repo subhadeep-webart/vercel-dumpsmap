@@ -289,6 +289,7 @@ export default function MapPage({ onExit, onSubmit, openAdmin, userMenu, user, f
         <SiteHeader
           user={user}
           onLogin={userMenu.onLogin}
+          onRegister={userMenu.onRegister}
           onProfile={userMenu.onProfile}
           onLogout={userMenu.onLogout}
           onAdmin={openAdmin}

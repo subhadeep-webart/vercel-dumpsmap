@@ -22,6 +22,7 @@ export default function HomeShell({
   onCommunity,
   onJobs,
   onLogin,
+  onRegister,
   onProfile,
   onAdmin,
   user,
@@ -40,6 +41,7 @@ export default function HomeShell({
       <SiteHeader
         user={user}
         onLogin={onLogin}
+        onRegister={onRegister}
         onProfile={onProfile}
         onLogout={() => logout()}
         onAdmin={onAdmin}

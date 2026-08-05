@@ -24,6 +24,7 @@ export default function Landing({ onEnterMap, onSubmit, userMenu, onCommunity, o
       <SiteHeader
         user={user}
         onLogin={userMenu.onLogin}
+        onRegister={userMenu.onRegister}
         onProfile={userMenu.onProfile}
         onLogout={userMenu.onLogout}
         onAdmin={userMenu.onAdmin}

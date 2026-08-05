@@ -162,6 +162,9 @@ export default function AppHeader({ active, showSearch = false }) {
               <Link href="/?login=1" className="hidden h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50 md:inline-flex">
                 Log In
               </Link>
+              <Link href="/?login=1&mode=signup" className="hidden h-9 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 md:inline-flex">
+                Register
+              </Link>
               <Link href="/beta" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-700">
                 <LogIn className="h-4 w-4" /> Join Beta
               </Link>
@@ -210,7 +213,10 @@ export default function AppHeader({ active, showSearch = false }) {
                       <Link href="/?login=1" onClick={() => setMobileOpen(false)} className="inline-flex h-10 items-center justify-center rounded-md border border-neutral-200 bg-white text-sm font-medium text-neutral-700 hover:bg-neutral-50">
                         Log In
                       </Link>
-                      <Link href="/beta" onClick={() => setMobileOpen(false)} className="inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700">
+                      <Link href="/?login=1&mode=signup" onClick={() => setMobileOpen(false)} className="inline-flex h-10 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-sm font-medium text-emerald-700 hover:bg-emerald-100">
+                        Register
+                      </Link>
+                      <Link href="/beta" onClick={() => setMobileOpen(false)} className="col-span-2 inline-flex h-10 items-center justify-center rounded-md bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700">
                         Join Beta
                       </Link>
                     </div>

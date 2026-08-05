@@ -31,7 +31,7 @@ import { Input } from '@/components/ui/input'
  *  - active               → 'home' | 'community' | etc. (highlights current section)
  */
 export default function SiteHeader({
-  user, onLogin, onProfile, onLogout, onAdmin, onDashboard, onSubmit, onEnterApp,
+  user, onLogin, onRegister, onProfile, onLogout, onAdmin, onDashboard, onSubmit, onEnterApp,
   notificationsCount = 0, active = 'home',
 }) {
   const router = useRouter()
@@ -286,9 +286,14 @@ export default function SiteHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button onClick={onLogin} variant="ghost" size="sm" className="hidden h-9 px-3 text-[13px] font-medium md:inline-flex">
-              Log In
-            </Button>
+            <>
+              <Button onClick={onLogin} variant="ghost" size="sm" className="hidden h-9 px-3 text-[13px] font-medium md:inline-flex">
+                Log In
+              </Button>
+              <Button onClick={() => (onRegister ? onRegister() : onLogin?.())} variant="outline" size="sm" className="hidden h-9 border-emerald-200 bg-emerald-50 px-3 text-[13px] font-medium text-emerald-700 hover:bg-emerald-100 md:inline-flex">
+                Register
+              </Button>
+            </>
           )}
 
           {/* Primary CTA — Join Beta (logged-out) / Support Our Mission (logged-in) */}
@@ -394,7 +399,10 @@ export default function SiteHeader({
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Button onClick={() => { setMobileOpen(false); onLogin?.() }} variant="outline" className="h-10 w-full">Log In</Button>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={() => { setMobileOpen(false); onLogin?.() }} variant="outline" className="h-10 w-full">Log In</Button>
+                        <Button onClick={() => { setMobileOpen(false); (onRegister ? onRegister() : onLogin?.()) }} variant="outline" className="h-10 w-full border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100">Register</Button>
+                      </div>
                       <Button onClick={() => { setMobileOpen(false); router.push('/beta') }} className="h-11 w-full bg-emerald-600 hover:bg-emerald-700">Join Beta <ArrowRight className="ml-1 h-4 w-4" /></Button>
                     </div>
                   )}

@@ -33,6 +33,9 @@ function AppInner() {
   const [submitOpen, setSubmitOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
+  // Which tab the auth dialog opens on ('login' | 'signup'). Register buttons
+  // set 'signup'; plain Log In leaves it 'login'.
+  const [authMode, setAuthMode] = useState('login')
   const [profileOpen, setProfileOpen] = useState(false)
   const [communityOpen, setCommunityOpen] = useState(false)
   const [communityTab, setCommunityTab] = useState('community')
@@ -56,6 +59,7 @@ function AppInner() {
   // protected pages like /dashboard).
   useEffect(() => {
     if (searchParams?.get('login') === '1') {
+      setAuthMode(searchParams?.get('mode') === 'signup' ? 'signup' : 'login')
       setAuthOpen(true)
     }
   }, [searchParams])
@@ -115,7 +119,8 @@ function AppInner() {
 
   const userMenuProps = {
     user,
-    onLogin: () => setAuthOpen(true),
+    onLogin: () => { setAuthMode('login'); setAuthOpen(true) },
+    onRegister: () => { setAuthMode('signup'); setAuthOpen(true) },
     onProfile: () => setProfileOpen(true),
     onLogout: logout,
     onAdmin: () => setAdminOpen(true),
@@ -176,7 +181,8 @@ function AppInner() {
             onPostAlert={() => { setView('map') /* user picks a facility pin */ }}
             onCommunity={openCommunity}
             onJobs={(tab = 'feed') => { setJobsInitialTab(tab); setJobsOpen(true) }}
-            onLogin={() => setAuthOpen(true)}
+            onLogin={userMenuProps.onLogin}
+            onRegister={userMenuProps.onRegister}
             onProfile={() => setProfileOpen(true)}
             onAdmin={() => setAdminOpen(true)}
             user={user}
@@ -208,7 +214,7 @@ function AppInner() {
       )}
       <SubmitFacilityDialog open={submitOpen} onOpenChange={setSubmitOpen} />
       <AdminDialog open={adminOpen} onOpenChange={setAdminOpen} />
-      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} initialMode={searchParams?.get('mode') === 'signup' ? 'signup' : 'login'} onAuth={(u) => {
+      <AuthDialog open={authOpen} onOpenChange={setAuthOpen} initialMode={authMode} onAuth={(u) => {
         setUser(u)
         setAuthOpen(false)
         // Sweep logged-in users to /dashboard (or wherever returnTo says) so
