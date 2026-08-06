@@ -10,10 +10,9 @@ import Link from 'next/link'
 import { api } from '@/lib/api-client'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { FieldRow } from '@/components/profile/primitives'
-import { Lock, Loader2, Save } from 'lucide-react'
+import { FieldRow, ProfileCard, profileInputClass } from '@/components/profile/primitives'
+import { Lock, Loader2, Save, KeyRound } from 'lucide-react'
 
 export default function SecurityTab() {
   const [current, setCurrent] = useState('')
@@ -41,36 +40,30 @@ export default function SecurityTab() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Change password</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <FieldRow label="Current password" icon={Lock}>
-            <Input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
-          </FieldRow>
-          <FieldRow label="New password" icon={Lock}>
-            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="Minimum 8 characters" />
-          </FieldRow>
-          <FieldRow label="Confirm new password" icon={Lock}>
-            <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-          </FieldRow>
-          <div className="pt-1">
-            <Button onClick={submit} disabled={busy} className="bg-green-700 hover:bg-green-800">
-              {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-              Update password
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Forgot your password?</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-sm text-neutral-600">If you can&apos;t remember your current password, use the password reset flow.</p>
-          <Button asChild variant="outline" className="mt-3">
-            <Link href="/?reset=1">Send reset link to my email</Link>
+      <ProfileCard index={3} title="Change password" desc="Use at least 8 characters" icon={Lock}>
+        <FieldRow label="Current password" icon={Lock}>
+          <Input className={profileInputClass} type="password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+        </FieldRow>
+        <FieldRow label="New password" icon={Lock}>
+          <Input className={profileInputClass} type="password" value={next} onChange={(e) => setNext(e.target.value)} placeholder="Minimum 8 characters" />
+        </FieldRow>
+        <FieldRow label="Confirm new password" icon={Lock}>
+          <Input className={profileInputClass} type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        </FieldRow>
+        <div className="pt-1">
+          <Button onClick={submit} disabled={busy} className="bg-green-700 shadow-sm shadow-green-700/25 transition-all hover:bg-green-800 hover:shadow-md active:scale-95">
+            {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+            Update password
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </ProfileCard>
+
+      <ProfileCard index={4} title="Forgot your password?" desc="Reset it via email instead" icon={KeyRound}>
+        <p className="text-sm text-neutral-600">If you can&apos;t remember your current password, use the password reset flow.</p>
+        <Button asChild variant="outline" className="mt-3">
+          <Link href="/?reset=1">Send reset link to my email</Link>
+        </Button>
+      </ProfileCard>
     </div>
   )
 }

@@ -67,6 +67,7 @@ export default function ProfilePage() {
 
       <ProfileBody
         activeTab={activeTab}
+        onNavigate={setActiveTab}
         user={user}
         form={form}
         setForm={setForm}

@@ -27,7 +27,8 @@ import { Input } from '@/components/ui/input'
 // without the saturated fills, and sits comfortably next to the brand blue
 // (brand-600 #0B4DBA).
 const ACTIONS = [
-  { key: 'job',       label: 'Post Job',          icon: Briefcase,      tone: 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100',                    chip: 'bg-sky-100 text-sky-700' },
+  // Post Job action hidden for now — kept here (commented out) so it can be re-enabled easily.
+  // { key: 'job',       label: 'Post Job',          icon: Briefcase,      tone: 'bg-sky-50 text-sky-700 ring-sky-200 hover:bg-sky-100',                    chip: 'bg-sky-100 text-sky-700' },
   { key: 'free',      label: 'Free Item',         icon: Gift,           tone: 'bg-pink-50 text-pink-700 ring-pink-200 hover:bg-pink-100',                chip: 'bg-pink-100 text-pink-700' },
    { key: 'facility',  label: 'Update Facility',   icon: MapPin,         tone: 'bg-brand-50 text-brand-700 ring-brand-200 hover:bg-brand-100',            chip: 'bg-brand-100 text-brand-700' },
   { key: 'donation',  label: 'Donation Need',     icon: HeartHandshake, tone: 'bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100',            chip: 'bg-amber-100 text-amber-700' },

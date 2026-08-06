@@ -13,8 +13,9 @@ import {
 export const FILTERS = [
   { key: 'all',        label: 'All',         icon: Globe,            tone: 'text-brand-600 bg-brand-100' },
   { key: 'alerts',     label: 'Alerts',      icon: AlertTriangle,    tone: 'text-red-600 bg-red-100' },
-  { key: 'jobs',       label: 'Jobs',        icon: Briefcase,        tone: 'text-blue-600 bg-blue-100' },
-  { key: 'bounties',   label: 'Bounties',    icon: CircleDollarSign, tone: 'text-green-600 bg-green-100' },
+  // Jobs and Bounties category chips hidden for now — kept here (commented out) so they can be re-enabled easily.
+  // { key: 'jobs',       label: 'Jobs',        icon: Briefcase,        tone: 'text-blue-600 bg-blue-100' },
+  // { key: 'bounties',   label: 'Bounties',    icon: CircleDollarSign, tone: 'text-green-600 bg-green-100' },
   { key: 'donations',  label: 'Donations',   icon: Heart,            tone: 'text-rose-600 bg-rose-100' },
   { key: 'facilities', label: 'Facilities',  icon: Building2,        tone: 'text-amber-600 bg-amber-100' },
   { key: 'tips',       label: 'Tips',        icon: Lightbulb,        tone: 'text-yellow-600 bg-yellow-100' },
@@ -26,8 +27,9 @@ export const FILTERS = [
 export const POST_TYPES = [
   { value: 'general',           label: 'General Post',    icon: MessageSquare,    tone: 'text-neutral-700 bg-neutral-100', desc: 'Share something with the community' },
   { value: 'safety_alert',      label: 'Alert',           icon: AlertTriangle,    tone: 'text-red-600 bg-red-50',          desc: 'Report a safety issue or alert' },
-  { value: 'job',               label: 'Job',             icon: Briefcase,        tone: 'text-blue-600 bg-blue-50',        desc: 'Post a job for contractors', href: '/jobs/new' },
-  { value: 'bounty',            label: 'Bounty',          icon: CircleDollarSign, tone: 'text-green-600 bg-green-50',      desc: 'Start a community bounty', href: '/bounties/new' },
+  // Job and Bounty post types hidden for now — kept here (commented out) so they can be re-enabled easily.
+  // { value: 'job',               label: 'Job',             icon: Briefcase,        tone: 'text-blue-600 bg-blue-50',        desc: 'Post a job for contractors', href: '/jobs/new' },
+  // { value: 'bounty',            label: 'Bounty',          icon: CircleDollarSign, tone: 'text-green-600 bg-green-50',      desc: 'Start a community bounty', href: '/bounties/new' },
   { value: 'donation_need',     label: 'Donation Need',   icon: Heart,            tone: 'text-rose-600 bg-rose-50',        desc: 'Request donations' },
   { value: 'free_item',         label: 'Free Item',       icon: Gift,             tone: 'text-orange-600 bg-orange-50',    desc: 'Give away or offer for free' },
   { value: 'facility_update',   label: 'Facility Update', icon: Building2,        tone: 'text-amber-600 bg-amber-50',      desc: 'Post facility status (owners only)' },

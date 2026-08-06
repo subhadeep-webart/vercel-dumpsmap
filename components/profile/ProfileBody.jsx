@@ -25,16 +25,21 @@ const TAB_COMPONENTS = {
   preferences: PreferencesTab,
 }
 
-export default function ProfileBody({ activeTab, user, form, setForm, save, savingField }) {
+export default function ProfileBody({ activeTab, onNavigate, user, form, setForm, save, savingField }) {
   const ActiveTab = TAB_COMPONENTS[activeTab] || PersonalTab
   return (
     <main className="container mx-auto grid gap-6 px-4 py-6 pb-28 md:grid-cols-3 md:pb-10">
-      <div className="space-y-4 md:col-span-2">
+      {/* Keyed by activeTab so switching tabs remounts this node and replays the
+          `dm-tab-panel` fade+slide — a smooth transition between tabs without a
+          motion library. */}
+      <div key={activeTab} className="dm-tab-panel space-y-4 md:col-span-2">
         <ActiveTab form={form} setForm={setForm} save={save} saving={savingField} />
       </div>
 
-      {/* Sidebar — quick stats / shortcuts */}
-      <ProfileSidebar user={user} />
+      {/* Sidebar — quick stats / shortcuts. Gets `form` too so the completion
+          meter updates live as the user edits fields, and `onNavigate` so its
+          checklist items can jump to the relevant tab. */}
+      <ProfileSidebar user={user} form={form} onNavigate={onNavigate} />
     </main>
   )
 }

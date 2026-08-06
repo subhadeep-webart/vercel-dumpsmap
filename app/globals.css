@@ -628,3 +628,66 @@ code {
   .reaction-panel, .reaction-emoji, .reaction-emoji:hover .reaction-emoji-glyph { animation: none; }
   .reaction-emoji:hover { transform: scale(1.15); }
 }
+
+/* ------------------------------------------------------------------
+   Profile editor motion — Facebook-style hero + tab micro-interactions.
+   Pure CSS, GPU-friendly (opacity/transform only) and fully disabled under
+   prefers-reduced-motion at the bottom of this block. Reuses .dm-tab-panel /
+   .dm-rise-in defined above for tab-content entrance + card stagger.
+   ------------------------------------------------------------------ */
+
+/* Cover photo settles in with a slow "Ken Burns" zoom-out so the hero feels
+   alive the moment the page loads, then holds still. */
+@keyframes pf-cover-in {
+  from { opacity: 0; transform: scale(1.08); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.pf-cover-in {
+  animation: pf-cover-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Avatar medallion springs in with a tiny overshoot (Facebook-style pop). */
+@keyframes pf-avatar-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.6); }
+  65%  { opacity: 1; transform: translateY(0) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.pf-avatar-in {
+  animation: pf-avatar-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+/* Hero text fades up just after the avatar, for a gentle cascade. */
+@keyframes pf-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pf-fade-up {
+  opacity: 0;
+  animation: pf-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(0.28s + var(--pf-i, 0) * 80ms);
+}
+
+/* Active-tab pill: the little "flash" highlight when a tab becomes active. */
+@keyframes pf-tab-pop {
+  0%   { transform: scale(0.92); }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.pf-tab-active {
+  animation: pf-tab-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Avatar ring hover: the medallion lifts + the ring warms to green. */
+.pf-avatar-ring {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, --tw-ring-color 0.3s ease;
+}
+.pf-avatar-ring:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-cover-in, .pf-avatar-in, .pf-fade-up, .pf-tab-active { animation: none !important; }
+  .pf-cover-in, .pf-avatar-in { opacity: 1; transform: none; }
+  .pf-fade-up { opacity: 1; transform: none; }
+  .pf-avatar-ring:hover { transform: none; }
+}

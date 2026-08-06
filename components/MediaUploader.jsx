@@ -102,6 +102,16 @@ async function compressImage(file) {
 // ----------------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------------
+// Named avatar sizes → the responsive circle dimensions + border weight used by
+// the `avatar` variant. `md` is the historical default (h-20 → sm:h-28). `xl`
+// is the Facebook-style floating hero avatar. Callers pass e.g. size="xl".
+const AVATAR_SIZES = {
+  sm: 'h-14 w-14 border-2',
+  md: 'h-20 w-20 border-4 sm:h-28 sm:w-28',
+  lg: 'h-24 w-24 border-4 sm:h-28 sm:w-28',
+  xl: 'h-28 w-28 border-[5px] sm:h-36 sm:w-36',
+}
+
 export default function MediaUploader({
   variant = 'tile',                  // 'avatar' | 'cover' | 'tile' | 'gallery'
   value,                             // string URL or string[] URLs (when multi)
@@ -111,6 +121,7 @@ export default function MediaUploader({
   label,                             // optional override of empty-state label
   helpText,
   className = '',
+  size = 'md',                       // avatar-variant size: 'sm' | 'md' | 'lg' | 'xl'
   accept = 'image/*',
   showRemove = true,
   showRotate = false,                // (future) rotate preview client-side
@@ -205,9 +216,10 @@ export default function MediaUploader({
   // Render variants
   // ------------------------------------------------------------------------
   if (variant === 'avatar') {
+    const sizeClasses = AVATAR_SIZES[size] || AVATAR_SIZES.md
     return (
-      <div className={`relative inline-block ${className}`}>
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-green-600 text-2xl font-extrabold text-white shadow-lg sm:h-28 sm:w-28">
+      <div className={`group relative inline-block ${className}`}>
+        <div className={`flex items-center justify-center overflow-hidden rounded-full border-white bg-green-600 text-2xl font-extrabold text-white shadow-lg ${sizeClasses}`}>
           {urls[0] ? (
             <SafeImage src={urls[0]} alt="Profile" kind="avatar" className="h-full w-full object-cover" />
           ) : (
@@ -219,7 +231,7 @@ export default function MediaUploader({
           onPick={() => fileRef.current?.click()}
           onCamera={() => cameraRef.current?.click()}
           onRemove={() => removeAt(0)}
-          hasValue={!!urls[0]} busy={busy} compact showRemove={showRemove}
+          hasValue={!!urls[0]} busy={busy} compact showRemove={showRemove} circular
         />
         <HiddenInputs accept={accept} multi={multi}
           fileRef={fileRef} cameraRef={cameraRef}
@@ -382,14 +394,21 @@ function HiddenInputs({ accept, multi, fileRef, cameraRef, onFile, onCamera }) {
   )
 }
 
-function UploadActionPills({ fileRef, cameraRef, onPick, onCamera, onRemove, hasValue, busy, compact, showRemove }) {
+function UploadActionPills({ fileRef, cameraRef, onPick, onCamera, onRemove, hasValue, busy, compact, showRemove, circular }) {
+  // On a circular avatar the camera/edit button sits at the true bottom-right
+  // corner (Facebook pattern) — pushed low and to the right so it overlaps the
+  // rim. The remove ✕ is hidden at rest and only fades in when the avatar is
+  // hovered (the parent MediaUploader wrapper is the `group`), keeping the
+  // resting state clean with just the one edit control.
+  const editPos = circular ? '-bottom-0.5 -right-0.5' : '-bottom-1 -right-1'
+  const removePos = circular ? 'right-[9%] top-[9%]' : '-top-1 -right-1'
   return (
     <>
       <button
         type="button"
         onClick={onCamera}
         disabled={busy}
-        className={`absolute -bottom-1 -right-1 inline-flex ${compact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-green-600 text-white shadow ring-2 ring-white hover:bg-green-700 sm:hidden`}
+        className={`absolute ${editPos} inline-flex ${compact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-green-600 text-white shadow ring-2 ring-white hover:bg-green-700 sm:hidden`}
         title="Take photo"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
@@ -398,7 +417,7 @@ function UploadActionPills({ fileRef, cameraRef, onPick, onCamera, onRemove, has
         type="button"
         onClick={onPick}
         disabled={busy}
-        className={`absolute -bottom-1 -right-1 hidden ${compact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-green-600 text-white shadow ring-2 ring-white hover:bg-green-700 sm:inline-flex`}
+        className={`absolute ${editPos} hidden ${compact ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-full bg-green-600 text-white shadow ring-2 ring-white hover:bg-green-700 sm:inline-flex`}
         title="Upload photo"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
@@ -408,7 +427,13 @@ function UploadActionPills({ fileRef, cameraRef, onPick, onCamera, onRemove, has
           type="button"
           onClick={onRemove}
           disabled={busy}
-          className={`absolute -top-1 -right-1 inline-flex ${compact ? 'h-6 w-6' : 'h-7 w-7'} items-center justify-center rounded-full bg-white text-red-600 shadow ring-2 ring-white hover:bg-red-50`}
+          className={`absolute ${removePos} inline-flex ${compact ? 'h-6 w-6' : 'h-7 w-7'} items-center justify-center rounded-full bg-white text-red-600 shadow ring-2 ring-white hover:bg-red-50 ${
+            circular
+              // Mobile (no hover): always visible. Desktop (sm+): hidden at rest,
+              // fades in on hover/focus so the resting avatar stays clean.
+              ? 'transition-opacity duration-200 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
+              : ''
+          }`}
           title="Remove photo"
         >
           <X className="h-3.5 w-3.5" />
