@@ -2,17 +2,17 @@
 
 // /time-clock — Time Clock 2.0
 // ----------------------------------------------------------------------------
-// Full rewrite. Adds:
-//   • Tabs: Today · Week · Calendar · Entries · Approvals (managers) · Settings
-//   • Manual entry create/edit/delete/duplicate
-//   • Work association (job, work order, vehicle, facility)
-//   • Calendar (month grid) + weekly view (Mon-Sun)
-//   • Manager approval queue with approve/reject actions
-//   • CSV export + Email (mailto) export
-//   • Rounding rules + auto-break + hourly rate settings
-// ----------------------------------------------------------------------------
+// Tabs: Today · Week · Calendar · Entries · Approvals (managers) · Settings.
+// Manual entry create/edit/delete/duplicate, work association (job, work order,
+// vehicle, facility), calendar + weekly views, a manager approval queue, and
+// CSV/email export.
+//
+// This file is presentation only. Data reads live in hooks/use-time-clock.js,
+// mutations in hooks/use-time-clock-actions.js, the manager queue in
+// hooks/use-time-clock-approvals.js; pure formatting/date helpers in
+// lib/time-clock-helpers.js and static config in constants/time_clock_constants.js.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ContractorToolsGate from '@/components/ContractorToolsGate'
 import FeatureLock from '@/components/FeatureLock'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,48 +25,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import {
   Clock, Play, Square, Coffee, CheckCircle2, Loader2, Briefcase, MapPin, Calendar,
   TimerReset, FileText, Trash2, BarChart3, Send, Plus, Edit3, Copy, Download, Mail,
-  ChevronLeft, ChevronRight, Settings, ShieldCheck, AlertCircle, Truck, ClipboardList, X,
+  ChevronLeft, ChevronRight, AlertCircle, Truck, ClipboardList, X,
   PartyPopper,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// ============================================================================
-// Helpers
-// ============================================================================
-const fmtMinutes = (m = 0) => {
-  const total = Math.max(0, Math.round(m))
-  const h = Math.floor(total / 60)
-  const mm = total % 60
-  return `${h}h ${String(mm).padStart(2, '0')}m`
-}
-const fmtClockHM = (sec) => {
-  const s = Math.max(0, Math.round(sec))
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  const ss = s % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
-}
-const fmtTime = (iso) => { if (!iso) return '—'; try { return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) } catch { return '—' } }
-const fmtDate = (iso) => { if (!iso) return '—'; try { return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' }) } catch { return '—' } }
-const ymd = (d = new Date()) => new Date(d).toISOString().slice(0, 10)
-// Datetime-local input wants 'YYYY-MM-DDTHH:mm' in local time (no Z)
-const toLocalInput = (iso) => {
-  if (!iso) return ''
-  const d = new Date(iso)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-const fromLocalInput = (v) => (v ? new Date(v).toISOString() : null)
-
-const STATUS_COLOR = {
-  active:    'bg-emerald-100 text-emerald-800',
-  completed: 'bg-neutral-200 text-neutral-700',
-  submitted: 'bg-amber-100 text-amber-800',
-  approved:  'bg-blue-100 text-blue-800',
-  rejected:  'bg-red-100 text-red-800',
-}
-
-const MANAGER_ROLES = ['super_admin', 'admin', 'moderator', 'manager']
+import { useTimeClock } from '@/hooks/use-time-clock'
+import { useTimeClockActions } from '@/hooks/use-time-clock-actions'
+import { useTimeClockApprovals } from '@/hooks/use-time-clock-approvals'
+import {
+  fmtMinutes, fmtClockHM, fmtTime, fmtDate, ymd,
+  toLocalInput, fromLocalInput, mondayOf, addDays, sumNetMinutes,
+} from '@/lib/time-clock-helpers'
+import {
+  STATUS_COLOR, STATUS_COLOR_FALLBACK, KPI_TONES, KPI_TONE_FALLBACK,
+  managerTabs, ENTRY_FILTERS, WEEKDAYS_MON_FIRST, ROUNDING_OPTIONS,
+  ROUNDING_DIRECTIONS, EMPTY_TAG_FORM,
+} from '@/constants/time_clock_constants'
 
 // ============================================================================
 // Page shell
@@ -85,151 +60,21 @@ export default function TimeClockPage() {
 // Main component
 // ============================================================================
 function TimeClock20() {
-  const [tab, setTab] = useState('today')
-  const [user, setUser] = useState(null)
-  const [active, setActive] = useState(null)
-  const [entries, setEntries] = useState([])
-  const [summary, setSummary] = useState(null)
-  const [settings, setSettings] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState(false)
-  const [now, setNow] = useState(Date.now())
+  const {
+    isManager, active, entries, summary, settings, loading,
+    openBreak, elapsedSeconds, reload, setSettings,
+  } = useTimeClock()
+  const actions = useTimeClockActions({ onMutated: reload })
 
-  // Dialog state
-  const [editing, setEditing] = useState(null)   // null | 'new' | entry object
+  const [tab, setTab] = useState('today')
+  const [editing, setEditing] = useState(null)   // null | 'new' | entry object | { __newOn }
   const [showClockIn, setShowClockIn] = useState(false)
 
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [c, l, s, st, meR] = await Promise.all([
-        fetch('/api/time-clock/current').then((r) => r.json()).catch(() => ({ entry: null })),
-        fetch('/api/time-clock/entries?limit=200').then((r) => r.json()).catch(() => ({ entries: [] })),
-        fetch('/api/time-clock/summary').then((r) => r.json()).catch(() => null),
-        fetch('/api/time-clock/settings').then((r) => r.json()).catch(() => null),
-        fetch('/api/auth/me').then((r) => r.json()).catch(() => null),
-      ])
-      setActive(c?.entry || null)
-      setEntries(l?.entries || [])
-      setSummary(s || null)
-      setSettings(st?.settings || null)
-      setUser(meR?.user || null)
-    } finally { setLoading(false) }
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  const isManager = useMemo(() => {
-    if (!user) return false
-    return MANAGER_ROLES.includes(user.role) || MANAGER_ROLES.includes(user.profileType) || user.isManager === true
-  }, [user])
-
-  const openBreak = useMemo(() => {
-    if (!active || !Array.isArray(active.breaks)) return null
-    return active.breaks.find((b) => b && !b.endAt) || null
-  }, [active])
-
-  const elapsedSeconds = useMemo(() => {
-    if (!active) return 0
-    const startMs = new Date(active.clockInAt).getTime()
-    let breakMs = 0
-    for (const b of active.breaks || []) {
-      if (!b?.startAt) continue
-      const bs = new Date(b.startAt).getTime()
-      const be = b.endAt ? new Date(b.endAt).getTime() : now
-      if (be > bs) breakMs += be - bs
-    }
-    return Math.max(0, (now - startMs - breakMs) / 1000)
-  }, [active, now])
-
-  // Actions
   const onClockIn = async (payload) => {
-    setBusy(true)
-    try {
-      const res = await fetch('/api/time-clock/clock-in', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload || {}),
-      })
-      const j = await res.json()
-      if (!res.ok) { toast.error(j.error || 'Failed to clock in'); return }
-      toast.success('Clocked in'); setShowClockIn(false); await load()
-    } finally { setBusy(false) }
-  }
-  const onClockOut = async () => {
-    setBusy(true)
-    try {
-      const res = await fetch('/api/time-clock/clock-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
-      const j = await res.json()
-      if (!res.ok) { toast.error(j.error || 'Failed to clock out'); return }
-      toast.success(`Clocked out · ${fmtMinutes(j.entry?.netMinutes || 0)} worked`); await load()
-    } finally { setBusy(false) }
-  }
-  const onBreakStart = async () => {
-    setBusy(true)
-    try {
-      const r = await fetch('/api/time-clock/break/start', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      if (!r.ok) toast.error((await r.json()).error || 'Could not start break'); else toast.success('Break started')
-      await load()
-    } finally { setBusy(false) }
-  }
-  const onBreakEnd = async () => {
-    setBusy(true)
-    try {
-      const r = await fetch('/api/time-clock/break/end', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      if (!r.ok) toast.error((await r.json()).error || 'Could not end break'); else toast.success('Back to work')
-      await load()
-    } finally { setBusy(false) }
-  }
-  const onSubmit = async (id) => {
-    const r = await fetch(`/api/time-clock/entries/${id}/submit`, { method: 'POST' })
-    if (!r.ok) toast.error((await r.json()).error || 'Submit failed'); else toast.success('Submitted for approval')
-    await load()
-  }
-  const onDelete = async (id) => {
-    if (!confirm('Delete this entry? This cannot be undone.')) return
-    const r = await fetch(`/api/time-clock/entries/${id}`, { method: 'DELETE' })
-    if (!r.ok) toast.error('Delete failed'); else toast.success('Deleted')
-    await load()
-  }
-  const onDuplicate = async (id) => {
-    const targetDate = prompt('Duplicate to date (YYYY-MM-DD)?', ymd())
-    if (!targetDate) return
-    const r = await fetch(`/api/time-clock/entries/${id}/duplicate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetDate }),
-    })
-    if (!r.ok) toast.error((await r.json()).error || 'Duplicate failed'); else toast.success('Shift duplicated')
-    await load()
-  }
-  const onExportCsv = async () => {
-    const url = `/api/time-clock/export.csv?from=&to=`
-    const r = await fetch(url)
-    if (!r.ok) { toast.error('Export failed'); return }
-    const blob = await r.blob()
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob); a.download = `timeclock_${ymd()}.csv`
-    document.body.appendChild(a); a.click(); a.remove()
-    toast.success('CSV downloaded')
-  }
-  const onEmailExport = async () => {
-    const r = await fetch('/api/time-clock/email-payload')
-    const j = await r.json()
-    if (!r.ok) { toast.error(j.error || 'Email payload failed'); return }
-    const params = new URLSearchParams({ subject: j.subject || 'Timesheet', body: j.body || '' })
-    const href = `mailto:${encodeURIComponent(j.to || '')}?${params.toString()}`
-    window.location.href = href
+    if (await actions.clockIn(payload)) setShowClockIn(false)
   }
 
-  const TABS = [
-    { key: 'today',     label: 'Today',     icon: Clock },
-    { key: 'week',      label: 'Week',      icon: Calendar },
-    { key: 'calendar',  label: 'Calendar',  icon: Calendar },
-    { key: 'entries',   label: 'All Entries', icon: ClipboardList },
-    ...(isManager ? [{ key: 'approvals', label: 'Approvals', icon: ShieldCheck }] : []),
-    { key: 'settings',  label: 'Settings',  icon: Settings },
-  ]
+  const TABS = managerTabs(isManager)
 
   return (
     <div className="min-h-[100dvh] bg-neutral-50">
@@ -244,8 +89,8 @@ function TimeClock20() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setEditing('new')} className="gap-1.5"><Plus className="h-4 w-4" /> Manual Entry</Button>
-            <Button variant="outline" onClick={onExportCsv} className="gap-1.5"><Download className="h-4 w-4" /> CSV</Button>
-            <Button variant="outline" onClick={onEmailExport} className="gap-1.5"><Mail className="h-4 w-4" /> Email</Button>
+            <Button variant="outline" onClick={actions.exportCsv} className="gap-1.5"><Download className="h-4 w-4" /> CSV</Button>
+            <Button variant="outline" onClick={actions.emailExport} className="gap-1.5"><Mail className="h-4 w-4" /> Email</Button>
           </div>
         </div>
       </section>
@@ -254,10 +99,10 @@ function TimeClock20() {
       {(loading || active) && (
         <section className="container mx-auto px-4 pb-4">
           <ActiveTimerCard
-            active={active} loading={loading} busy={busy} openBreak={openBreak}
+            active={active} loading={loading} busy={actions.busy} openBreak={openBreak}
             elapsedSeconds={elapsedSeconds}
             onClickClockIn={() => setShowClockIn(true)}
-            onClockOut={onClockOut} onBreakStart={onBreakStart} onBreakEnd={onBreakEnd}
+            onClockOut={actions.clockOut} onBreakStart={actions.breakStart} onBreakEnd={actions.breakEnd}
           />
         </section>
       )}
@@ -283,7 +128,7 @@ function TimeClock20() {
           <TodayView
             active={active} summary={summary} loading={loading} settings={settings}
             entries={entries} onClickClockIn={() => setShowClockIn(true)}
-            onSubmit={onSubmit} onEdit={setEditing} onDelete={onDelete} onDuplicate={onDuplicate}
+            onSubmit={actions.submit} onEdit={setEditing} onDelete={actions.remove} onDuplicate={actions.duplicate}
           />
         )}
         {tab === 'week' && (
@@ -294,8 +139,8 @@ function TimeClock20() {
         )}
         {tab === 'entries' && (
           <EntriesView
-            entries={entries} loading={loading} onSubmit={onSubmit} onEdit={setEditing}
-            onDelete={onDelete} onDuplicate={onDuplicate}
+            entries={entries} loading={loading} onSubmit={actions.submit} onEdit={setEditing}
+            onDelete={actions.remove} onDuplicate={actions.duplicate}
           />
         )}
         {tab === 'approvals' && isManager && <ApprovalsView />}
@@ -304,13 +149,13 @@ function TimeClock20() {
         )}
       </main>
 
-      <ClockInDialog open={showClockIn} onClose={() => setShowClockIn(false)} onSubmit={onClockIn} busy={busy} />
+      <ClockInDialog open={showClockIn} onClose={() => setShowClockIn(false)} onSubmit={onClockIn} busy={actions.busy} />
       <EntryDialog
         open={!!editing}
         entry={editing && typeof editing === 'object' && !editing.__newOn ? editing : null}
         initialDate={editing && editing.__newOn ? editing.__newOn : null}
         onClose={() => setEditing(null)}
-        onSaved={() => { setEditing(null); load() }}
+        onSaved={() => { setEditing(null); reload() }}
       />
     </div>
   )
@@ -391,7 +236,7 @@ function TodayView({ active, summary, loading, entries, onClickClockIn, onSubmit
 // ============================================================================
 // Week view (Mon-Sun grid)
 // ============================================================================
-function WeekView({ entries, settings, onEdit }) {
+function WeekView({ entries, onEdit }) {
   const [weekStart, setWeekStart] = useState(() => mondayOf(new Date()))
   const days = useMemo(() => {
     const out = []
@@ -412,11 +257,10 @@ function WeekView({ entries, settings, onEdit }) {
     return m
   }, [days, entries])
 
-  const weekTotal = useMemo(() => {
-    let total = 0
-    Object.values(grouped).forEach((arr) => arr.forEach((e) => { total += e.netMinutes || 0 }))
-    return total
-  }, [grouped])
+  const weekTotal = useMemo(
+    () => Object.values(grouped).reduce((total, arr) => total + sumNetMinutes(arr), 0),
+    [grouped],
+  )
 
   return (
     <div className="space-y-3">
@@ -436,7 +280,7 @@ function WeekView({ entries, settings, onEdit }) {
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
         {days.map((d) => {
-          const k = ymd(d); const arr = grouped[k]; const dayTotal = arr.reduce((a, e) => a + (e.netMinutes || 0), 0)
+          const k = ymd(d); const arr = grouped[k]; const dayTotal = sumNetMinutes(arr)
           const isToday = ymd(new Date()) === k
           return (
             <Card key={k} className={isToday ? 'border-2 border-brand-300' : ''}>
@@ -506,14 +350,14 @@ function CalendarView({ entries, onEdit, onNewOnDate }) {
 
       <div className="rounded-xl border border-neutral-200 bg-white">
         <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50 text-center">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+          {WEEKDAYS_MON_FIRST.map((d) => (
             <div key={d} className="py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-500">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7">
           {grid.map((d) => {
             const k = ymd(d); const arr = grouped[k] || []
-            const total = arr.reduce((a, e) => a + (e.netMinutes || 0), 0)
+            const total = sumNetMinutes(arr)
             const inMonth = d.getMonth() === cursor.getMonth()
             const isToday = ymd(new Date()) === k
             return (
@@ -552,7 +396,7 @@ function EntriesView({ entries, loading, onSubmit, onEdit, onDelete, onDuplicate
     <div className="space-y-3">
       <Card>
         <CardContent className="flex flex-wrap gap-2 p-3">
-          {['all', 'completed', 'submitted', 'approved', 'rejected'].map((s) => (
+          {ENTRY_FILTERS.map((s) => (
             <button key={s} onClick={() => setFilter(s)} className={`rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wide transition ${filter === s ? 'bg-brand-600 text-white' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}>{s}</button>
           ))}
         </CardContent>
@@ -574,46 +418,12 @@ function EntriesView({ entries, loading, onSubmit, onEdit, onDelete, onDuplicate
 // Approvals view (managers)
 // ============================================================================
 function ApprovalsView() {
-  const [queue, setQueue] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [busyId, setBusyId] = useState(null)
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const r = await fetch('/api/time-clock/manager/queue?status=submitted')
-      const j = await r.json()
-      if (!r.ok) { toast.error(j.error || 'Could not load'); setQueue([]); return }
-      setQueue(j.entries || [])
-    } finally { setLoading(false) }
-  }, [])
-  useEffect(() => { load() }, [load])
-  const approve = async (id) => {
-    setBusyId(id)
-    try {
-      const r = await fetch(`/api/time-clock/manager/${id}/approve`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
-      })
-      if (!r.ok) toast.error((await r.json()).error || 'Approve failed'); else toast.success('Approved')
-      await load()
-    } finally { setBusyId(null) }
-  }
-  const reject = async (id) => {
-    const reason = prompt('Rejection reason?')
-    if (!reason) return
-    setBusyId(id)
-    try {
-      const r = await fetch(`/api/time-clock/manager/${id}/reject`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),
-      })
-      if (!r.ok) toast.error((await r.json()).error || 'Reject failed'); else toast.success('Rejected')
-      await load()
-    } finally { setBusyId(null) }
-  }
+  const { queue, loading, busyId, refresh, approve, reject } = useTimeClockApprovals()
   return (
     <div className="space-y-3">
       <Card><CardContent className="flex items-center justify-between p-3">
         <div className="text-xs font-bold uppercase tracking-wider text-neutral-500">Pending approvals · {queue.length}</div>
-        <Button size="sm" variant="outline" onClick={load} className="gap-1.5"><TimerReset className="h-3.5 w-3.5" /> Refresh</Button>
+        <Button size="sm" variant="outline" onClick={refresh} className="gap-1.5"><TimerReset className="h-3.5 w-3.5" /> Refresh</Button>
       </CardContent></Card>
       {loading ? (
         <Card><CardContent className="flex items-center gap-2 p-6 text-sm text-neutral-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</CardContent></Card>
@@ -659,6 +469,7 @@ function ApprovalsView() {
 // Settings view (rounding rules etc.)
 // ============================================================================
 function SettingsView({ settings, onSaved }) {
+  const { busy, saveSettings } = useTimeClockActions()
   const [form, setForm] = useState({
     roundToMinutes: settings?.roundToMinutes ?? 1,
     roundDirection: settings?.roundDirection ?? 'nearest',
@@ -666,23 +477,9 @@ function SettingsView({ settings, onSaved }) {
     managerEmail: settings?.managerEmail ?? '',
     defaultRate: settings?.defaultRate ?? 0,
   })
-  const [busy, setBusy] = useState(false)
   const save = async () => {
-    setBusy(true)
-    try {
-      const r = await fetch('/api/time-clock/settings', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roundToMinutes: Number(form.roundToMinutes),
-          roundDirection: form.roundDirection,
-          autoBreakMinutes: Number(form.autoBreakMinutes),
-          managerEmail: form.managerEmail,
-          defaultRate: Number(form.defaultRate),
-        }),
-      })
-      const j = await r.json()
-      if (!r.ok) toast.error(j.error || 'Save failed'); else { toast.success('Settings saved'); onSaved?.(j.settings) }
-    } finally { setBusy(false) }
+    const saved = await saveSettings(form)
+    if (saved) onSaved?.(saved)
   }
   return (
     <Card>
@@ -696,19 +493,13 @@ function SettingsView({ settings, onSaved }) {
           <div>
             <Label className="text-xs">Round shift duration to nearest…</Label>
             <select className="mt-1 h-9 w-full rounded-md border border-neutral-300 px-2 text-sm" value={form.roundToMinutes} onChange={(e) => setForm({ ...form, roundToMinutes: e.target.value })}>
-              <option value={1}>No rounding</option>
-              <option value={5}>5 minutes</option>
-              <option value={10}>10 minutes</option>
-              <option value={15}>15 minutes (quarter hour)</option>
-              <option value={30}>30 minutes (half hour)</option>
+              {ROUNDING_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
             <Label className="text-xs">Rounding direction</Label>
             <select className="mt-1 h-9 w-full rounded-md border border-neutral-300 px-2 text-sm" value={form.roundDirection} onChange={(e) => setForm({ ...form, roundDirection: e.target.value })}>
-              <option value="nearest">Nearest (default)</option>
-              <option value="up">Always up</option>
-              <option value="down">Always down</option>
+              {ROUNDING_DIRECTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
@@ -738,7 +529,7 @@ function SettingsView({ settings, onSaved }) {
 // ============================================================================
 // Active timer card
 // ============================================================================
-function ActiveTimerCard({ active, loading, busy, openBreak, elapsedSeconds, onClickClockIn, onClockOut, onBreakStart, onBreakEnd }) {
+function ActiveTimerCard({ active, loading, busy, openBreak, elapsedSeconds, onClockOut, onBreakStart, onBreakEnd }) {
   if (loading && !active) {
     return <Card><CardContent className="flex items-center gap-2 p-6 text-sm text-neutral-500"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</CardContent></Card>
   }
@@ -780,13 +571,7 @@ function ActiveTimerCard({ active, loading, busy, openBreak, elapsedSeconds, onC
 // KPI tile
 // ============================================================================
 function KpiTile({ icon: Icon, label, value, sub, loading, tone = 'brand' }) {
-  const toneCls = ({
-    brand: 'text-brand-700 bg-brand-50',
-    emerald: 'text-emerald-700 bg-emerald-50',
-    amber: 'text-amber-700 bg-amber-50',
-    red: 'text-red-700 bg-red-50',
-    violet: 'text-violet-700 bg-violet-50',
-  })[tone] || 'text-brand-700 bg-brand-50'
+  const toneCls = KPI_TONES[tone] || KPI_TONE_FALLBACK
   return (
     <Card>
       <CardContent className="p-4">
@@ -802,7 +587,7 @@ function KpiTile({ icon: Icon, label, value, sub, loading, tone = 'brand' }) {
 // Entry row
 // ============================================================================
 function EntryRow({ entry, onSubmit, onEdit, onDelete, onDuplicate }) {
-  const statusColor = STATUS_COLOR[entry.status] || 'bg-neutral-100 text-neutral-700'
+  const statusColor = STATUS_COLOR[entry.status] || STATUS_COLOR_FALLBACK
   return (
     <Card>
       <CardContent className="p-3 sm:p-4">
@@ -849,8 +634,8 @@ function EntryRow({ entry, onSubmit, onEdit, onDelete, onDuplicate }) {
 // Clock-In dialog
 // ============================================================================
 function ClockInDialog({ open, onClose, onSubmit, busy }) {
-  const [form, setForm] = useState({ jobLabel: '', workOrderLabel: '', vehicleLabel: '', facilityName: '', notes: '' })
-  useEffect(() => { if (!open) setForm({ jobLabel: '', workOrderLabel: '', vehicleLabel: '', facilityName: '', notes: '' }) }, [open])
+  const [form, setForm] = useState(EMPTY_TAG_FORM)
+  useEffect(() => { if (!open) setForm(EMPTY_TAG_FORM) }, [open])
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
@@ -878,8 +663,8 @@ function ClockInDialog({ open, onClose, onSubmit, busy }) {
 // ============================================================================
 function EntryDialog({ open, entry, initialDate, onClose, onSaved }) {
   const isEdit = !!entry?.id
+  const { busy, saveEntry } = useTimeClockActions({ onMutated: onSaved })
   const [form, setForm] = useState({})
-  const [busy, setBusy] = useState(false)
   useEffect(() => {
     if (!open) return
     if (entry?.id) {
@@ -902,23 +687,14 @@ function EntryDialog({ open, entry, initialDate, onClose, onSaved }) {
 
   const save = async () => {
     if (!form.clockInAt || !form.clockOutAt) { toast.error('Clock in/out times are required'); return }
-    setBusy(true)
-    try {
-      const payload = {
-        clockInAt: fromLocalInput(form.clockInAt),
-        clockOutAt: fromLocalInput(form.clockOutAt),
-        jobLabel: form.jobLabel || null, workOrderLabel: form.workOrderLabel || null,
-        vehicleLabel: form.vehicleLabel || null, facilityName: form.facilityName || null,
-        notes: form.notes || '',
-      }
-      const url = isEdit ? `/api/time-clock/entries/${entry.id}` : '/api/time-clock/entries'
-      const method = isEdit ? 'PATCH' : 'POST'
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const j = await r.json()
-      if (!r.ok) { toast.error(j.error || 'Save failed'); return }
-      toast.success(isEdit ? 'Entry updated' : 'Manual entry created')
-      onSaved()
-    } finally { setBusy(false) }
+    const payload = {
+      clockInAt: fromLocalInput(form.clockInAt),
+      clockOutAt: fromLocalInput(form.clockOutAt),
+      jobLabel: form.jobLabel || null, workOrderLabel: form.workOrderLabel || null,
+      vehicleLabel: form.vehicleLabel || null, facilityName: form.facilityName || null,
+      notes: form.notes || '',
+    }
+    await saveEntry(payload, entry?.id)
   }
 
   return (
@@ -941,17 +717,4 @@ function EntryDialog({ open, entry, initialDate, onClose, onSaved }) {
       </DialogContent>
     </Dialog>
   )
-}
-
-// ============================================================================
-// Date helpers
-// ============================================================================
-function mondayOf(d) {
-  const day = d.getDay() // 0=Sun
-  const offset = (day + 6) % 7
-  const m = new Date(d); m.setDate(d.getDate() - offset); m.setHours(0, 0, 0, 0)
-  return m
-}
-function addDays(d, n) {
-  const x = new Date(d); x.setDate(x.getDate() + n); return x
 }

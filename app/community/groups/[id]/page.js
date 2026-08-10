@@ -9,33 +9,25 @@ import { Badge } from '@/components/ui/badge'
 import { StyledAutoResizeTextarea } from '@/components/ui/auto-resize-textarea'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowLeft, Users, MapPin, Settings, Shield, Plus, LogOut, BadgeCheck, Pin, MessageCircle, AlertTriangle, Star } from 'lucide-react'
+import { Users, MapPin, Settings, Plus, LogOut, BadgeCheck, Pin, MessageCircle, AlertTriangle, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import RoleBadge from '@/components/RoleBadge'
-import { CATEGORY_BY_KEY, categoryColor, timeAgo, REACTION_TYPES } from '@/lib/community-categories'
+import { CATEGORY_BY_KEY, categoryColor, timeAgo } from '@/lib/community-categories'
 import { GroupCategoryIcon, CategoryIcon } from '@/lib/community-icons'
 import GroupChatPanel from '@/components/messaging/GroupChatPanel'
 import PageShell from '@/components/PageShell'
 import { isLikelyLoggedIn } from '@/lib/api-client'
 import { useCurrentUser } from '@/lib/useCurrentUser'
-
-const GROUP_CATS = {
-  haulers: { label: 'Haulers' }, cleanup: { label: 'Cleanup Crew' },
-  reuse: { label: 'Reuse / Free' }, contractors: { label: 'Contractors' },
-  recycling: { label: 'Recycling' }, property: { label: 'Property Mgmt' },
-  scrap: { label: 'Scrap Metal' }, donation: { label: 'Donation Network' },
-  agency: { label: 'Agency' }, general: { label: 'General' },
-}
+import { CAT_DETAIL_BY_KEY, GROUP_TABS } from '@/constants/groups_constants'
+import { isGroupOrganizer, isStaffUser } from '@/lib/groups-helpers'
+import { useGroup } from '@/hooks/use-group'
+import { useGroupActions } from '@/hooks/use-group-actions'
 
 export default function GroupDetailPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id
   const { user } = useCurrentUser()
-  const [group, setGroup] = useState(null)
-  const [posts, setPosts] = useState([])
-  const [members, setMembers] = useState([])
-  const [busy, setBusy] = useState(false)
   const [composeOpen, setComposeOpen] = useState(false)
   const [tab, setTab] = useState('feed')
 
@@ -44,49 +36,16 @@ export default function GroupDetailPage() {
     if (typeof window === 'undefined') return
     const sp = new URLSearchParams(window.location.search)
     const t = sp.get('tab')
-    if (t && ['feed', 'chat', 'members'].includes(t)) setTab(t)
+    if (t && GROUP_TABS.includes(t)) setTab(t)
   }, [])
 
   const loggedIn = isLikelyLoggedIn()
+  const { group, posts, members, reloadGroup, reloadPosts, reloadMembers } = useGroup(id, tab === 'members')
+  const { busy, join, leave, kick } = useGroupActions()
 
-  const loadGroup = async () => {
-    const r = await fetch(`/api/community/groups/${id}`)
-    if (!r.ok) { setGroup('not_found'); return }
-    const j = await r.json()
-    setGroup(j.group)
-  }
-  const loadPosts = async () => {
-    const r = await fetch(`/api/community/groups/${id}/posts?limit=60`)
-    const j = await r.json()
-    setPosts(j.posts || [])
-  }
-  const loadMembers = async () => {
-    const r = await fetch(`/api/community/groups/${id}/members?limit=100`)
-    const j = await r.json()
-    setMembers(j.members || [])
-  }
-  useEffect(() => { if (id) { loadGroup(); loadPosts() } }, [id])
-  useEffect(() => { if (tab === 'members' && id) loadMembers() }, [tab, id])
-
-  const join = async () => {
-    if (!loggedIn) { toast.error('Log in'); return }
-    setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST' })
-    setBusy(false)
-    if (r.ok) { toast.success('Joined group'); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
-  }
-  const leave = async () => {
-    if (!confirm('Leave this group?')) return
-    setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/leave`, { method: 'POST' })
-    setBusy(false)
-    if (r.ok) { toast.success('Left group'); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
-  }
-  const kick = async (memberId) => {
-    if (!confirm('Remove this member from the group?')) return
-    const r = await fetch(`/api/community/groups/${group.id}/members/${memberId}`, { method: 'DELETE' })
-    if (r.ok) { toast.success('Removed'); loadMembers(); loadGroup() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
-  }
+  const doJoin = () => join(group.id, { loggedIn, loginMsg: 'Log in', successMsg: 'Joined group', onReload: reloadGroup })
+  const doLeave = () => leave(group.id, { onReload: reloadGroup })
+  const doKick = (memberId) => kick(group.id, memberId, { onReload: () => { reloadMembers(); reloadGroup() } })
 
   if (group === 'not_found') {
     return (
@@ -98,9 +57,9 @@ export default function GroupDetailPage() {
   }
   if (!group) return <div className="p-8 text-center text-sm text-neutral-500">Loading group…</div>
 
-  const cat = GROUP_CATS[group.category] || GROUP_CATS.general
-  const isOrganizer = group.myRole === 'group_admin' || group.ownerId === user?.id
-  const isStaff = user && ['super_admin', 'admin', 'moderator'].includes(user.role)
+  const cat = CAT_DETAIL_BY_KEY[group.category] || CAT_DETAIL_BY_KEY.general
+  const isOrganizer = isGroupOrganizer(group, user)
+  const isStaff = isStaffUser(user)
 
   return (
     <PageShell active="community" breadcrumbs={[{ label: 'Community', href: '/community' }, { label: 'Groups', href: '/community/groups' }, { label: group.name }]} maxWidth="max-w-4xl">
@@ -123,8 +82,8 @@ export default function GroupDetailPage() {
               <span>· Created {timeAgo(group.createdAt)}</span>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {!group.myRole && <Button onClick={join} disabled={busy} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>}
-              {group.myRole === 'member' && <Button variant="outline" onClick={leave} disabled={busy}><LogOut className="mr-1 h-4 w-4" /> Leave</Button>}
+              {!group.myRole && <Button onClick={doJoin} disabled={busy} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>}
+              {group.myRole === 'member' && <Button variant="outline" onClick={doLeave} disabled={busy}><LogOut className="mr-1 h-4 w-4" /> Leave</Button>}
               {group.myRole && <Button onClick={() => { if (!loggedIn) { toast.error('Log in'); return } setComposeOpen(true) }} className="bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Post to group</Button>}
               {(isOrganizer || isStaff) && <Button variant="outline" onClick={() => router.push(`/community/groups/${group.slug || group.id}/settings`)}><Settings className="mr-1 h-4 w-4" /> Settings</Button>}
               {isOrganizer && <Badge variant="outline" className="inline-flex items-center gap-1 border-amber-300 bg-amber-50 text-amber-800">{group.myRole === 'group_admin' ? <><Star className="h-3 w-3" /> Organizer</> : 'Owner'}</Badge>}
@@ -140,7 +99,7 @@ export default function GroupDetailPage() {
 
         {/* Tabs */}
         <div className="mt-4 flex overflow-x-auto border-b border-neutral-200">
-          {['feed', 'chat', 'members'].map((t) => (
+          {GROUP_TABS.map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`relative whitespace-nowrap px-4 py-2 text-sm font-medium ${tab === t ? 'text-neutral-900' : 'text-neutral-500'}`}>
               {t === 'feed' && `Feed (${posts.length})`}
               {t === 'chat' && <span className="inline-flex items-center gap-1">Chat <MessageCircle className="h-4 w-4" /></span>}
@@ -170,7 +129,7 @@ export default function GroupDetailPage() {
                 <MessageCircle className="mx-auto h-8 w-8 text-neutral-400" />
                 <p className="mt-2 text-sm font-semibold text-neutral-800">Members-only chat</p>
                 <p className="mt-1 text-xs text-neutral-500">Join this group to read and post messages.</p>
-                <Button onClick={join} disabled={busy} className="mt-3 bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>
+                <Button onClick={doJoin} disabled={busy} className="mt-3 bg-brand-600 hover:bg-brand-700"><Plus className="mr-1 h-4 w-4" /> Join group</Button>
               </div>
             )
           )}
@@ -188,7 +147,7 @@ export default function GroupDetailPage() {
                       </div>
                     </div>
                     {(isOrganizer || isStaff) && m.id !== group.ownerId && (
-                      <Button variant="outline" size="sm" onClick={() => kick(m.id)} className="text-red-600 hover:bg-red-50">Remove</Button>
+                      <Button variant="outline" size="sm" onClick={() => doKick(m.id)} className="text-red-600 hover:bg-red-50">Remove</Button>
                     )}
                   </CardContent>
                 </Card>
@@ -198,7 +157,7 @@ export default function GroupDetailPage() {
         </div>
       </div>
 
-      <GroupComposeDialog open={composeOpen} onOpenChange={setComposeOpen} groupId={group.id} onPosted={loadPosts} />
+      <GroupComposeDialog open={composeOpen} onOpenChange={setComposeOpen} groupId={group.id} onPosted={reloadPosts} />
     </PageShell>
   )
 }
@@ -227,21 +186,17 @@ function GroupPostCard({ post }) {
 }
 
 function GroupComposeDialog({ open, onOpenChange, groupId, onPosted }) {
+  const { postToGroup } = useGroupActions()
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const submit = async () => {
     if (!title.trim()) { toast.error('Add a title'); return }
     setSubmitting(true)
-    const r = await fetch('/api/community/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category: 'general', title, body, groupId }),
-    })
-    const j = await r.json()
+    const ok = await postToGroup(groupId, { title, body })
     setSubmitting(false)
-    if (!r.ok) { toast.error(j.error || 'Failed'); return }
-    toast.success('Posted to group'); setTitle(''); setBody(''); onOpenChange(false); onPosted?.()
+    if (!ok) return
+    setTitle(''); setBody(''); onOpenChange(false); onPosted?.()
   }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

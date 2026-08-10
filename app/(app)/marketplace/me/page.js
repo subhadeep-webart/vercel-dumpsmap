@@ -1,9 +1,8 @@
 'use client'
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,40 +13,12 @@ import {
   ShoppingBag, Plus, X, Trash2, Pencil, BellOff,
 } from 'lucide-react'
 import CategoryPlaceholder from '@/components/marketplace/CategoryPlaceholder'
-import { isLikelyLoggedIn } from '@/lib/api-client'
-
-function normalizePhoto(url) {
-  if (!url || typeof url !== 'string') return null
-  if (url.startsWith('/uploads/')) return `/api/files/${url.slice('/uploads/'.length)}`
-  return url
-}
-
-const TABS = [
-  { value: 'saved',      label: 'Saved',              icon: BookmarkIcon },
-  { value: 'reserved',   label: 'Reserved',           icon: Timer },
-  { value: 'messages',   label: 'Messages',           icon: MessageCircle },
-  { value: 'claimed',    label: 'Claimed',            icon: CheckCircle2 },
-  { value: 'alerts',     label: 'Nearby Alerts',      icon: Bell },
-  { value: 'searches',   label: 'Saved Searches',     icon: Sparkles },
-]
-
-const statusStyle = (s) => ({
-  on_truck: 'bg-emerald-600 text-white',
-  at_site: 'bg-blue-600 text-white',
-  last_chance: 'bg-rose-600 text-white',
-  reserved: 'bg-amber-500 text-white',
-  sold: 'bg-neutral-700 text-white',
-  claimed: 'bg-neutral-700 text-white',
-  donated: 'bg-purple-600 text-white',
-}[s] || 'bg-neutral-200 text-neutral-700')
-
-const priceLabel = (l) => {
-  if (l.priceType === 'free' || l.price === 0) return 'FREE'
-  if (l.priceType === 'donation') return 'DONATION'
-  if (l.priceType === 'trade') return 'TRADE'
-  if (l.priceType === 'obo') return l.price ? `$${l.price} or Make Offer` : 'Make Offer'
-  return l.price != null ? `$${l.price}` : '—'
-}
+import { useMyListings } from '@/hooks/use-my-listings'
+import { useMarketplaceListingActions } from '@/hooks/use-marketplace-listing-actions'
+import {
+  normalizePhoto, tilePriceLabel as priceLabel, tileStatusStyle as statusStyle,
+} from '@/lib/marketplace-helpers'
+import { ME_TABS as TABS, METRIC_ACCENTS, EMPTY_SAVED_SEARCH } from '@/constants/marketplace_detail_constants'
 
 function ListingTile({ l, extra }) {
   const [imgFailed, setImgFailed] = useState(false)
@@ -90,13 +61,7 @@ function ListingTile({ l, extra }) {
 }
 
 function MetricCard({ icon: Icon, label, value, accent = 'brand' }) {
-  const accents = {
-    brand: 'from-brand-50 to-white text-brand-700',
-    green: 'from-emerald-50 to-white text-emerald-700',
-    rose: 'from-rose-50 to-white text-rose-700',
-    amber: 'from-amber-50 to-white text-amber-700',
-    purple: 'from-purple-50 to-white text-purple-700',
-  }[accent]
+  const accents = METRIC_ACCENTS[accent]
   return (
     <Card className="overflow-hidden border-neutral-200">
       <CardContent className={`flex items-center gap-3 bg-gradient-to-br p-4 ${accents}`}>
@@ -113,8 +78,8 @@ function MetricCard({ icon: Icon, label, value, accent = 'brand' }) {
 }
 
 function SavedSearchEditor({ open, initial, onClose, onSave }) {
-  const [form, setForm] = useState(initial || { name: '', category: '', city: '', keyword: '', maxKm: '', priceType: '', freeOnly: false, donationOnly: false, enabled: true })
-  useEffect(() => { setForm(initial || { name: '', category: '', city: '', keyword: '', maxKm: '', priceType: '', freeOnly: false, donationOnly: false, enabled: true }) }, [initial])
+  const [form, setForm] = useState(initial || EMPTY_SAVED_SEARCH)
+  useEffect(() => { setForm(initial || EMPTY_SAVED_SEARCH) }, [initial])
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
@@ -149,77 +114,26 @@ function BuyerDashboardPageInner() {
   const sp = useSearchParams()
   const initialTab = sp.get('tab') || 'saved'
   const [tab, setTab] = useState(initialTab)
-  const [user, setUser] = useState(null)
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(null) // saved-search edit object
   const [editorOpen, setEditorOpen] = useState(false)
 
-  // Load me
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!isLikelyLoggedIn()) { router.push('/?login=1&returnTo=/marketplace/me'); return }
-    fetch('/api/auth/me')
-      .then((r) => r.ok ? r.json() : null)
-      .then((j) => {
-        if (!j?.user) { router.push('/?login=1&returnTo=/marketplace/me'); return }
-        setUser(j.user)
-      })
-      .catch(() => router.push('/?login=1&returnTo=/marketplace/me'))
-  }, [router])
+  // Data reads (current user + dashboard payload + live reservation countdown).
+  const { user, isLoggedOut, data, loading, reservedWithLive, reload: load } = useMyListings({ tab })
+  const actions = useMarketplaceListingActions({ onMutated: load })
 
-  const load = async () => {
-    setLoading(true)
-    try {
-      const r = await fetch('/api/marketplace/me')
-      if (r.status === 401) { router.push('/?login=1&returnTo=/marketplace/me'); return }
-      const j = await r.json()
-      setData(j)
-    } finally {
-      setLoading(false)
-    }
-  }
-  useEffect(() => { if (user) load() /* eslint-disable-line */ }, [user])
-
-  // Live countdown refresh once per second when on reserved tab
-  const [tick, setTick] = useState(0)
+  // Redirect to login when we know there's no session (mirrors the old
+  // isLikelyLoggedIn / /auth/me / 401 guards, all of which pushed here).
   useEffect(() => {
-    if (tab !== 'reserved') return
-    const t = setInterval(() => setTick((x) => x + 1), 1000)
-    return () => clearInterval(t)
-  }, [tab])
-  const reservedWithLive = useMemo(() => {
-    if (!data?.reserved) return []
-    return data.reserved.map((l) => {
-      if (!l.reservation?.expiresAt) return l
-      const msRemaining = Math.max(0, new Date(l.reservation.expiresAt).getTime() - Date.now())
-      return { ...l, reservation: { ...l.reservation, msRemaining } }
-    })
-  }, [data?.reserved, tick])
+    if (isLoggedOut) router.push('/?login=1&returnTo=/marketplace/me')
+  }, [isLoggedOut, router])
 
   // Saved-search handlers
   const onSaveSearch = async (form) => {
-    try {
-      const url = form.id ? `/api/marketplace/saved-searches/${form.id}` : '/api/marketplace/saved-searches'
-      const method = form.id ? 'PATCH' : 'POST'
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-      if (!r.ok) throw new Error((await r.json()).error || 'Failed')
-      toast.success(form.id ? 'Saved search updated' : 'Saved search created')
-      setEditorOpen(false)
-      load()
-    } catch (e) {
-      toast.error(e.message)
-    }
+    const ok = await actions.saveSearch(form)
+    if (ok) setEditorOpen(false)
   }
-  const onDeleteSearch = async (id) => {
-    if (!confirm('Delete this saved search?')) return
-    const r = await fetch(`/api/marketplace/saved-searches/${id}`, { method: 'DELETE' })
-    if (r.ok) { toast.success('Deleted'); load() }
-  }
-  const onToggleSearch = async (s) => {
-    const r = await fetch(`/api/marketplace/saved-searches/${s.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !s.enabled }) })
-    if (r.ok) load()
-  }
+  const onDeleteSearch = (id) => actions.deleteSearch(id)
+  const onToggleSearch = (s) => actions.toggleSearch(s)
 
   const m = data?.metrics || {}
 

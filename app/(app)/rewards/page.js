@@ -8,7 +8,7 @@
 // (Redeem → opens dialog), redemption status timeline.
 // ----------------------------------------------------------------------------
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,43 +16,21 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Award, Coins, TrendingUp, MapPin, Receipt, Users, Recycle, ArrowRight,
-  Gift, ChevronRight, Loader2, AlertCircle, History, CheckCircle2, XCircle,
+  Award, Coins, TrendingUp, ArrowRight,
+  Gift, Loader2, AlertCircle, History,
   Sparkles,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import RouteFeatureLock from '@/components/RouteFeatureLock'
-import { isLikelyLoggedIn } from '@/lib/api-client'
-
-const fmtPts = (n) => Number(n || 0).toLocaleString()
-const fmtDollars = (cents) => `$${(Number(cents || 0) / 100).toFixed(2)}`
-
-const EARN_TILES = [
-  { icon: MapPin,  label: 'Facility check-in',      pts: 25, hint: 'When you visit a partner site' },
-  { icon: Receipt, label: 'Verified receipt',       pts: 50, hint: 'Drop-off / disposal proof' },
-  { icon: Recycle, label: 'E-waste / donation',     pts: 75, hint: 'Bonus for high-impact items' },
-  { icon: Award,   label: 'First visit bonus',      pts: 100, hint: 'Once per facility' },
-  { icon: Users,   label: 'Community post',         pts: 10, hint: 'Wait times, hot spots, tips' },
-  { icon: Users,   label: 'Referral',               pts: 250, hint: 'Friends join and check in' },
-]
-
-const REDEMPTION_TIERS = [
-  { points: 1000, dollars: 10,  blurb: 'Coffee on us' },
-  { points: 2500, dollars: 25,  blurb: 'Fill the tank' },
-  { points: 5000, dollars: 50,  blurb: 'Family dinner' },
-  { points: 10000, dollars: 100, blurb: 'Pro reward' },
-]
-
-const STATUS_META = {
-  pending:    { tone: 'bg-amber-100 text-amber-800', icon: Loader2, label: 'Pending review' },
-  processing: { tone: 'bg-blue-100 text-blue-800',   icon: Loader2, label: 'Processing payout' },
-  paid:       { tone: 'bg-emerald-100 text-emerald-800', icon: CheckCircle2, label: 'Paid' },
-  rejected:   { tone: 'bg-red-100 text-red-800',     icon: XCircle, label: 'Rejected' },
-  cancelled:  { tone: 'bg-neutral-200 text-neutral-700', icon: XCircle, label: 'Cancelled' },
-}
+import {
+  EARN_TILES, REDEMPTION_TIERS, STATUS_META,
+  CASHOUT_METHOD_TYPES, EMPTY_CASHOUT_METHOD,
+} from '@/constants/rewards_constants'
+import { fmtPts, fmtDollars, labelForSource } from '@/lib/rewards-page-helpers'
+import { useRewards } from '@/hooks/use-rewards'
+import { useRewardsActions } from '@/hooks/use-rewards-actions'
 
 export default function RewardsPage() {
   return (
@@ -64,32 +42,9 @@ export default function RewardsPage() {
 
 function RewardsPageInner() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
-  const [bootstrapping, setBootstrapping] = useState(true)
-  const [balance, setBalance] = useState(null)
-  const [history, setHistory] = useState([])
-  const [redemptions, setRedemptions] = useState([])
-  const [settings, setSettings] = useState(null)
+  const { user, bootstrapping, balance, history, redemptions, reload } = useRewards()
   const [redeemOpen, setRedeemOpen] = useState(null) // { points, dollars }
   const [softLogin, setSoftLogin] = useState(null)
-
-  const loadAll = useCallback(async () => {
-    if (!isLikelyLoggedIn()) { setBootstrapping(false); return }
-    try {
-      const [meR, balR, histR, redR] = await Promise.all([
-        fetch('/api/auth/me').then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/balance').then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/history?limit=20').then((r) => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/users/me/rewards/redemptions').then((r) => r.ok ? r.json() : null).catch(() => null),
-      ])
-      setUser(meR?.user || null)
-      setBalance(balR || null)
-      setHistory(histR?.entries || [])
-      setRedemptions(redR?.redemptions || [])
-    } finally { setBootstrapping(false) }
-  }, [])
-
-  useEffect(() => { loadAll() }, [loadAll])
 
   const requireAuth = (action) => {
     if (user) return true
@@ -273,7 +228,7 @@ function RewardsPageInner() {
         tier={redeemOpen}
         balance={balance?.balance || 0}
         onClose={() => setRedeemOpen(null)}
-        onRedeemed={() => { setRedeemOpen(null); loadAll() }}
+        onRedeemed={() => { setRedeemOpen(null); reload() }}
       />
       <SoftLoginModal action={softLogin} onClose={() => setSoftLogin(null)} />
     </div>
@@ -368,83 +323,44 @@ function Faq({ q, a }) {
   )
 }
 
-const SOURCE_LABELS = {
-  facility_check_in:    'Facility check-in',
-  receipt_verified:     'Verified receipt',
-  first_visit_bonus:    'First-visit bonus',
-  donation_receipt:     'Donation receipt',
-  ewaste_receipt:       'E-waste receipt',
-  transfer_station_receipt: 'Transfer station receipt',
-  partner_facility_bonus: 'Partner facility bonus',
-  community_post:       'Community post',
-  illegal_dump_report:  'Illegal dump report',
-  cleanup_event:        'Cleanup event',
-  referral_bonus:       'Referral bonus',
-  admin_adjustment:     'Admin adjustment',
-  redemption:           'Redemption',
-}
-function labelForSource(s) {
-  return SOURCE_LABELS[s] || (String(s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
-}
-
 // ============================================================================
 // Redeem dialog
 // ============================================================================
 function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
+  const { busy, loadDialogData, addMethod: addMethodReq, redeem } = useRewardsActions({ onMutated: onRedeemed })
   const [methods, setMethods] = useState([])
   const [methodId, setMethodId] = useState('')
   const [preview, setPreview] = useState(null)
-  const [busy, setBusy] = useState(false)
   const [addingMethod, setAddingMethod] = useState(false)
-  const [newMethod, setNewMethod] = useState({ type: 'venmo', label: '', email: '' })
+  const [newMethod, setNewMethod] = useState(EMPTY_CASHOUT_METHOD)
 
   useEffect(() => {
     if (!open || !tier) return
     let active = true
     ;(async () => {
-      const r = await fetch('/api/users/me/cashout-methods')
-      const j = await r.json().catch(() => ({}))
+      const { methods: loaded, preview: pv } = await loadDialogData(tier)
       if (!active) return
-      setMethods(j.methods || [])
-      const def = (j.methods || []).find((m) => m.isDefault) || (j.methods || [])[0]
+      setMethods(loaded)
+      const def = loaded.find((m) => m.isDefault) || loaded[0]
       setMethodId(def?.id || '')
-      const pr = await fetch('/api/users/me/rewards/redeem/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ points: tier.points }),
-      })
-      const pj = await pr.json().catch(() => ({}))
-      if (active) setPreview(pj.preview || null)
+      setPreview(pv)
     })()
     return () => { active = false }
-  }, [open, tier])
+  }, [open, tier, loadDialogData])
 
   const addMethod = async () => {
     if (!newMethod.label.trim()) { toast.error('Add a label'); return }
-    const r = await fetch('/api/users/me/cashout-methods', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newMethod),
-    })
-    const j = await r.json()
-    if (!r.ok) { toast.error(j.error || 'Failed'); return }
-    setMethods((arr) => [...arr, j.method])
-    setMethodId(j.method.id)
+    const method = await addMethodReq(newMethod)
+    if (!method) return
+    setMethods((arr) => [...arr, method])
+    setMethodId(method.id)
     setAddingMethod(false)
-    setNewMethod({ type: 'venmo', label: '', email: '' })
+    setNewMethod(EMPTY_CASHOUT_METHOD)
   }
 
   const submit = async () => {
     if (!methodId) { toast.error('Select or add a cashout method'); return }
-    setBusy(true)
-    try {
-      const r = await fetch('/api/users/me/rewards/redeem', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ points: tier.points, cashoutMethodId: methodId }),
-      })
-      const j = await r.json()
-      if (!r.ok) { toast.error(j.error || 'Redemption failed'); return }
-      toast.success(`Redemption submitted! $${(j.redemption.netCashCents / 100).toFixed(2)} will be paid out.`)
-      onRedeemed()
-    } finally { setBusy(false) }
+    await redeem(tier, methodId)
   }
 
   if (!open || !tier) return null
@@ -510,10 +426,9 @@ function RedeemDialog({ open, tier, balance, onClose, onRedeemed }) {
                   <div>
                     <Label className="text-xs">Type</Label>
                     <select className="mt-1 h-9 w-full rounded-md border border-neutral-300 px-2 text-sm" value={newMethod.type} onChange={(e) => setNewMethod({ ...newMethod, type: e.target.value })}>
-                      <option value="venmo">Venmo</option>
-                      <option value="cashapp">Cash App</option>
-                      <option value="check">Mailed check</option>
-                      <option value="facility_credit">Facility credit</option>
+                      {CASHOUT_METHOD_TYPES.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

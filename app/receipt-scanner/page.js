@@ -13,166 +13,33 @@
 //
 // Gating: feature flag `ocrReceiptScanner` (beta). Locked state shows an
 // "Apply for beta" copy when the user doesn't have a grant.
+//
+// All data/logic lives in hooks/use-receipt-scanner.js (+ its actions hook);
+// this file is presentation only.
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import PageShell from '@/components/PageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useFeatureAccess } from '@/lib/useFeatureAccess'
-import { isLikelyLoggedIn } from '@/lib/api-client'
 import {
-  ArrowLeft, ArrowRight, Camera, CheckCircle2, FileText, Loader2,
+  ArrowLeft, Camera, CheckCircle2, FileText, Loader2,
   RefreshCw, ScanLine, Sparkles, Upload, AlertTriangle, Lock,
 } from 'lucide-react'
-import { toast } from 'sonner'
-
-const MATERIALS = ['', 'MSW', 'C&D', 'Green Waste', 'Mixed', 'Metal', 'Cardboard', 'E-waste', 'Yard Waste', 'Other']
-const LOADS = ['mixed', 'clean', 'cnd', 'green', 'metal', 'other']
-const PAY_METHODS = ['card', 'cash', 'check', 'account', 'other']
+import { useReceiptScanner } from '@/hooks/use-receipt-scanner'
+import { humanizeSource } from '@/lib/receipt-scanner-helpers'
+import { MATERIALS, LOADS, PAY_METHODS } from '@/constants/receipt_scanner_constants'
 
 export default function ReceiptScannerPage() {
-  const router = useRouter()
-  const fileRef = useRef(null)
-  const cameraRef = useRef(null)
-  const [user, setUser] = useState(null)
-  const [authStatus, setAuthStatus] = useState('loading') // loading | ready | unauth
-  const [stage, setStage] = useState('pick')             // pick | scanning | review | saving | done
-  const [previewUrl, setPreviewUrl] = useState(null)
-  const [scanError, setScanError] = useState('')
-  const [draft, setDraft] = useState(null)
-  const [ocrMeta, setOcrMeta] = useState(null)
-  const [savedReceipt, setSavedReceipt] = useState(null)
-  const [savedRewards, setSavedRewards] = useState(null)
-  const access = useFeatureAccess('ocrReceiptScanner')
-
-  // Auth bootstrap (with 8s safety timeout so mobile users never get stuck)
-  useEffect(() => {
-    let cancelled = false
-    if (!isLikelyLoggedIn()) {
-      router.replace('/?login=1&returnTo=/receipt-scanner')
-      return
-    }
-    const ctrl = new AbortController()
-    const timeoutId = setTimeout(() => {
-      ctrl.abort()
-      // Don't strand the user on a spinner — let them through.
-      if (!cancelled) setAuthStatus('ready')
-    }, 8000)
-    fetch('/api/auth/me', { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((j) => {
-        if (cancelled) return
-        if (!j?.user) { router.replace('/?login=1&returnTo=/receipt-scanner'); return }
-        setUser(j.user)
-        setAuthStatus('ready')
-      })
-      .catch(() => { if (!cancelled) setAuthStatus('ready') })
-      .finally(() => clearTimeout(timeoutId))
-    return () => { cancelled = true; clearTimeout(timeoutId); try { ctrl.abort() } catch {} }
-  }, [router])
-
-  // Clean object URL when changed
-  useEffect(() => {
-    return () => { if (previewUrl) try { URL.revokeObjectURL(previewUrl) } catch {} }
-  }, [previewUrl])
-
-  // ---------------------------------------------------------------------
-  // File select → scan
-  // ---------------------------------------------------------------------
-  const onFile = useCallback(async (file) => {
-    if (!file) return
-    setScanError('')
-    setDraft(null); setOcrMeta(null); setSavedReceipt(null)
-    const obj = URL.createObjectURL(file)
-    setPreviewUrl(obj)
-    setStage('scanning')
-    const fd = new FormData()
-    fd.append('file', file)
-    try {
-      const res = await fetch('/api/receipts/scan', {
-        method: 'POST',
-        body: fd,
-      })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setScanError(j.error || `Scan failed (HTTP ${res.status})`)
-        setStage('pick')
-        return
-      }
-      setDraft(j.draft)
-      setOcrMeta(j.ocr)
-      // Prefer the server-stored URL for the receipt photo (persists across redeploys)
-      if (j.ocr?.photoUrl) setPreviewUrl(j.ocr.photoUrl)
-      setStage('review')
-    } catch (e) {
-      setScanError(String(e?.message || e))
-      setStage('pick')
-    }
-  }, [])
-
-  const onDraftChange = (k, v) => setDraft((d) => ({ ...d, [k]: v }))
-
-  // Auto-recompute netLb / netTons when gross/tare change
-  const onWeightChange = (k, v) => {
-    setDraft((d) => {
-      const next = { ...d, [k]: v }
-      const gross = Number(next.grossLb) || 0
-      const tare = Number(next.tareLb) || 0
-      if (gross > 0 && tare > 0) {
-        next.netLb = Math.max(0, gross - tare)
-        next.netTons = Number((next.netLb / 2000).toFixed(4))
-      }
-      return next
-    })
-  }
-
-  const onSave = useCallback(async () => {
-    if (!draft) return
-    setStage('saving')
-    const payload = {
-      ...draft,
-      photoUrl: ocrMeta?.photoUrl || null,
-      ocr: ocrMeta ? {
-        provider: ocrMeta.provider,
-        model: ocrMeta.model,
-        confidence: ocrMeta.confidence,
-        elapsedMs: ocrMeta.elapsedMs,
-      } : null,
-    }
-    try {
-      const res = await fetch('/api/receipts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error(j.error || 'Save failed')
-        setStage('review')
-        return
-      }
-      setSavedReceipt(j.receipt || j)
-      setSavedRewards(j.rewards || null)
-      setStage('done')
-      const earned = j?.rewards?.totalPoints || 0
-      toast.success(earned > 0 ? `Receipt saved · +${earned} pts earned` : 'Receipt saved')
-    } catch (e) {
-      toast.error(String(e?.message || e))
-      setStage('review')
-    }
-  }, [draft, ocrMeta])
-
-  const resetAll = () => {
-    setStage('pick'); setDraft(null); setOcrMeta(null); setSavedReceipt(null); setSavedRewards(null)
-    setScanError(''); setPreviewUrl(null)
-    if (fileRef.current) fileRef.current.value = ''
-    if (cameraRef.current) cameraRef.current.value = ''
-  }
+  const {
+    fileRef, cameraRef,
+    authStatus, access,
+    stage, previewUrl, scanError, draft, ocrMeta, savedRewards,
+    onFile, onDraftChange, onWeightChange, onSave, resetAll,
+  } = useReceiptScanner()
 
   // ---------------------------------------------------------------------
   // Render
@@ -484,22 +351,8 @@ export default function ReceiptScannerPage() {
   )
 }
 
-// Humanise reward source identifiers for the user-facing breakdown.
-function humanizeSource(source) {
-  const map = {
-    receipt_verified: 'Verified receipt',
-    ewaste_receipt: 'E-Waste receipt',
-    donation_receipt: 'Donation receipt',
-    transfer_station_receipt: 'Transfer station receipt',
-    partner_facility_bonus: 'Partner facility bonus',
-    first_visit_bonus: 'First visit bonus',
-    facility_check_in: 'Facility check-in',
-  }
-  return map[source] || source.replace(/_/g, ' ')
-}
-
 // ---------------------------------------------------------------------------
-// Helpers
+// Presentational helpers (kept in-file; data/logic lives in the hooks)
 // ---------------------------------------------------------------------------
 function SectionHead({ title }) {
   return <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">{title}</div>

@@ -1,46 +1,38 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Star, ArrowLeft, BadgeCheck, MapPin, MessageCircle, PenLine } from 'lucide-react'
+import { Star, BadgeCheck, MapPin, PenLine } from 'lucide-react'
 import ContractorReviewDialog from '@/components/recommendations/ContractorReviewDialog'
 import StartDmButton from '@/components/messaging/StartDmButton'
 import { timeAgo } from '@/lib/community-categories'
 import PageShell from '@/components/PageShell'
 import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useCurrentUser } from '@/lib/useCurrentUser'
+import { useContractor } from '@/hooks/use-recommendations'
+import { isVerified } from '@/lib/recommendations-helpers'
+import { RATING_STARS } from '@/constants/recommendations_constants'
 
 export default function ContractorProfilePage() {
   const params = useParams()
   const id = params.id
-  const [data, setData] = useState(null)
-  const [user, setUser] = useState(null)
   const [reviewOpen, setReviewOpen] = useState(false)
   const [editingReview, setEditingReview] = useState(null)
   // Logged-in flag (cookie-auth: token is httpOnly, not readable by JS).
   // Still named `token` because it is threaded to child components as a prop.
   const [token, setToken] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
     setToken(isLikelyLoggedIn())
   }, [])
 
-  useEffect(() => { if (token) fetch('/api/auth/me').then((r) => r.json()).then((j) => setUser(j.user || null)).catch(() => {}) /* eslint-disable-line */ }, [token])
+  const { user } = useCurrentUser()
+  const { data, notFound, reload } = useContractor(id)
 
-  const load = async () => {
-    const r = await fetch(`/api/recommendations/contractors/${id}`)
-    if (!r.ok) { setData('not_found'); return }
-    const j = await r.json()
-    setData(j)
-  }
-  useEffect(() => { if (id) load() /* eslint-disable-line */ }, [id])
-
-  if (data === 'not_found') return <div className="flex min-h-screen items-center justify-center text-sm text-neutral-500">Contractor not found.</div>
+  if (notFound) return <div className="flex min-h-screen items-center justify-center text-sm text-neutral-500">Contractor not found.</div>
   if (!data) return <div className="flex min-h-screen items-center justify-center text-sm text-neutral-500">Loading…</div>
 
   const c = data.contractor
@@ -56,7 +48,7 @@ export default function ContractorProfilePage() {
               <div className="min-w-0 flex-1">
                 <h1 className="flex items-center gap-1 text-xl font-extrabold leading-tight md:text-2xl">
                   {c.name}
-                  {(c.verificationLevel === 'verified_contractor' || c.verificationLevel === 'verified_facility_owner') && <BadgeCheck className="h-5 w-5 text-blue-600" />}
+                  {isVerified(c.verificationLevel) && <BadgeCheck className="h-5 w-5 text-blue-600" />}
                 </h1>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-neutral-600">
                   <span className="inline-flex items-center gap-1">
@@ -97,7 +89,7 @@ export default function ContractorProfilePage() {
             </div>
             {data.aggregate.count > 0 && (
               <div className="mb-3 grid gap-0.5">
-                {[5, 4, 3, 2, 1].map((star) => {
+                {RATING_STARS.map((star) => {
                   const n = data.aggregate.distribution[star] || 0
                   const pct = data.aggregate.count ? Math.round((n / data.aggregate.count) * 100) : 0
                   return (
@@ -145,7 +137,7 @@ export default function ContractorProfilePage() {
         contractorName={c.name}
         token={token}
         existing={editingReview}
-        onSaved={() => { setReviewOpen(false); load() }}
+        onSaved={() => { setReviewOpen(false); reload() }}
       />
     </PageShell>
   )

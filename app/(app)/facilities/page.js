@@ -13,12 +13,16 @@
 // instead of routing to /?view=map, so the URL stays /facilities and it reads
 // as a single page with two ways to look at the same facilities.
 //
+// Data/logic (current user, favorites read, favorite toggle) lives in the
+// use-facilities.js / use-facilities-actions.js hooks; this file stays a thin
+// view that wires them into the two sub-views.
+//
 // Navigation:
 //   • Logo → /dashboard (logged in) or / (logged out) via <HomeBrandLink />.
 //   • Facility card click → router.push('/facilities/:id') (the real detail page).
 //   • Map "Back to Feed" → returns to the directory (onExit).
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import RouteFeatureLock from '@/components/RouteFeatureLock'
@@ -27,7 +31,8 @@ import FacilitiesHero from '@/components/facilities/FacilitiesHero'
 import MapPage from '@/components/home/MapPage'
 import AuthDialog from '@/components/home/AuthDialog'
 import { clearAuthToken } from '@/hooks/use-logout'
-import { isLikelyLoggedIn } from '@/lib/api-client'
+import { useFacilitiesDirectory } from '@/hooks/use-facilities'
+import { useFacilitiesActions } from '@/hooks/use-facilities-actions'
 
 export default function FacilitiesIndexPage() {
   return (
@@ -40,8 +45,11 @@ export default function FacilitiesIndexPage() {
 function FacilitiesIndexInner() {
   const router = useRouter()
   const [view, setView] = useState('feed') // 'feed' | 'map'
-  const [user, setUser] = useState(null)
-  const [favoriteIds, setFavoriteIds] = useState([])
+
+  // Current user + favorites bootstrap (see hooks/use-facilities.js).
+  const { user, setUser, favoriteIds, setFavoriteIds } = useFacilitiesDirectory()
+  const { toggleFavorite } = useFacilitiesActions({ user, setFavoriteIds })
+
   // In-place auth dialog — opened by the check-in flow when a logged-out user
   // tries to check in, so they're not bounced to the homepage (?login=1).
   const [authOpen, setAuthOpen] = useState(false)
@@ -49,35 +57,10 @@ function FacilitiesIndexInner() {
 
   const openLogin = (mode = 'login') => { setAuthMode(mode); setAuthOpen(true) }
 
-  // Load favorites for the signed-in user (used on bootstrap and after login).
-  const loadFavorites = () => {
-    fetch('/api/users/me/contributions')
-      .then((r) => r.json())
-      .then((c) => setFavoriteIds(c.favoriteIds || []))
-      .catch(() => {})
-  }
-
-  // Lightweight auth bootstrap (mirrors app/page.js) so the map header shows the
-  // right account state and favorites light up. No redirect side-effects here —
-  // this page is not the landing page.
-  useEffect(() => {
-    if (!isLikelyLoggedIn()) return
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.user) {
-          setUser(j.user)
-          loadFavorites()
-        }
-      })
-      .catch(() => {})
-  }, [])
-
-  // AuthDialog success: adopt the user in place (no navigation) and load their
-  // favorites. The session cookie is already set by the time this fires.
+  // AuthDialog success: adopt the user in place (no navigation). Setting the user
+  // flips the favorites SWR key on, so their favorites load automatically.
   const onAuthSuccess = (u) => {
     setUser(u)
-    loadFavorites()
   }
 
   const logout = () => {
@@ -85,24 +68,6 @@ function FacilitiesIndexInner() {
     setUser(null)
     setFavoriteIds([])
     toast.success('Logged out')
-  }
-
-  const toggleFavorite = async (facilityId) => {
-    if (!user) {
-      toast('Log in to save favorites')
-      return
-    }
-    const r = await fetch(`/api/favorites/${facilityId}`, {
-      method: 'POST',
-    })
-    const j = await r.json()
-    if (j.favorited) {
-      setFavoriteIds((arr) => [...arr, facilityId])
-      toast.success('Saved to favorites')
-    } else {
-      setFavoriteIds((arr) => arr.filter((x) => x !== facilityId))
-      toast('Removed from favorites')
-    }
   }
 
   const userMenuProps = {

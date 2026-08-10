@@ -6,9 +6,8 @@
 // weight, $/ton, total cost, facility, photo. Shows monthly KPIs and a
 // recent-receipts table. Backed by /api/receipts + /api/receipts/stats.
 
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import ContractorToolsGate from '@/components/ContractorToolsGate'
 import {
   Receipt, Plus, Truck, BarChart3, Recycle, Camera, Loader2, Trash2,
@@ -25,30 +24,14 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 
-const PAY_METHODS = [
-  { v: 'card',    l: 'Card' },
-  { v: 'cash',    l: 'Cash' },
-  { v: 'check',   l: 'Check' },
-  { v: 'account', l: 'Account / invoice' },
-  { v: 'other',   l: 'Other' },
-]
-
-const LOAD_TYPES = [
-  { v: 'mixed',  l: 'Mixed C&D' },
-  { v: 'clean',  l: 'Clean (single material)' },
-  { v: 'cnd',    l: 'C&D only' },
-  { v: 'green',  l: 'Yard waste / green' },
-  { v: 'metal',  l: 'Metal' },
-  { v: 'other',  l: 'Other' },
-]
-
-const MATERIAL_TYPES = [
-  'Mixed C&D', 'Concrete', 'Wood', 'Metal', 'Green Waste', 'Cardboard',
-  'E-Waste', 'Appliances', 'Furniture', 'Dirt', 'Household Junk', 'Other',
-]
-
-const fmtUSD = (n) => `$${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`
-const fmtTons = (n) => `${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} t`
+import { useReceipts, searchFacilities } from '@/hooks/use-receipts'
+import { useReceiptsActions } from '@/hooks/use-receipts-actions'
+import {
+  fmtUSD, fmtTons, netLbOf, netTonsOf, computedTotalOf, emptyBatchRow,
+} from '@/lib/receipts-helpers'
+import {
+  PAY_METHODS, LOAD_TYPES, MATERIAL_TYPES, BATCH_MAX_ROWS,
+} from '@/constants/receipts_constants'
 
 export default function ReceiptsPage() {
   return (
@@ -59,41 +42,19 @@ export default function ReceiptsPage() {
 }
 
 function ReceiptsCenter() {
-  const router = useRouter()
-  const [stats, setStats] = useState(null)
-  const [receipts, setReceipts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { stats, receipts, loading, reload } = useReceipts()
+  const actions = useReceiptsActions({ onMutated: reload })
   const [formOpen, setFormOpen] = useState(false)
   const [batchOpen, setBatchOpen] = useState(false)
   const [editingId, setEditingId] = useState(null)
 
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [statsRes, listRes] = await Promise.all([
-        fetch('/api/receipts/stats').then((r) => r.json()).catch(() => null),
-        fetch('/api/receipts?limit=50').then((r) => r.json()).catch(() => ({ receipts: [] })),
-      ])
-      if (statsRes && !statsRes.error) setStats(statsRes)
-      setReceipts(listRes.receipts || [])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { loadAll() }, [loadAll])
-
   const handleSaved = () => {
     setFormOpen(false)
     setEditingId(null)
-    loadAll()
+    reload()
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Delete this receipt? This cannot be undone.')) return
-    const r = await fetch(`/api/receipts/${id}`, { method: 'DELETE' })
-    if (r.ok) loadAll()
-  }
+  const handleDelete = (id) => actions.remove(id)
 
   const editing = editingId ? receipts.find((r) => r.id === editingId) : null
 
@@ -273,7 +234,7 @@ function ReceiptsCenter() {
         <section className="container mx-auto px-4 pb-6">
           <ReceiptBatchPanel
             onCancel={() => setBatchOpen(false)}
-            onSaved={() => { setBatchOpen(false); loadAll() }}
+            onSaved={() => { setBatchOpen(false); reload() }}
           />
         </section>
       )}
@@ -472,14 +433,8 @@ function MonthlyTrend({ items }) {
 // Batch upload panel — let contractors enter up to 10 receipts at once with
 // a final review step + the "I confirm" checkbox required by the API.
 // -----------------------------------------------------------------------------
-const emptyBatchRow = () => ({
-  dateOf: new Date().toISOString().slice(0, 10),
-  facilityName: '', materialType: 'Mixed C&D',
-  grossLb: '', tareLb: '', pricePerTon: '',
-  vehicleNumber: '', jobName: '', ticketNumber: '', notes: '',
-})
-
 function ReceiptBatchPanel({ onCancel, onSaved }) {
+  const { saveBatch } = useReceiptsActions()
   const [rows, setRows] = useState([emptyBatchRow(), emptyBatchRow()])
   const [phase, setPhase] = useState('entry') // 'entry' | 'review'
   const [confirmed, setConfirmed] = useState(false)
@@ -487,39 +442,30 @@ function ReceiptBatchPanel({ onCancel, onSaved }) {
   const [error, setError] = useState(null)
 
   const updateRow = (i, patch) => setRows((rs) => rs.map((r, idx) => idx === i ? { ...r, ...patch } : r))
-  const addRow = () => setRows((rs) => rs.length < 10 ? [...rs, emptyBatchRow()] : rs)
+  const addRow = () => setRows((rs) => rs.length < BATCH_MAX_ROWS ? [...rs, emptyBatchRow()] : rs)
   const removeRow = (i) => setRows((rs) => rs.filter((_, idx) => idx !== i))
 
   const validRows = rows.filter((r) => r.facilityName && r.facilityName.trim())
-  const calcNetTons = (r) => {
-    const net = Math.max(0, (Number(r.grossLb) || 0) - (Number(r.tareLb) || 0))
-    return net / 2000
-  }
-  const calcTotal = (r) => Number((calcNetTons(r) * (Number(r.pricePerTon) || 0)).toFixed(2))
+  const calcNetTons = (r) => netTonsOf(r.grossLb, r.tareLb)
+  const calcTotal = (r) => computedTotalOf(r.grossLb, r.tareLb, r.pricePerTon)
 
   const submit = async () => {
     if (!confirmed) { setError('Please confirm accuracy before submitting.'); return }
     if (validRows.length === 0) { setError('Add at least one receipt with a facility name.'); return }
     setSaving(true); setError(null)
-    try {
-      const payload = {
-        confirm: true,
-        receipts: validRows.map((r) => ({
-          ...r,
-          grossLb: Number(r.grossLb) || 0,
-          tareLb: Number(r.tareLb) || 0,
-          pricePerTon: Number(r.pricePerTon) || 0,
-        })),
-      }
-      const res = await fetch('/api/receipts/batch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error || 'Batch save failed')
-      onSaved?.(j)
-    } catch (e) { setError(String(e.message || e)) } finally { setSaving(false) }
+    const payload = {
+      confirm: true,
+      receipts: validRows.map((r) => ({
+        ...r,
+        grossLb: Number(r.grossLb) || 0,
+        tareLb: Number(r.tareLb) || 0,
+        pricePerTon: Number(r.pricePerTon) || 0,
+      })),
+    }
+    const res = await saveBatch(payload)
+    if (res.ok) onSaved?.(res.result)
+    else setError(res.error)
+    setSaving(false)
   }
 
   return (
@@ -560,8 +506,8 @@ function ReceiptBatchPanel({ onCancel, onSaved }) {
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={rows.length >= 10} onClick={addRow}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add row ({rows.length}/10)
+              <Button type="button" variant="outline" size="sm" disabled={rows.length >= BATCH_MAX_ROWS} onClick={addRow}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add row ({rows.length}/{BATCH_MAX_ROWS})
               </Button>
               <Button type="button" size="sm" disabled={validRows.length === 0} onClick={() => setPhase('review')} className="bg-brand-600 hover:bg-brand-700">
                 Review {validRows.length} receipt{validRows.length === 1 ? '' : 's'} <ArrowRight className="ml-1 h-3.5 w-3.5" />
@@ -615,6 +561,7 @@ function ReceiptBatchPanel({ onCancel, onSaved }) {
 // Receipt form (create + edit). Uses /api/upload for photo persistence.
 // -----------------------------------------------------------------------------
 function ReceiptForm({ initial, onCancel, onSaved }) {
+  const { saveReceipt, uploadPhoto } = useReceiptsActions()
   const isEdit = !!initial?.id
   const [form, setForm] = useState({
     dateOf: initial?.dateOf || new Date().toISOString().slice(0, 10),
@@ -647,26 +594,21 @@ function ReceiptForm({ initial, onCancel, onSaved }) {
   const [facilityResults, setFacilityResults] = useState([])
   const [facilityOpen, setFacilityOpen] = useState(false)
 
-  const netLb = useMemo(() => {
-    const g = Number(form.grossLb) || 0
-    const t = Number(form.tareLb) || 0
-    return Math.max(0, g - t)
-  }, [form.grossLb, form.tareLb])
+  const netLb = useMemo(
+    () => netLbOf(form.grossLb, form.tareLb),
+    [form.grossLb, form.tareLb],
+  )
   const netTons = netLb / 2000
-  const computedTotal = useMemo(() => {
-    const p = Number(form.pricePerTon) || 0
-    return Number((netTons * p).toFixed(2))
-  }, [netTons, form.pricePerTon])
+  const computedTotal = useMemo(
+    () => computedTotalOf(form.grossLb, form.tareLb, form.pricePerTon),
+    [form.grossLb, form.tareLb, form.pricePerTon],
+  )
 
-  // Facility search
+  // Facility search (debounced typeahead against /api/facilities).
   useEffect(() => {
     if (!facilitySearch || facilitySearch.length < 2) { setFacilityResults([]); return }
     const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`/api/facilities?q=${encodeURIComponent(facilitySearch)}`)
-        const j = await r.json()
-        setFacilityResults((j.facilities || []).slice(0, 6))
-      } catch { setFacilityResults([]) }
+      setFacilityResults(await searchFacilities(facilitySearch))
     }, 250)
     return () => clearTimeout(t)
   }, [facilitySearch])
@@ -678,50 +620,30 @@ function ReceiptForm({ initial, onCancel, onSaved }) {
     if (!file) return
     setUploading(true)
     setError(null)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error || 'Upload failed')
-      update('photoUrl', j.url || j.fileUrl || j.path)
-    } catch (err) {
-      setError(String(err.message || err))
-    } finally {
-      setUploading(false)
-    }
+    const res = await uploadPhoto(file)
+    if (res.ok) update('photoUrl', res.url)
+    else setError(res.error)
+    setUploading(false)
   }
 
   const submit = async (e) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
-    try {
-      const payload = {
-        ...form,
-        grossLb: Number(form.grossLb) || 0,
-        tareLb: Number(form.tareLb) || 0,
-        pricePerTon: Number(form.pricePerTon) || 0,
-        environmentalFee: form.environmentalFee === '' ? 0 : Number(form.environmentalFee) || 0,
-        // Only send totalCost when the user explicitly typed a custom value.
-        totalCost: totalCostManual && form.totalCost !== '' ? Number(form.totalCost) || 0 : undefined,
-      }
-      if (payload.totalCost === undefined) delete payload.totalCost
-      const url = isEdit ? `/api/receipts/${initial.id}` : '/api/receipts'
-      const method = isEdit ? 'PATCH' : 'POST'
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const j = await res.json()
-      if (!res.ok) throw new Error(j.error || 'Save failed')
-      onSaved?.(j.receipt)
-    } catch (err) {
-      setError(String(err.message || err))
-    } finally {
-      setSaving(false)
+    const payload = {
+      ...form,
+      grossLb: Number(form.grossLb) || 0,
+      tareLb: Number(form.tareLb) || 0,
+      pricePerTon: Number(form.pricePerTon) || 0,
+      environmentalFee: form.environmentalFee === '' ? 0 : Number(form.environmentalFee) || 0,
+      // Only send totalCost when the user explicitly typed a custom value.
+      totalCost: totalCostManual && form.totalCost !== '' ? Number(form.totalCost) || 0 : undefined,
     }
+    if (payload.totalCost === undefined) delete payload.totalCost
+    const res = await saveReceipt(payload, isEdit ? initial.id : undefined)
+    if (res.ok) onSaved?.(res.receipt)
+    else setError(res.error)
+    setSaving(false)
   }
 
   return (

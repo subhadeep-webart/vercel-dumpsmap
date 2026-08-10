@@ -9,31 +9,17 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { ArrowLeft, Plus, Users, Search, MapPin, Star, Shield, BadgeCheck, ChevronRight, Globe } from 'lucide-react'
-import { toast } from 'sonner'
+import { Plus, Users, Search, MapPin, Star, BadgeCheck, Globe } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import PhotoUploader from '@/components/PhotoUploader'
 import PageShell from '@/components/PageShell'
 import FieldError from '@/components/FieldError'
 import { GroupCategoryIcon } from '@/lib/community-icons'
 import { isLikelyLoggedIn } from '@/lib/api-client'
-import { useCurrentUser } from '@/lib/useCurrentUser'
 import { createGroupSchema } from '@/validator/community-group'
-
-const GROUP_CATEGORIES = [
-  { key: 'haulers',     label: 'Haulers' },
-  { key: 'cleanup',     label: 'Cleanup Crew' },
-  { key: 'reuse',       label: 'Reuse / Free' },
-  { key: 'contractors', label: 'Contractors' },
-  { key: 'recycling',   label: 'Recycling' },
-  { key: 'property',    label: 'Property Mgmt' },
-  { key: 'scrap',       label: 'Scrap Metal' },
-  { key: 'donation',    label: 'Donation Network' },
-  { key: 'agency',      label: 'Agency / Public' },
-  { key: 'general',     label: 'General' },
-]
-const CAT_BY_KEY = Object.fromEntries(GROUP_CATEGORIES.map((c) => [c.key, c]))
+import { GROUP_CATEGORIES, CAT_BY_KEY, GROUP_FORM_DEFAULTS } from '@/constants/groups_constants'
+import { useGroups, useCities } from '@/hooks/use-groups'
+import { useGroupActions } from '@/hooks/use-group-actions'
 
 export default function GroupsPage() {
   return (
@@ -48,33 +34,12 @@ export default function GroupsPage() {
 function GroupsPageInner() {
   const router = useRouter()
   const sp = useSearchParams()
-  const { user } = useCurrentUser()
-  const [groups, setGroups] = useState([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ city: sp.get('city') || '', category: sp.get('category') || '', q: '', mine: false })
   const [createOpen, setCreateOpen] = useState(false)
-  const [cities, setCities] = useState([])
 
   const loggedIn = isLikelyLoggedIn()
-
-  const load = async () => {
-    setLoading(true)
-    const p = new URLSearchParams()
-    if (filter.city) p.set('city', filter.city)
-    if (filter.category) p.set('category', filter.category)
-    if (filter.q) p.set('q', filter.q)
-    if (filter.mine) p.set('mine', 'true')
-    p.set('limit', '60')
-    const r = await fetch(`/api/community/groups?${p}`)
-    const j = await r.json()
-    setGroups(j.groups || [])
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [filter.city, filter.category, filter.q, filter.mine])
-
-  useEffect(() => {
-    fetch('/api/community/cities').then((r) => r.json()).then((j) => setCities(j.cities || [])).catch(() => {})
-  }, [])
+  const { groups, loading, reload } = useGroups(filter)
+  const { cities } = useCities()
 
   return (
     <PageShell active="community" breadcrumbs={[{ label: 'Community', href: '/community' }, { label: 'Groups' }]} maxWidth="max-w-6xl">
@@ -134,7 +99,7 @@ function GroupsPageInner() {
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              {groups.map((g) => <GroupCard key={g.id} group={g} token={loggedIn} onChanged={load} />)}
+              {groups.map((g) => <GroupCard key={g.id} group={g} token={loggedIn} onChanged={reload} />)}
             </div>
           </main>
         </div>
@@ -156,15 +121,9 @@ function CategoryChip({ current, value, label, icon, onClick }) {
 
 function GroupCard({ group, token, onChanged }) {
   const cat = CAT_BY_KEY[group.category] || CAT_BY_KEY.general
-  const [busy, setBusy] = useState(false)
   const joined = !!group.myRole
-  const handleJoin = async () => {
-    if (!token) { toast.error('Log in to join'); return }
-    setBusy(true)
-    const r = await fetch(`/api/community/groups/${group.id}/join`, { method: 'POST' })
-    setBusy(false)
-    if (r.ok) { toast.success('Joined'); onChanged?.() } else { const j = await r.json(); toast.error(j.error || 'Failed') }
-  }
+  const { busy, join } = useGroupActions()
+  const handleJoin = () => join(group.id, { loggedIn: token, loginMsg: 'Log in to join', successMsg: 'Joined', onReload: onChanged })
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-4">
@@ -194,9 +153,8 @@ function GroupCard({ group, token, onChanged }) {
   )
 }
 
-const GROUP_FORM_DEFAULTS = { name: '', category: '', description: '', city: '', state: 'CA', tags: '', photoUrl: '', rules: '' }
-
 function CreateGroupDialog({ open, onOpenChange, onCreated }) {
+  const { createGroup } = useGroupActions()
   const {
     register,
     handleSubmit,
@@ -219,17 +177,10 @@ function CreateGroupDialog({ open, onOpenChange, onCreated }) {
 
   // Only runs once zod validation passes (RHF blocks submit otherwise).
   const onSubmit = async (values) => {
-    const payload = {
-      ...values,
-      tags: values.tags.split(',').map((t) => t.trim()).filter(Boolean),
-      rules: values.rules.split('\n').map((r) => r.trim()).filter(Boolean),
-    }
-    const r = await fetch('/api/community/groups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-    const j = await r.json()
-    if (!r.ok) { toast.error(j.error || 'Failed'); return }
-    toast.success('Group created — you are the organizer')
+    const group = await createGroup(values)
+    if (!group) return
     reset(GROUP_FORM_DEFAULTS)
-    onCreated?.(j.group)
+    onCreated?.(group)
   }
 
   return (

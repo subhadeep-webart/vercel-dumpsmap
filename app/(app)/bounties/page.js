@@ -4,6 +4,10 @@
 // ----------------------------------------------------------------------------
 // Public browseable. Engagement CTAs (Contribute, Claim, Post) gated via
 // SoftLoginModal. Reads from /api/bounties (created Sprint A foundation).
+//
+// Data reads live in hooks/use-bounties.js (SWR); mutations live in
+// hooks/use-bounties-actions.js. Constants → constants/bounties_constants.js,
+// pure helpers → lib/bounties-helpers.js. This file keeps only the view.
 // ----------------------------------------------------------------------------
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -19,32 +23,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { CircleDollarSign, MapPin, Users, Plus, Loader2, Heart, CheckCircle2, AlertTriangle, ArrowRight, Trash2, Award } from 'lucide-react'
 import { toast } from 'sonner'
 import FeatureLock from '@/components/FeatureLock'
-import { isLikelyLoggedIn } from '@/lib/api-client'
-
-const STATE_META = {
-  draft:         { label: 'Draft',         tone: 'bg-neutral-100 text-neutral-700' },
-  funding:       { label: 'Funding',       tone: 'bg-amber-100 text-amber-800' },
-  goal_reached:  { label: 'Goal Reached',  tone: 'bg-emerald-100 text-emerald-800' },
-  claimed:       { label: 'Claimed',       tone: 'bg-blue-100 text-blue-800' },
-  in_progress:   { label: 'In Progress',   tone: 'bg-violet-100 text-violet-800' },
-  verified:      { label: 'Verified',      tone: 'bg-brand-100 text-brand-800' },
-  cancelled:     { label: 'Cancelled',     tone: 'bg-neutral-200 text-neutral-700' },
-  expired:       { label: 'Expired',       tone: 'bg-red-100 text-red-800' },
-}
-const FILTERS = [
-  { key: 'all',          label: 'All' },
-  { key: 'funding',      label: 'Funding' },
-  { key: 'goal_reached', label: 'Ready to Claim' },
-  { key: 'in_progress',  label: 'In Progress' },
-  { key: 'verified',     label: 'Completed' },
-]
-
-const fmtMoney = (v) => `$${Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
-const daysUntil = (date) => {
-  if (!date) return null
-  const ms = new Date(date).getTime() - Date.now()
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
-}
+import { STATE_META, FILTERS, CONTRIBUTE_PRESETS, DEFAULT_CONTRIBUTION, EMPTY_BOUNTY_FORM } from '@/constants/bounties_constants'
+import { fmtMoney, daysUntil } from '@/lib/bounties-helpers'
+import { useBounties } from '@/hooks/use-bounties'
+import { useBountiesActions } from '@/hooks/use-bounties-actions'
 
 export default function BountiesPage() {
   return (
@@ -56,40 +38,12 @@ export default function BountiesPage() {
 
 function BountiesPageInner() {
   const router = useRouter()
-  const [user, setUser] = useState(null)
-  const [bounties, setBounties] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { user, bounties, loading, reload } = useBounties()
+  const actions = useBountiesActions({ onMutated: reload })
   const [filter, setFilter] = useState('all')
   const [contributeTarget, setContributeTarget] = useState(null)
   const [postOpen, setPostOpen] = useState(false)
   const [softLogin, setSoftLogin] = useState(null)
-
-  // Load auth + bounties
-  useEffect(() => {
-    let cancelled = false
-    const run = async () => {
-      if (isLikelyLoggedIn()) {
-        const r = await fetch('/api/auth/me').catch(() => null)
-        if (r?.ok) {
-          const j = await r.json()
-          if (!cancelled) setUser(j.user || null)
-        }
-      }
-      const br = await fetch('/api/bounties').catch(() => null)
-      if (br?.ok) {
-        const bj = await br.json()
-        if (!cancelled) setBounties(bj.bounties || [])
-      }
-      if (!cancelled) setLoading(false)
-    }
-    run()
-    return () => { cancelled = true }
-  }, [])
-
-  const reload = async () => {
-    const r = await fetch('/api/bounties')
-    if (r.ok) { const j = await r.json(); setBounties(j.bounties || []) }
-  }
 
   const requireAuth = (action) => {
     if (user) return true
@@ -104,12 +58,7 @@ function BountiesPageInner() {
 
   const claim = async (bounty) => {
     if (!requireAuth('save')) return
-    if (!confirm(`Claim "${bounty.title}"? This creates a Work Order assigned to you.`)) return
-    const r = await fetch(`/api/bounties/${bounty.id}/claim`, { method: 'POST' })
-    const j = await r.json()
-    if (!r.ok) { toast.error(j.error || 'Claim failed'); return }
-    toast.success('Bounty claimed! Work order created.')
-    await reload()
+    await actions.claim(bounty)
   }
 
   return (
@@ -315,29 +264,19 @@ function EmptyState({ onPost }) {
 // Contribute dialog
 // ============================================================================
 function ContributeDialog({ bounty, onClose, onContributed }) {
-  const [amount, setAmount] = useState(25)
+  const [amount, setAmount] = useState(DEFAULT_CONTRIBUTION)
   const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  useEffect(() => { if (bounty) { setAmount(25); setNote('') } }, [bounty])
+  const { busy, contribute } = useBountiesActions()
+  useEffect(() => { if (bounty) { setAmount(DEFAULT_CONTRIBUTION); setNote('') } }, [bounty])
   if (!bounty) return null
 
   const remaining = Math.max(0, (bounty.fundingGoalUsd || 0) - (bounty.fundedUsd || 0))
-  const presets = [10, 25, 50, 100]
+  const presets = CONTRIBUTE_PRESETS
   const submit = async () => {
     const n = Number(amount)
     if (!Number.isFinite(n) || n <= 0) { toast.error('Enter a positive amount'); return }
-    setBusy(true)
-    try {
-      const r = await fetch(`/api/bounties/${bounty.id}/contribute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amountUsd: n, note }),
-      })
-      const j = await r.json()
-      if (!r.ok) { toast.error(j.error || 'Contribution failed'); return }
-      toast.success(`Thanks for contributing ${fmtMoney(n)}!`)
-      onContributed()
-    } finally { setBusy(false) }
+    const ok = await contribute(bounty.id, { amountUsd: n, note })
+    if (ok) onContributed()
   }
   return (
     <Dialog open={!!bounty} onOpenChange={(v) => !v && onClose()}>
@@ -390,35 +329,18 @@ function ContributeDialog({ bounty, onClose, onContributed }) {
 // Post bounty dialog
 // ============================================================================
 function PostBountyDialog({ open, onClose, onCreated }) {
-  const [form, setForm] = useState({ title: '', description: '', city: '', state: '', fundingGoalUsd: 250 })
-  const [busy, setBusy] = useState(false)
-  useEffect(() => { if (!open) setForm({ title: '', description: '', city: '', state: '', fundingGoalUsd: 250 }) }, [open])
+  const [form, setForm] = useState(EMPTY_BOUNTY_FORM)
+  const { busy, createBounty } = useBountiesActions()
+  useEffect(() => { if (!open) setForm(EMPTY_BOUNTY_FORM) }, [open])
   const submit = async () => {
     if (!form.title.trim() || !form.description.trim()) { toast.error('Title and description are required'); return }
-    setBusy(true)
-    try {
-      // Create as draft, then transition to funding
-      const r = await fetch('/api/bounties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: form.title.trim(),
-          description: form.description.trim(),
-          location: { city: form.city, state: form.state },
-          fundingGoalUsd: Number(form.fundingGoalUsd) || 0,
-        }),
-      })
-      const j = await r.json()
-      if (!r.ok) { toast.error(j.error || 'Create failed'); return }
-      // Transition to funding so it shows up publicly
-      await fetch(`/api/bounties/${j.bounty.id}/state`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: 'funding' }),
-      }).catch(() => {})
-      toast.success('Bounty posted!')
-      onCreated()
-    } finally { setBusy(false) }
+    const ok = await createBounty({
+      title: form.title.trim(),
+      description: form.description.trim(),
+      location: { city: form.city, state: form.state },
+      fundingGoalUsd: Number(form.fundingGoalUsd) || 0,
+    })
+    if (ok) onCreated()
   }
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>

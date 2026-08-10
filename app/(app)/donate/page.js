@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import HomeBrandLink from '@/components/HomeBrandLink'
@@ -10,60 +10,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import {
-  Recycle, HeartHandshake, Truck, Building2, Users, Globe2, Activity,
+  Recycle, HeartHandshake, Building2, Users, Activity,
   Sparkles, ShieldCheck, ArrowRight, Mail, BadgeCheck, Repeat, Zap,
-  Hammer, Box, MessageCircle, MapPin, Quote,
+  Quote,
 } from 'lucide-react'
-
-const PRESET_AMOUNTS = [5, 25, 50, 100]
-
-const TIERS = [
-  { key: 'recycler',   name: 'Recycler Supporter',  amount: 10,  icon: Recycle,        accent: 'blue',
-    desc: 'Helps us keep the lights on — servers, mapping data, and verification.' },
-  { key: 'community',  name: 'Community Supporter', amount: 25,  icon: HeartHandshake, accent: 'sky',
-    desc: 'Supports the reuse + donation network and local cleanup coordination.' },
-  { key: 'contractor', name: 'Contractor Supporter', amount: 50, icon: Hammer,         accent: 'amber',
-    desc: 'Funds live wait times, contractor chat, and job-board intelligence.' },
-  { key: 'facility',   name: 'Facility Partner',     amount: 250, icon: Building2,    accent: 'blue',
-    desc: 'Enables deeper facility integrations, dynamic pricing, and verification.' },
-  { key: 'mission',    name: 'Mission Partner',      amount: 500, icon: Globe2,       accent: 'purple',
-    desc: 'Powers expansion into new regions and the long-term roadmap.' },
-]
-
-const IMPACT_ITEMS = [
-  { icon: Activity,       title: 'Live facility updates',       desc: 'Wait times, closures, and accept/reject status from haulers on the ground.' },
-  { icon: HeartHandshake, title: 'Community reuse network',     desc: 'Free items, salvage, and donation routing before things hit the landfill.' },
-  { icon: Truck,          title: 'Contractor tools',            desc: 'Routing, hot spots, and live facility intelligence for haulers.' },
-  { icon: Box,            title: 'Marketplace infrastructure',  desc: 'Residential & commercial listings, hauls, equipment, and bulk material.' },
-  { icon: MapPin,         title: 'Mobile-first field tools',    desc: 'Built for the truck cab, not the office — photos, GPS, one-tap reports.' },
-  { icon: Recycle,        title: 'Recycling education',         desc: 'Plain-language guides on what gets accepted, where, and at what price.' },
-  { icon: Users,          title: 'Local cleanup coordination',  desc: 'Pickup needs, apartment turnovers, estate cleanouts, neighborhood drives.' },
-  { icon: BadgeCheck,     title: 'Donation coordination',       desc: 'Real-time “needs furniture today” signals to redirect reusable items.' },
-]
-
-const METRICS = [
-  { label: 'Facilities added',         value: '120+' },
-  { label: 'Active haulers',           value: '40+' },
-  { label: 'Community posts (target)', value: '1,000/mo' },
-  { label: 'Contractor alerts shared', value: '5,200+' },
-]
-
-const TRANSPARENCY = [
-  { label: 'Platform development',  pct: 35 },
-  { label: 'Server infrastructure', pct: 15 },
-  { label: 'Facility verification', pct: 12 },
-  { label: 'Community moderation',  pct: 10 },
-  { label: 'Mapping / data systems', pct: 10 },
-  { label: 'Mobile optimization',   pct: 8 },
-  { label: 'Local outreach + cleanup coordination', pct: 10 },
-]
-
-const TESTIMONIALS = [
-  { quote: 'Saved me a 25-minute round trip. Gate was closed and the feed told me before I rolled.', name: 'Marcus J.', role: 'Junk hauler · East Bay' },
-  { quote: 'Got 12 office chairs picked up the same day instead of trashed. This is the missing layer.', name: 'Renee P.',  role: 'Property manager · San Jose' },
-  { quote: 'Our donation center finally has a way to say “we need tables today” and have it actually reach people.', name: 'Iliana V.', role: 'Donation coordinator' },
-  { quote: 'Best CRV center near me, with the line moving. Used to be a guessing game.', name: 'Devon T.', role: 'Recycler · Sunnyvale' },
-]
+import {
+  PRESET_AMOUNTS, TIERS, IMPACT_ITEMS, METRICS, TRANSPARENCY, TESTIMONIALS,
+  MISSION_POINTS, PARTNER_TYPES,
+} from '@/constants/donate_constants'
+import { resolveAmount } from '@/lib/donate-helpers'
+import { useDonate } from '@/hooks/use-donate'
+import { useDonateActions } from '@/hooks/use-donate-actions'
 
 export default function DonatePage() {
   const router = useRouter()
@@ -74,43 +31,21 @@ export default function DonatePage() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [message, setMessage] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [stripeReady, setStripeReady] = useState(false)
 
-  useEffect(() => {
-    // peek at integrations through public settings (no auth) — fall back gracefully
-    fetch('/api/platform-settings/public').catch(() => {})
-  }, [])
+  // Best-effort peek at public integration settings on mount (see useDonate).
+  useDonate()
 
-  const submit = async (e) => {
+  const { submitting, stripeReady, createIntent } = useDonateActions({
+    // Non-Stripe fallback: log interest and route to the queued success page.
+    onQueued: (amt) => router.push(`/donate/success?queued=1&amount=${amt}&email=${encodeURIComponent(email)}`),
+  })
+
+  const submit = (e) => {
     e?.preventDefault?.()
     if (!email) return toast.error('Please enter your email')
-    const amt = Number(custom) > 0 ? Number(custom) : amount
+    const amt = resolveAmount(custom, amount)
     if (!amt || amt <= 0) return toast.error('Pick or enter a donation amount')
-    setSubmitting(true)
-    try {
-      const r = await fetch('/api/donations/intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name, amount: amt, tier, message, recurring }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Failed')
-      setStripeReady(!!j.stripeReady)
-      const checkoutUrl = j.checkoutUrl || j.intent?.stripeCheckoutUrl
-      if (j.stripeReady && checkoutUrl) {
-        window.location.href = checkoutUrl
-        return
-      }
-      if (j.stripeError) {
-        toast.warning('Secure checkout temporarily unavailable — your support was logged. We will reach out.')
-      }
-      router.push(`/donate/success?queued=1&amount=${amt}&email=${encodeURIComponent(email)}`)
-    } catch (err) {
-      toast.error(err.message || 'Failed to record donation interest')
-    } finally {
-      setSubmitting(false)
-    }
+    createIntent({ email, name, amount: amt, tier, message, recurring })
   }
 
   return (
@@ -193,11 +128,7 @@ export default function DonatePage() {
             </p>
           </div>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {[
-              { icon: Activity, title: 'Live facility intelligence', body: 'Wait times, accepted materials, closures, and pricing updated by people on the ground.' },
-              { icon: HeartHandshake, title: 'A reuse-first ecosystem', body: 'Free items, donation needs, salvage opportunities — routed before things hit the dump.' },
-              { icon: Truck, title: 'Built for the field', body: 'Mobile-first, photo-driven, one-tap reports for haulers, contractors, and facility crews.' },
-            ].map((b) => (
+            {MISSION_POINTS.map((b) => (
               <div key={b.title} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-brand-700 shadow-sm ring-1 ring-neutral-200"><b.icon className="h-5 w-5" /></div>
                 <h3 className="mt-3 text-lg font-bold">{b.title}</h3>
@@ -307,7 +238,7 @@ export default function DonatePage() {
             </div>
 
             <Button type="submit" disabled={submitting} className="mt-4 w-full bg-brand-600 py-6 text-base font-bold hover:bg-brand-700">
-              {submitting ? 'Processing…' : `Donate $${Number(custom) > 0 ? Number(custom) : amount}${recurring ? ' / month' : ''}`}
+              {submitting ? 'Processing…' : `Donate $${resolveAmount(custom, amount)}${recurring ? ' / month' : ''}`}
               <ArrowRight className="ml-1 h-5 w-5" />
             </Button>
             <div className="mt-3 text-center text-[11px] text-neutral-500">
@@ -366,7 +297,7 @@ export default function DonatePage() {
           <div className="rounded-3xl border border-neutral-200 bg-gradient-to-br from-neutral-900 via-neutral-800 to-brand-900 p-7 text-white shadow-xl">
             <div className="text-xs font-bold uppercase tracking-wide text-brand-300">Who partners with us</div>
             <ul className="mt-3 grid grid-cols-2 gap-2 text-sm">
-              {['Transfer stations','Scrap yards','Donation centers','Recycling companies','Realty firms','Property managers','Hauling crews','Local sponsors'].map((p) => (
+              {PARTNER_TYPES.map((p) => (
                 <li key={p} className="flex items-center gap-1.5"><BadgeCheck className="h-3.5 w-3.5 text-brand-400" /> {p}</li>
               ))}
             </ul>

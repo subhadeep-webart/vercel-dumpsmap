@@ -123,9 +123,16 @@ export default function MediaUploader({
   className = '',
   size = 'md',                       // avatar-variant size: 'sm' | 'md' | 'lg' | 'xl'
   accept = 'image/*',
-  showRemove = true,
+  showRemove,                        // undefined → variant default (see below)
   showRotate = false,                // (future) rotate preview client-side
 }) {
+  // Facebook-style profile media (avatar + cover) has no explicit "remove"
+  // affordance: you change the photo by uploading a new one over it, never by
+  // clearing it back to a placeholder. So those two variants default showRemove
+  // to false. Document/gallery/tile uploaders still default to true, where a
+  // remove control is genuinely needed. An explicit prop always wins.
+  const removeDefault = variant === 'avatar' || variant === 'cover' ? false : true
+  const allowRemove = showRemove === undefined ? removeDefault : showRemove
   const fileRef = useRef(null)
   const cameraRef = useRef(null)
   const dropZoneRef = useRef(null)
@@ -231,7 +238,7 @@ export default function MediaUploader({
           onPick={() => fileRef.current?.click()}
           onCamera={() => cameraRef.current?.click()}
           onRemove={() => removeAt(0)}
-          hasValue={!!urls[0]} busy={busy} compact showRemove={showRemove} circular
+          hasValue={!!urls[0]} busy={busy} compact showRemove={allowRemove} circular
         />
         <HiddenInputs accept={accept} multi={multi}
           fileRef={fileRef} cameraRef={cameraRef}
@@ -255,33 +262,42 @@ export default function MediaUploader({
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.18),transparent_55%)]" />
         )}
-        {/* Top-right actions */}
-        <div className="absolute right-3 top-3 flex gap-1.5">
-          {urls[0] && showRemove && (
+        {/* Cover actions — Facebook-style single round camera button pinned to
+            the bottom-right corner of the cover. Tap to upload OR replace; there
+            is no separate remove control (allowRemove is false for covers). If a
+            caller explicitly opts remove back in, the pill row is used instead. */}
+        {allowRemove ? (
+          <div className="absolute right-3 top-3 flex gap-1.5">
+            {urls[0] && (
+              <button
+                onClick={() => removeAt(0)}
+                className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-red-700 shadow backdrop-blur hover:bg-white"
+                disabled={busy}
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Remove
+              </button>
+            )}
             <button
-              onClick={() => removeAt(0)}
-              className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-red-700 shadow backdrop-blur hover:bg-white"
+              onClick={() => fileRef.current?.click()}
+              className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow backdrop-blur hover:bg-white"
               disabled={busy}
             >
-              <Trash2 className="h-3.5 w-3.5" /> Remove
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              {urls[0] ? 'Replace' : 'Upload'}
             </button>
-          )}
+          </div>
+        ) : (
           <button
-            onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow backdrop-blur hover:bg-white"
+            // Mobile taps open the camera/gallery input; on desktop the same
+            // button opens the file picker. One control, FB-style.
+            onClick={() => (typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches ? cameraRef : fileRef).current?.click()}
+            className="absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/70 text-white shadow-lg ring-1 ring-white/30 backdrop-blur transition hover:bg-neutral-900/90"
             disabled={busy}
+            title={urls[0] ? 'Change cover photo' : 'Add cover photo'}
           >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-            {urls[0] ? 'Replace' : 'Upload'}
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
           </button>
-          <button
-            onClick={() => cameraRef.current?.click()}
-            className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-semibold text-neutral-800 shadow backdrop-blur hover:bg-white sm:hidden"
-            disabled={busy}
-          >
-            <Camera className="h-3.5 w-3.5" /> Camera
-          </button>
-        </div>
+        )}
         {dragging && <DragOverlay />}
         {busy && <UploadingBanner progress={progress} />}
         <HiddenInputs accept={accept} multi={multi}

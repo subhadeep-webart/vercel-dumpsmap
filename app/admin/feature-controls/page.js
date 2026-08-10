@@ -8,7 +8,7 @@
 //   • Features    — list of all features with status pill + edit dialog
 //   • Audit log   — every flag change with diff (old → new)
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,84 +19,29 @@ import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  ToggleRight, Loader2, ShieldCheck, History, RefreshCw, Edit3, Eye, Lock, EyeOff, Save, X,
-  Sparkles, AlertTriangle, CircleDot, Pause, Rocket, FlaskConical, Layers,
+  ToggleRight, Loader2, ShieldCheck, History, RefreshCw, Edit3, Eye, Lock, Save, X, Layers,
 } from 'lucide-react'
-import { toast } from 'sonner'
-
-const STATUS_META = {
-  live:        { label: 'Live',        cls: 'bg-emerald-100 text-emerald-800 ring-emerald-200', icon: Rocket },
-  beta:        { label: 'Beta',        cls: 'bg-violet-100 text-violet-800 ring-violet-200',     icon: FlaskConical },
-  demo:        { label: 'Demo',        cls: 'bg-amber-100 text-amber-800 ring-amber-200',         icon: Sparkles },
-  paused:      { label: 'Paused',      cls: 'bg-orange-100 text-orange-800 ring-orange-200',     icon: Pause },
-  not_active:  { label: 'Not Active',  cls: 'bg-neutral-200 text-neutral-700 ring-neutral-300',  icon: EyeOff },
-}
-
-const CATEGORY_META = {
-  navigation: { label: 'Navigation Pages',  cls: 'bg-brand-100 text-brand-800' },
-  contractor:  { label: 'Contractor Ops',    cls: 'bg-sky-100 text-sky-800' },
-  marketplace: { label: 'Marketplace',       cls: 'bg-blue-100 text-blue-800' },
-  monetization:{ label: 'Monetization',      cls: 'bg-emerald-100 text-emerald-800' },
-  rewards:     { label: 'Rewards',           cls: 'bg-pink-100 text-pink-800' },
-  enterprise:  { label: 'Enterprise',        cls: 'bg-indigo-100 text-indigo-800' },
-}
+import { STATUS_META, CATEGORY_META } from '@/constants/feature_controls_constants'
+import { useFeatureControls } from '@/hooks/use-feature-controls'
+import { useFeatureControlsActions } from '@/hooks/use-feature-controls-actions'
 
 export default function FeatureControlsPage() {
   return <FeatureControls />
 }
 
 function FeatureControls() {
-  const [flags, setFlags] = useState([])
-  const [statuses, setStatuses] = useState([])
-  const [tiers, setTiers] = useState([])
-  const [roles, setRoles] = useState([])
-  const [audit, setAudit] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+    flags, statuses, tiers, roles, audit, counters, loading, reload,
+  } = useFeatureControls()
+  const { saveFlag } = useFeatureControlsActions({ onMutated: reload })
+
   const [tab, setTab] = useState('features')
   const [editFlag, setEditFlag] = useState(null) // the flag object currently being edited
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [f, a] = await Promise.all([
-        fetch('/api/admin/feature-flags').then((r) => r.json()).catch(() => null),
-        fetch('/api/admin/feature-flags/audit?limit=100').then((r) => r.json()).catch(() => ({ entries: [] })),
-      ])
-      if (f?.flags) {
-        setFlags(f.flags)
-        setStatuses(f.featureStatuses || [])
-        setTiers(f.membershipTiers || [])
-        setRoles(f.validRoles || [])
-      }
-      setAudit(a?.entries || [])
-    } finally { setLoading(false) }
-  }, [])
-
-  useEffect(() => { load() }, [load])
-
-  const counters = useMemo(() => {
-    const c = { live: 0, beta: 0, demo: 0, paused: 0, not_active: 0 }
-    for (const f of flags) c[f.globalStatus] = (c[f.globalStatus] || 0) + 1
-    return c
-  }, [flags])
-
   const onSaveFlag = async (key, patch) => {
-    try {
-      const res = await fetch(`/api/admin/feature-flags/${key}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      })
-      const j = await res.json()
-      if (!res.ok) { toast.error(j.error || 'Update failed'); return false }
-      toast.success(`${j.flag.name} updated`)
-      setEditFlag(null)
-      await load()
-      return true
-    } catch (e) {
-      toast.error('Update failed')
-      return false
-    }
+    const ok = await saveFlag(key, patch)
+    if (ok) setEditFlag(null)
+    return ok
   }
 
   return (
@@ -111,7 +56,7 @@ function FeatureControls() {
             All changes are recorded in the audit log. Per-account controls coming in Phase B.
           </p>
         </div>
-        <Button variant="outline" onClick={load} className="gap-2"><RefreshCw className="h-4 w-4" /> Refresh</Button>
+        <Button variant="outline" onClick={reload} className="gap-2"><RefreshCw className="h-4 w-4" /> Refresh</Button>
       </div>
 
       {/* Status counters */}

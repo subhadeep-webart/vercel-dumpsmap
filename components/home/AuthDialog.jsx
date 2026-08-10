@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
@@ -9,25 +11,49 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { ArrowRight, Check, Eye, EyeOff, Loader2 } from 'lucide-react'
 import ProfileTypeCard from '@/components/home/ProfileTypeCard'
 import { PROFILE_TYPES } from '@/components/home/home-facility-meta'
 import { useAuth } from '@/components/AuthContext'
+import FieldError from '@/components/FieldError'
+import { signupSchema, scorePassword } from '@/validator/signup'
+
+// Password-strength palette, indexed by score (0–4). Bars use a full color;
+// the label text uses a matching tone. Kept module-level so it isn't rebuilt.
+const STRENGTH_BAR = ['bg-neutral-200', 'bg-red-500', 'bg-amber-500', 'bg-lime-500', 'bg-emerald-500']
+const STRENGTH_TEXT = ['text-neutral-400', 'text-red-600', 'text-amber-600', 'text-lime-600', 'text-emerald-600']
 
 // ---------- Auth Dialog (signup/login + multi-profile onboarding) ----------
 export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = 'login' }) {
   const { login } = useAuth()
   const [mode, setMode] = useState(initialMode) // 'signup' | 'login'
   const [step, setStep] = useState(1) // 1: pick profiles, 2: credentials
+  // Login-mode credentials stay as simple local state (no schema/RHF there).
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
   const [selected, setSelected] = useState([]) // profile keys
   const [primary, setPrimary] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Signup step 2 is validated with react-hook-form + zod. Keeping this in the
+  // component (rather than only the login-mode local state above) gives us
+  // inline field errors, a live password-strength meter, and a submit gate.
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isValid },
+  } = useForm({
+    resolver: zodResolver(signupSchema),
+    mode: 'onChange',
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+  })
+
+  const pwValue = watch('password')
+  const strength = scorePassword(pwValue)
 
   // When the dialog re-opens, sync mode with the (possibly updated) prop so
   // deep links from /login vs /signup land in the right tab.
@@ -37,9 +63,10 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
 
   useEffect(() => {
     if (!open) {
-      setEmail(''); setPassword(''); setConfirmPassword(''); setName(''); setSelected([]); setPrimary(''); setMode(initialMode); setStep(1); setShowPassword(false); setShowConfirmPassword(false)
+      setEmail(''); setPassword(''); setSelected([]); setPrimary(''); setMode(initialMode); setStep(1); setShowPassword(false); setShowConfirmPassword(false)
+      reset()
     }
-  }, [open, initialMode])
+  }, [open, initialMode, reset])
 
   const toggle = (k) => {
     if (selected.includes(k)) {
@@ -53,21 +80,15 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
     }
   }
 
-  const submit = async (e) => {
-    e?.preventDefault?.()
+  // Shared with both flows: POST credentials, update global auth, close dialog.
+  const authenticate = async (endpoint, body, welcome) => {
     if (busy) return
-    if (!email || !password) return toast.error('Email and password required')
-    if (mode === 'signup' && password !== confirmPassword) return toast.error('Passwords do not match')
     setBusy(true)
     try {
-      const r = await fetch(`/api/auth/${mode}`, {
+      const r = await fetch(`/api/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          mode === 'signup'
-            ? { email, password, name, profileTypes: selected, primaryProfile: primary }
-            : { email, password }
-        ),
+        body: JSON.stringify(body),
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j.error || 'Failed')
@@ -76,7 +97,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
       // other surface reading useAuth) reflects the login without a refresh.
       login(j.user)
       onAuth?.(j.user)
-      toast.success(mode === 'signup' ? `Welcome to DumpMaps, ${j.user.name}!` : `Welcome back, ${j.user.name}!`)
+      toast.success(welcome(j.user))
       onOpenChange(false)
     } catch (e) {
       toast.error(e.message)
@@ -84,6 +105,28 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
       setBusy(false)
     }
   }
+
+  // Login mode: plain local state, minimal validation.
+  const submit = (e) => {
+    e?.preventDefault?.()
+    if (!email || !password) return toast.error('Email and password required')
+    authenticate('login', { email, password }, (u) => `Welcome back, ${u.name}!`)
+  }
+
+  // Signup mode: react-hook-form calls this only once zod validation passes,
+  // so `values` is guaranteed name/email/password-complete and matched.
+  const onSignup = (values) =>
+    authenticate(
+      'signup',
+      {
+        email: values.email,
+        password: values.password,
+        name: values.name,
+        profileTypes: selected,
+        primaryProfile: primary,
+      },
+      (u) => `Welcome to DumpMaps, ${u.name}!`,
+    )
 
   // login mode: simple
   if (mode === 'login') {
@@ -303,7 +346,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               )}
             </div>
           ) : (
-            <form id="signup-form" onSubmit={submit} className="space-y-4">
+            <form id="signup-form" onSubmit={handleSubmit(onSignup)} noValidate className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {selected.map((k) => {
                   const pt = PROFILE_TYPES.find((p) => p.key === k)
@@ -328,21 +371,24 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               <div>
                 <Label className="text-xs">Display name</Label>
                 <Input
-                  className="mt-1"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  className={`mt-1 ${errors.name ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
                   placeholder="e.g. Mike"
+                  aria-invalid={!!errors.name}
+                  {...register('name')}
                 />
+                <FieldError msg={errors.name?.message} />
               </div>
 
               <div>
                 <Label className="text-xs">Email</Label>
                 <Input
-                  className="mt-1"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="email"
+                  className={`mt-1 ${errors.email ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
                   placeholder="you@email.com"
+                  aria-invalid={!!errors.email}
+                  {...register('email')}
                 />
+                <FieldError msg={errors.email?.message} />
               </div>
 
               <div>
@@ -350,10 +396,10 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                 <div className="relative mt-1">
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    className="pr-10"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    className={`pr-10 ${errors.password ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
                     placeholder="••••••••"
+                    aria-invalid={!!errors.password}
+                    {...register('password')}
                   />
                   <button
                     type="button"
@@ -365,6 +411,27 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+
+                {/* Vibrant live strength meter — segments fill and shift color as the password improves */}
+                {pwValue ? (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                            i < strength.score ? STRENGTH_BAR[strength.score] : 'bg-neutral-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className={`mt-1 text-[11px] font-medium ${STRENGTH_TEXT[strength.score]}`}>
+                      {strength.label}
+                    </p>
+                  </div>
+                ) : null}
+
+                <FieldError msg={errors.password?.message} />
               </div>
 
               <div>
@@ -372,10 +439,10 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                 <div className="relative mt-1">
                   <Input
                     type={showConfirmPassword ? 'text' : 'password'}
-                    className="pr-10"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`pr-10 ${errors.confirmPassword ? 'border-red-400 focus-visible:ring-red-400' : ''}`}
                     placeholder="••••••••"
+                    aria-invalid={!!errors.confirmPassword}
+                    {...register('confirmPassword')}
                   />
                   <button
                     type="button"
@@ -387,9 +454,7 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {confirmPassword && password !== confirmPassword && (
-                  <p className="mt-1 text-[11px] text-red-600">Passwords do not match</p>
-                )}
+                <FieldError msg={errors.confirmPassword?.message} />
               </div>
               {/* Hidden submit lets Enter submit the form; the visible button lives in the footer below */}
               <button type="submit" className="sr-only" aria-hidden="true" tabIndex={-1} />
@@ -433,10 +498,14 @@ export default function AuthDialog({ open, onOpenChange, onAuth, initialMode = '
               <Button
                 type="submit"
                 form="signup-form"
-                disabled={busy}
-                className="flex-1 bg-brand-600 hover:bg-brand-700"
+                disabled={busy || !isValid}
+                className="flex-1 bg-brand-600 hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {busy ? '…' : 'Create account'}
+                {busy ? (
+                  <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Creating…</>
+                ) : (
+                  <><Check className="mr-1.5 h-4 w-4" /> Create account</>
+                )}
               </Button>
             </div>
           )}

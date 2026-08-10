@@ -67,6 +67,35 @@ function clean(doc) {
   return rest
 }
 
+// Public profile projection — the ONLY fields a public/anonymous viewer may
+// see. This is an allowlist by construction (we build a fresh object rather than
+// deleting from the user record), so a new sensitive field added to `users`
+// later can never leak here by accident. Explicitly excluded: email, phone,
+// address*, zip, ein, documents, paymentMethodsAccepted, notifications,
+// resetToken, passwordHash, profileVisibility internals.
+function publicProfileProjection(u) {
+  if (!u) return null
+  const photo = u.profilePhotoUrl || u.avatarUrl || ''
+  return {
+    id: u.id,
+    name: u.name || u.email?.split('@')[0] || 'DumpMaps member',
+    profilePhotoUrl: photo,
+    avatarUrl: photo,
+    coverImageUrl: u.coverImageUrl || '',
+    bio: u.bio || '',
+    companyName: u.companyName || '',
+    website: u.website || '',
+    city: u.city || '',
+    state: u.state || '',
+    role: u.role || 'user',
+    profileType: u.profileType || '',
+    verified: !!u.verified,
+    verificationLevel: u.verificationLevel || null,
+    availabilityStatus: u.availabilityStatus || 'available',
+    createdAt: u.createdAt || null,
+  }
+}
+
 function cryptoRandomToken() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID().replace(/-/g, '') + Math.random().toString(36).slice(2, 10)
@@ -141,6 +170,113 @@ export async function handle(ctx) {
     const user = await db.collection('users').findOne({ id: auth.id })
     if (!user) return handleCORS(NextResponse.json({ error: 'User not found' }, { status: 404 }))
     return handleCORS(NextResponse.json({ user: clean(user) }))
+  }
+
+  // --------------------------------------------------------------------------
+  // PUBLIC PROFILE — a FB-mobile-style, viewable-by-anyone profile page.
+  //
+  //   GET /users/:id/profile-public         — whitelisted public projection
+  //   GET /users/:id/profile-public/posts   — that user's community posts
+  //   GET /users/:id/profile-public/listings— that user's B2B marketplace items
+  //
+  // These are intentionally NOT auth-gated: a public profile is browsable
+  // signed-out. But they respect profileVisibility ('private' → minimal stub)
+  // and only ever expose a hand-picked whitelist — never email, phone, address,
+  // EIN, documents, payment methods, or notification settings. The private-field
+  // audit is enforced by publicProfileProjection(), not by trusting clean().
+  // --------------------------------------------------------------------------
+
+  // Match /users/:id/profile-public with optional /posts | /listings suffix.
+  // `me` resolves to the caller's own id so the page can offer an Edit shortcut.
+  const publicMatch = route.match(/^\/users\/([^/]+)\/profile-public(?:\/(posts|listings))?$/)
+  if (publicMatch && method === 'GET') {
+    const rawId = decodeURIComponent(publicMatch[1])
+    const sub = publicMatch[2] || null
+    const viewer = getAuth(request)
+    // Resolve 'me' so /users/me/profile-public works for the signed-in user.
+    const targetId = rawId === 'me' ? viewer?.id : rawId
+    if (!targetId) return handleCORS(NextResponse.json({ error: 'User not found' }, { status: 404 }))
+
+    const user = await db.collection('users').findOne({ id: targetId })
+    if (!user) return handleCORS(NextResponse.json({ error: 'User not found' }, { status: 404 }))
+
+    const isOwner = !!viewer && viewer.id === user.id
+    const isPrivate = String(user.profileVisibility || 'public') === 'private'
+
+    // A private profile hides everything but a name + avatar stub — UNLESS the
+    // owner is viewing their own page (they always see their full profile).
+    if (isPrivate && !isOwner) {
+      // Sub-resource requests on a private profile return empty, not the stub.
+      if (sub) return handleCORS(NextResponse.json({ items: [], total: 0, private: true }))
+      return handleCORS(NextResponse.json({
+        user: {
+          id: user.id,
+          name: user.name || 'DumpMaps member',
+          profilePhotoUrl: user.profilePhotoUrl || user.avatarUrl || '',
+          avatarUrl: user.profilePhotoUrl || user.avatarUrl || '',
+        },
+        private: true,
+        isOwner: false,
+      }))
+    }
+
+    // ---- Sub-resource: community posts authored by this user ----
+    if (sub === 'posts') {
+      const url = new URL(request.url)
+      const limit = Math.min(30, Math.max(1, Number(url.searchParams.get('limit') || 12)))
+      const posts = await db.collection('community_posts')
+        .find({ authorId: user.id, status: { $ne: 'removed' } })
+        .sort({ createdAt: -1 }).limit(limit).toArray()
+      const items = posts.map((p) => ({
+        id: p.id,
+        title: p.title || '',
+        body: (p.body || '').slice(0, 280),
+        category: p.category || 'general',
+        photos: Array.isArray(p.photos) ? p.photos.slice(0, 1) : [],
+        city: p.city || '',
+        state: p.state || '',
+        likes: p.reactionCount || 0,
+        comments: p.commentCount || 0,
+        createdAt: p.createdAt,
+        href: `/community/posts/${p.id}`,
+      }))
+      return handleCORS(NextResponse.json({ items, total: items.length }))
+    }
+
+    // ---- Sub-resource: B2B marketplace listings sold by this user ----
+    if (sub === 'listings') {
+      const url = new URL(request.url)
+      const limit = Math.min(30, Math.max(1, Number(url.searchParams.get('limit') || 12)))
+      const rows = await db.collection('marketplace_listings')
+        .find({ sellerId: user.id, status: { $ne: 'removed' }, sold: { $ne: true } })
+        .sort({ createdAt: -1 }).limit(limit).toArray()
+      const items = rows.map((l) => ({
+        id: l.id,
+        title: l.title || '',
+        price: typeof l.price === 'number' ? l.price : null,
+        condition: l.condition || null,
+        category: l.b2bCategory || l.category || null,
+        photo: (Array.isArray(l.photos) && l.photos[0]) || (Array.isArray(l.images) && l.images[0]) || null,
+        city: l.city || '',
+        state: l.state || '',
+        createdAt: l.createdAt,
+        href: `/marketplace?listing=${l.id}`,
+      }))
+      return handleCORS(NextResponse.json({ items, total: items.length }))
+    }
+
+    // ---- Main public profile projection (whitelist only) ----
+    const [postCount, listingCount] = await Promise.all([
+      db.collection('community_posts').countDocuments({ authorId: user.id, status: { $ne: 'removed' } }).catch(() => 0),
+      db.collection('marketplace_listings').countDocuments({ sellerId: user.id, status: { $ne: 'removed' }, sold: { $ne: true } }).catch(() => 0),
+    ])
+
+    return handleCORS(NextResponse.json({
+      user: publicProfileProjection(user),
+      isOwner,
+      private: false,
+      stats: { posts: postCount, listings: listingCount },
+    }))
   }
 
   if (route === '/users/me/profile' && method === 'PATCH') {

@@ -8,11 +8,15 @@
 // - Test-mode banner shown when publishable key is pk_test_*
 // - 3D Secure handled by Stripe's default confirm flow (modal/redirect)
 // - DumpMaps never sees the raw PAN — only pm_xxx + last4/brand/exp
+//
+// Data reads live in hooks/use-payment-methods (auth → stripe config → card
+// list via SWR); mutations live in hooks/use-payment-methods-actions. This file
+// is now presentational: the page + the two sub-components below only render and
+// wire handlers.
 
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { loadStripe } from '@stripe/stripe-js'
 import {
   Elements, useStripe, useElements, CardElement,
 } from '@stripe/react-stripe-js'
@@ -24,23 +28,15 @@ import {
   ArrowLeft, ArrowRight, CreditCard, Loader2, Lock,
   Plus, ShieldCheck, Star, Trash2, AlertTriangle,
 } from 'lucide-react'
-import { toast } from 'sonner'
-import { isLikelyLoggedIn } from '@/lib/api-client'
-
-const CARD_BRAND_LABELS = {
-  visa: 'Visa', mastercard: 'Mastercard', amex: 'Amex', discover: 'Discover',
-  diners: 'Diners', jcb: 'JCB', unionpay: 'UnionPay', unknown: 'Card', card: 'Card',
-}
-
-function brandLabel(b) {
-  if (!b) return 'Card'
-  return CARD_BRAND_LABELS[String(b).toLowerCase()] || (b[0].toUpperCase() + b.slice(1))
-}
+import { LOGIN_RETURN_TO } from '@/constants/payment_methods_constants'
+import { brandLabel, formatExpiry } from '@/lib/payment-methods-helpers'
+import { usePaymentMethods } from '@/hooks/use-payment-methods'
+import { usePaymentMethodsActions } from '@/hooks/use-payment-methods-actions'
 
 // ---------------------------------------------------------------------------
 // Card form (Stripe Elements)
 // ---------------------------------------------------------------------------
-function CardForm({ clientSecret, setupIntentId, onSaved, onCancel }) {
+function CardForm({ clientSecret, setupIntentId, onSave, onSaved, onCancel }) {
   const stripe = useStripe()
   const elements = useElements()
   const [busy, setBusy] = useState(false)
@@ -70,20 +66,14 @@ function CardForm({ clientSecret, setupIntentId, onSaved, onCancel }) {
         setBusy(false)
         return
       }
-      // Persist on our backend
-      const res = await fetch('/api/users/me/payment-methods', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethodId: pmId, setupIntentId }),
-      })
-      const j = await res.json().catch(() => ({}))
+      // Persist on our backend (via the actions hook).
+      const res = await onSave({ paymentMethodId: pmId, setupIntentId })
       if (!res.ok) {
-        setErr(j.error || 'Failed to save card')
+        setErr(res.error || 'Failed to save card')
         setBusy(false)
         return
       }
-      toast.success('Card saved')
-      onSaved?.(j.paymentMethod)
+      onSaved?.(res.paymentMethod)
     } catch (e) {
       setErr(String(e?.message || e))
       setBusy(false)
@@ -145,9 +135,7 @@ function CardForm({ clientSecret, setupIntentId, onSaved, onCancel }) {
 // Saved card row
 // ---------------------------------------------------------------------------
 function SavedCardRow({ pm, onMakeDefault, onDelete, busy }) {
-  const exp = pm.expMonth && pm.expYear
-    ? `${String(pm.expMonth).padStart(2, '0')}/${String(pm.expYear).slice(-2)}`
-    : '—'
+  const exp = formatExpiry(pm)
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
@@ -191,137 +179,35 @@ function SavedCardRow({ pm, onMakeDefault, onDelete, busy }) {
 // ---------------------------------------------------------------------------
 export default function PaymentMethodsPage() {
   const router = useRouter()
-  const [status, setStatus] = useState('loading') // loading | ready | unauth | locked | stripeMissing | error
-  const [errorMsg, setErrorMsg] = useState('')
-  const [user, setUser] = useState(null)
-  const [stripeMode, setStripeMode] = useState(null) // 'test' | 'live'
-  const [stripePromise, setStripePromise] = useState(null)
-  const [methods, setMethods] = useState([])
+  const {
+    status, errorMsg, stripeMode, stripePromise, methods, reload,
+  } = usePaymentMethods()
+  const { intentBusy, rowBusy, startAdd, saveCard, makeDefault, remove } =
+    usePaymentMethodsActions({ onMutated: reload })
+
   const [adding, setAdding] = useState(false)
   const [intent, setIntent] = useState(null) // { clientSecret, setupIntentId }
-  const [intentBusy, setIntentBusy] = useState(false)
-  const [rowBusy, setRowBusy] = useState(false)
 
-  // Bootstrap: auth → stripe config → list
+  // Redirect unauthenticated visitors to login (the hook reports status:'unauth'
+  // once the shared session hint / /auth/me confirms there's no user).
   useEffect(() => {
-    let cancelled = false
-    if (!isLikelyLoggedIn()) {
-      router.replace('/?login=1&returnTo=/settings/payment-methods')
-      return
-    }
-    ;(async () => {
-      try {
-        const meRes = await fetch('/api/auth/me')
-        const meJ = await meRes.json().catch(() => ({}))
-        if (!meJ?.user) {
-          if (!cancelled) router.replace('/?login=1&returnTo=/settings/payment-methods')
-          return
-        }
-        if (cancelled) return
-        setUser(meJ.user)
+    if (status === 'unauth') router.replace(LOGIN_RETURN_TO)
+  }, [status, router])
 
-        const cfgRes = await fetch('/api/stripe/config')
-        const cfgJ = await cfgRes.json().catch(() => ({}))
-        if (cancelled) return
-        if (!cfgJ.configured || !cfgJ.publishableKey) {
-          setStatus('stripeMissing')
-          return
-        }
-        setStripeMode(cfgJ.mode || null)
-        setStripePromise(loadStripe(cfgJ.publishableKey))
-
-        const listRes = await fetch('/api/users/me/payment-methods')
-        const listJ = await listRes.json().catch(() => ({}))
-        if (cancelled) return
-        if (listRes.status === 403) {
-          setStatus('locked')
-          setErrorMsg(listJ.error || 'Not allowed')
-          return
-        }
-        if (listRes.status === 503) {
-          setStatus('stripeMissing')
-          return
-        }
-        if (!listRes.ok) {
-          setStatus('error')
-          setErrorMsg(listJ.error || `HTTP ${listRes.status}`)
-          return
-        }
-        setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
-        setStatus('ready')
-      } catch (e) {
-        if (!cancelled) { setStatus('error'); setErrorMsg(String(e?.message || e)) }
-      }
-    })()
-    return () => { cancelled = true }
-  }, [router])
-
-  const startAdd = useCallback(async () => {
-    setIntentBusy(true)
-    try {
-      const res = await fetch('/api/users/me/payment-methods/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        toast.error(j.error || 'Failed to start card setup')
-        return
-      }
-      setIntent({ clientSecret: j.clientSecret, setupIntentId: j.setupIntentId })
+  const onStartAdd = useCallback(async () => {
+    const res = await startAdd()
+    if (res.ok) {
+      setIntent(res.intent)
       setAdding(true)
-    } catch (e) {
-      toast.error(String(e?.message || e))
-    } finally {
-      setIntentBusy(false)
     }
-  }, [])
+  }, [startAdd])
 
-  const onSaved = useCallback(async (saved) => {
-    setAdding(false); setIntent(null)
-    // Refresh list (server is authoritative on defaults)
-    try {
-      const listRes = await fetch('/api/users/me/payment-methods')
-      const listJ = await listRes.json().catch(() => ({}))
-      setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
-    } catch (_) {
-      // Fallback: append optimistically
-      if (saved) setMethods((m) => [saved, ...m])
-    }
-  }, [])
-
-  const onMakeDefault = useCallback(async (pm) => {
-    setRowBusy(true)
-    try {
-      const res = await fetch(`/api/users/me/payment-methods/${pm.id}/default`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-      })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(j.error || 'Failed to set default'); return }
-      const listRes = await fetch('/api/users/me/payment-methods')
-      const listJ = await listRes.json().catch(() => ({}))
-      setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
-      toast.success('Default card updated')
-    } finally { setRowBusy(false) }
-  }, [])
-
-  const onDelete = useCallback(async (pm) => {
-    if (!confirm(`Remove ${brandLabel(pm.brand)} ending •••• ${pm.last4}?`)) return
-    setRowBusy(true)
-    try {
-      const res = await fetch(`/api/users/me/payment-methods/${pm.id}`, {
-        method: 'DELETE',
-      })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok) { toast.error(j.error || 'Failed to remove'); return }
-      const listRes = await fetch('/api/users/me/payment-methods')
-      const listJ = await listRes.json().catch(() => ({}))
-      setMethods(Array.isArray(listJ.paymentMethods) ? listJ.paymentMethods : [])
-      toast.success('Card removed')
-    } finally { setRowBusy(false) }
-  }, [])
+  const onSaved = useCallback(() => {
+    setAdding(false)
+    setIntent(null)
+    // Refresh list (server is authoritative on defaults).
+    reload()
+  }, [reload])
 
   const elementsOptions = useMemo(() => intent ? { clientSecret: intent.clientSecret } : null, [intent])
 
@@ -403,14 +289,14 @@ export default function PaymentMethodsPage() {
               )}
 
               {methods.map((pm) => (
-                <SavedCardRow key={pm.id} pm={pm} onMakeDefault={onMakeDefault} onDelete={onDelete} busy={rowBusy} />
+                <SavedCardRow key={pm.id} pm={pm} onMakeDefault={makeDefault} onDelete={remove} busy={rowBusy} />
               ))}
             </div>
 
             {/* Add card */}
             {!adding && (
               <div className="mt-4">
-                <Button onClick={startAdd} disabled={intentBusy}>
+                <Button onClick={onStartAdd} disabled={intentBusy}>
                   {intentBusy ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Preparing…</> : <><Plus className="mr-2 h-4 w-4" />Add a card</>}
                 </Button>
               </div>
@@ -429,6 +315,7 @@ export default function PaymentMethodsPage() {
                     <CardForm
                       clientSecret={intent.clientSecret}
                       setupIntentId={intent.setupIntentId}
+                      onSave={saveCard}
                       onSaved={onSaved}
                       onCancel={() => { setAdding(false); setIntent(null) }}
                     />

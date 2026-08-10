@@ -5,7 +5,7 @@
 // Falls back to "—" placeholders if there is no data yet, with a CTA to open the
 // Receipt Center.
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import ContractorToolsGate from '@/components/ContractorToolsGate'
 import {
@@ -13,9 +13,8 @@ import {
   CircleDollarSign, Loader2,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-
-const fmtUSD = (n) => `$${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`
-const fmtTons = (n) => `${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })} t`
+import { useDisposalIntelligence } from '@/hooks/use-disposal-intelligence'
+import { fmtUSD, fmtTons } from '@/lib/disposal-intelligence-helpers'
 
 export default function DisposalIntelligencePage() {
   return (
@@ -26,16 +25,7 @@ export default function DisposalIntelligencePage() {
 }
 
 function DisposalIntelligence() {
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/receipts/stats')
-      .then((r) => r.json())
-      .then((j) => { if (!j.error) setStats(j) })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+  const { stats, loading } = useDisposalIntelligence()
 
   const hasData = stats && stats.lifetime?.trips > 0
   const month = stats?.thisMonth || {}

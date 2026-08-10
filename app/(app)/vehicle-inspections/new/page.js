@@ -18,37 +18,13 @@ import {
   Truck, Gauge, Fuel, AlertTriangle, Camera, CheckCircle2, Loader2, Save, X,
   ShieldAlert, ClipboardCheck,
 } from 'lucide-react'
-
-const FUEL = [
-  { v: 'empty', l: 'Empty' }, { v: '1_4', l: '¼' }, { v: '1_2', l: '½' },
-  { v: '3_4', l: '¾' }, { v: 'full', l: 'Full' },
-]
-const LOAD = [
-  { v: 'empty', l: 'Empty' }, { v: 'half', l: 'Half full' }, { v: 'full', l: 'Full' },
-]
-const CLEAN = [
-  { v: 'clean', l: 'Clean' }, { v: 'dirty', l: 'Dirty' },
-  { v: 'needs_wash', l: 'Needs wash' }, { v: 'needs_interior', l: 'Needs interior cleaning' },
-]
-const DASH_LIGHTS = [
-  'Check engine', 'Oil pressure', 'Battery', 'Brake', 'Tire pressure',
-  'ABS', 'Transmission', 'Coolant', 'Other',
-]
-const DAMAGE_LOCATIONS = [
-  'Front', 'Rear', 'Driver side', 'Passenger side', 'Roof', 'Interior', 'Tires', 'Other',
-]
-const CHECKLIST = [
-  ['tires',           'Tires checked'],
-  ['lights',          'Lights working'],
-  ['brakes',          'Brakes working'],
-  ['mirrors',         'Mirrors okay'],
-  ['backupCamera',    'Backup camera okay'],
-  ['liftgate',        'Liftgate / dump bed working'],
-  ['registration',    'Registration & insurance present'],
-  ['safetyEquipment', 'Safety equipment present'],
-  ['firstAid',        'First aid kit present'],
-  ['strapsTools',     'Straps / tools secured'],
-]
+import { useVehicleInspectionActions } from '@/hooks/use-vehicle-inspection-actions'
+import {
+  FUEL_OPTIONS, LOAD_OPTIONS, CLEAN_OPTIONS, DASH_LIGHTS, DAMAGE_LOCATIONS, CHECKLIST,
+} from '@/constants/vehicle_inspections_constants'
+import {
+  emptyInspectionForm, computeMilesDriven, buildCreatePayload, labelToKey,
+} from '@/lib/vehicle-inspections-helpers'
 
 export default function NewInspectionPage() {
   return (
@@ -60,29 +36,16 @@ export default function NewInspectionPage() {
 
 function NewInspection() {
   const router = useRouter()
-  const [form, setForm] = useState({
-    vehicleNumber: '', vehicleType: '', licensePlate: '', driverName: '',
-    date: new Date().toISOString().slice(0, 10),
-    startTime: '', endTime: '',
-    phase: 'pre_shift',
-    mileageStart: '', mileageEnd: '',
-    fuelStart: 'full', fuelEnd: '',
-    dashboardLightsReported: false, dashboardLights: [],
-    damageReported: false, damageDescription: '', damageLocations: [], damagePhotos: [],
-    loadStatus: 'empty',
-    cleanliness: 'clean',
-    checklist: Object.fromEntries(CHECKLIST.map(([k]) => [k, true])),
-    notes: '',
-  })
+  const { create, uploadPhoto } = useVehicleInspectionActions()
+  const [form, setForm] = useState(emptyInspectionForm)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
 
-  const milesDriven = useMemo(() => {
-    const a = Number(form.mileageStart) || 0
-    const b = form.mileageEnd === '' ? null : (Number(form.mileageEnd) || 0)
-    return b != null && b >= a ? b - a : 0
-  }, [form.mileageStart, form.mileageEnd])
+  const milesDriven = useMemo(
+    () => computeMilesDriven(form.mileageStart, form.mileageEnd),
+    [form.mileageStart, form.mileageEnd],
+  )
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }))
   const updateChecklist = (k, v) => setForm((p) => ({ ...p, checklist: { ...p.checklist, [k]: v } }))
@@ -96,17 +59,14 @@ function NewInspection() {
     if (!file) return
     setUploading(true)
     setError(null)
-    try {
-      const fd = new FormData()
-      fd.append('file', file)
-      const r = await fetch('/api/upload', { method: 'POST', body: fd })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Upload failed')
-      const url = j.url || j.fileUrl || j.path
-      update('damagePhotos', [...form.damagePhotos, url])
-    } catch (err) {
-      setError(String(err.message || err))
-    } finally { setUploading(false); e.target.value = '' }
+    const res = await uploadPhoto(file)
+    if (res.ok) {
+      update('damagePhotos', [...form.damagePhotos, res.url])
+    } else {
+      setError(res.error)
+    }
+    setUploading(false)
+    e.target.value = ''
   }
 
   const submit = async (e) => {
@@ -114,23 +74,13 @@ function NewInspection() {
     if (!form.vehicleNumber.trim()) { setError('Truck / vehicle number is required.'); return }
     if (!form.driverName.trim()) { setError('Driver name is required.'); return }
     setSaving(true); setError(null)
-    try {
-      const payload = {
-        ...form,
-        mileageStart: Number(form.mileageStart) || 0,
-        mileageEnd: form.mileageEnd === '' ? null : (Number(form.mileageEnd) || 0),
-      }
-      const r = await fetch('/api/vehicle-inspections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Save failed')
-      router.push(`/vehicle-inspections/${j.inspection.id}`)
-    } catch (err) {
-      setError(String(err.message || err))
-    } finally { setSaving(false) }
+    const res = await create(buildCreatePayload(form))
+    if (res.ok) {
+      router.push(`/vehicle-inspections/${res.inspection.id}`)
+    } else {
+      setError(res.error)
+      setSaving(false)
+    }
   }
 
   return (
@@ -211,7 +161,7 @@ function NewInspection() {
             {form.dashboardLightsReported && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {DASH_LIGHTS.map((l) => {
-                  const k = l.toLowerCase().replace(/[^a-z]+/g, '_')
+                  const k = labelToKey(l)
                   const on = form.dashboardLights.includes(k)
                   return (
                     <button type="button" key={k} onClick={() => toggleArray('dashboardLights', k)} className={`rounded-full border px-3 py-1 text-xs ${on ? 'border-red-300 bg-red-50 text-red-700' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'}`}>
@@ -230,7 +180,7 @@ function NewInspection() {
               <div className="mt-2 space-y-2">
                 <div className="flex flex-wrap gap-1.5">
                   {DAMAGE_LOCATIONS.map((l) => {
-                    const k = l.toLowerCase().replace(/[^a-z]+/g, '_')
+                    const k = labelToKey(l)
                     const on = form.damageLocations.includes(k)
                     return (
                       <button type="button" key={k} onClick={() => toggleArray('damageLocations', k)} className={`rounded-full border px-3 py-1 text-xs ${on ? 'border-red-300 bg-red-50 text-red-700' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'}`}>
@@ -263,12 +213,12 @@ function NewInspection() {
           <FormSection title="Load & cleanliness" icon={Truck}>
             <Row2>
               <Field label="Load status">
-                <PillRow value={form.loadStatus} onChange={(v) => update('loadStatus', v)} options={LOAD} />
+                <PillRow value={form.loadStatus} onChange={(v) => update('loadStatus', v)} options={LOAD_OPTIONS} />
               </Field>
               <Field label="Vehicle cleanliness">
                 <Select value={form.cleanliness} onValueChange={(v) => update('cleanliness', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CLEAN.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}</SelectContent>
+                  <SelectContent>{CLEAN_OPTIONS.map((c) => <SelectItem key={c.v} value={c.v}>{c.l}</SelectItem>)}</SelectContent>
                 </Select>
               </Field>
             </Row2>
@@ -352,7 +302,7 @@ function PillRow({ value, onChange, options }) {
 function FuelButtons({ value, onChange, allowClear }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {FUEL.map((f) => (
+      {FUEL_OPTIONS.map((f) => (
         <button type="button" key={f.v} onClick={() => onChange(value === f.v && allowClear ? '' : f.v)} className={`min-w-[44px] rounded-md border px-2 py-1 text-xs font-semibold ${value === f.v ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'}`}>
           {f.l}
         </button>

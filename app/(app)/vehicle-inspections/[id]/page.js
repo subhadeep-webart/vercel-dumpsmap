@@ -4,7 +4,7 @@
 // affordance to add end-of-shift data (mileage end, fuel end, end time) to a
 // pre-shift inspection.
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import ContractorToolsGate from '@/components/ContractorToolsGate'
@@ -15,13 +15,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
   ArrowLeft, Truck, Gauge, Fuel, AlertTriangle, CheckCircle2, ShieldAlert, Loader2,
-  Calendar, User, MapPin, Image as ImageIcon, Trash2, Save, X,
+  Calendar, User, Trash2, Save, X,
 } from 'lucide-react'
-
-const FUEL_LABEL = { empty: 'Empty', '1_4': '¼', '1_2': '½', '3_4': '¾', full: 'Full' }
-const LOAD_LABEL = { empty: 'Empty', half: 'Half full', full: 'Full' }
-const CLEAN_LABEL = { clean: 'Clean', dirty: 'Dirty', needs_wash: 'Needs wash', needs_interior: 'Needs interior cleaning' }
-const FUEL = ['empty', '1_4', '1_2', '3_4', 'full']
+import { useVehicleInspection } from '@/hooks/use-vehicle-inspection'
+import { useVehicleInspectionActions } from '@/hooks/use-vehicle-inspection-actions'
+import { FUEL_LABEL, LOAD_LABEL, CLEAN_LABEL, FUEL } from '@/constants/vehicle_inspections_constants'
+import { phaseLabel, humanizeChecklistKey, humanizeToken, buildEndShiftPayload } from '@/lib/vehicle-inspections-helpers'
 
 export default function InspectionDetailPage() {
   return (
@@ -34,26 +33,12 @@ export default function InspectionDetailPage() {
 function InspectionDetail() {
   const { id } = useParams()
   const router = useRouter()
-  const [ins, setIns] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { inspection: ins, loading, error, setInspection } = useVehicleInspection(id)
+  const { update, remove } = useVehicleInspectionActions()
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState({})
   const [saving, setSaving] = useState(false)
-
-  const load = useCallback(async () => {
-    setLoading(true); setError(null)
-    try {
-      const r = await fetch(`/api/vehicle-inspections/${id}`)
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`)
-      setIns(j.inspection)
-    } catch (e) {
-      setError(String(e.message || e))
-    } finally { setLoading(false) }
-  }, [id])
-
-  useEffect(() => { load() }, [load])
+  const [saveError, setSaveError] = useState(null)
 
   const startEdit = () => {
     setDraft({
@@ -67,24 +52,19 @@ function InspectionDetail() {
   const cancelEdit = () => { setEditMode(false); setDraft({}) }
   const saveEdit = async () => {
     setSaving(true)
-    try {
-      const payload = {
-        mileageEnd: draft.mileageEnd === '' ? null : Number(draft.mileageEnd) || 0,
-        fuelEnd: draft.fuelEnd || null,
-        endTime: draft.endTime || '',
-        phase: draft.mileageEnd && draft.fuelEnd ? 'both' : ins.phase,
-      }
-      const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Save failed')
-      setIns(j.inspection); setEditMode(false)
-    } catch (e) { setError(String(e.message || e)) } finally { setSaving(false) }
+    const res = await update(id, buildEndShiftPayload(draft, ins))
+    if (res.ok) {
+      setInspection(res.inspection)
+      setEditMode(false)
+    } else {
+      setSaveError(res.error)
+    }
+    setSaving(false)
   }
 
   const onDelete = async () => {
-    if (!confirm('Delete this inspection? This soft-deletes the record.')) return
-    const r = await fetch(`/api/vehicle-inspections/${id}`, { method: 'DELETE' })
-    if (r.ok) router.push('/vehicle-inspections')
+    const ok = await remove(id)
+    if (ok) router.push('/vehicle-inspections')
   }
 
   if (loading) {
@@ -103,7 +83,7 @@ function InspectionDetail() {
           <Card className="mx-auto max-w-md"><CardContent className="space-y-3 p-6 text-center">
             <AlertTriangle className="mx-auto h-7 w-7 text-amber-600" />
             <h1 className="font-bold">Couldn't load this inspection</h1>
-            <p className="text-sm text-neutral-600">{error || 'Not found.'}</p>
+            <p className="text-sm text-neutral-600">{(error && String(error.message || error)) || 'Not found.'}</p>
             <Button asChild><Link href="/vehicle-inspections">Back to inspections</Link></Button>
           </CardContent></Card>
         </div>
@@ -125,7 +105,7 @@ function InspectionDetail() {
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">{ins.vehicleNumber}</h1>
-                  <Badge variant="outline">{ins.phase === 'both' ? 'Pre + Post' : ins.phase === 'post_shift' ? 'Post-shift' : 'Pre-shift'}</Badge>
+                  <Badge variant="outline">{phaseLabel(ins.phase)}</Badge>
                   {ins.issuesFlag ? (
                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><ShieldAlert className="mr-1 h-3 w-3" /> Issues</Badge>
                   ) : (
@@ -167,6 +147,7 @@ function InspectionDetail() {
                 </div>
               </div>
             </div>
+            {saveError && <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{saveError}</div>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={cancelEdit}><X className="mr-1 h-4 w-4" /> Cancel</Button>
               <Button size="sm" disabled={saving} onClick={saveEdit} className="bg-brand-600 hover:bg-brand-700">
@@ -195,7 +176,7 @@ function InspectionDetail() {
         <Card className={ins.dashboardLightsReported ? 'border-red-200' : ''}><CardContent className="p-5">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold"><ShieldAlert className={`h-4 w-4 ${ins.dashboardLightsReported ? 'text-red-600' : 'text-neutral-400'}`} /> Dashboard lights</h2>
           {ins.dashboardLightsReported ? (
-            <div className="flex flex-wrap gap-1.5">{(ins.dashboardLights || []).map((d) => <Badge key={d} className="bg-red-50 text-red-700 hover:bg-red-50">{d.replace(/_/g, ' ')}</Badge>)}</div>
+            <div className="flex flex-wrap gap-1.5">{(ins.dashboardLights || []).map((d) => <Badge key={d} className="bg-red-50 text-red-700 hover:bg-red-50">{humanizeToken(d)}</Badge>)}</div>
           ) : (
             <p className="text-sm text-neutral-600">All clear — no warning lights reported.</p>
           )}
@@ -206,7 +187,7 @@ function InspectionDetail() {
           {ins.damageReported ? (
             <div className="space-y-2">
               {ins.damageLocations?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">{ins.damageLocations.map((l) => <Badge key={l} className="bg-red-50 text-red-700 hover:bg-red-50">{l.replace(/_/g, ' ')}</Badge>)}</div>
+                <div className="flex flex-wrap gap-1.5">{ins.damageLocations.map((l) => <Badge key={l} className="bg-red-50 text-red-700 hover:bg-red-50">{humanizeToken(l)}</Badge>)}</div>
               )}
               {ins.damageDescription && <p className="text-sm text-neutral-700">{ins.damageDescription}</p>}
               {ins.damagePhotos?.length > 0 && (
@@ -233,7 +214,7 @@ function InspectionDetail() {
           <ul className="space-y-1 text-sm">
             {Object.entries(ins.checklist || {}).map(([k, v]) => (
               <li key={k} className="flex items-center justify-between">
-                <span className="capitalize">{k.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</span>
+                <span className="capitalize">{humanizeChecklistKey(k)}</span>
                 {v ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <span className="text-xs font-bold text-red-600">Failed</span>}
               </li>
             ))}

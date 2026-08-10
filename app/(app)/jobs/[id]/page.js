@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,15 +11,16 @@ import ReportButton from '@/components/ReportButton'
 import { timeAgo } from '@/lib/community-categories'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
 import { useCurrentUser } from '@/lib/useCurrentUser'
+import { useJob } from '@/hooks/use-job'
+import { useJobActions } from '@/hooks/use-job-actions'
+import { jobAddressLine, jobDirectionsUrl } from '@/lib/job-detail-helpers'
 
 export default function JobDetailPage() {
   const { id } = useParams()
   const router = useRouter()
   const { user } = useCurrentUser()
-  const [job, setJob] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
-  const [actionBusy, setActionBusy] = useState(false)
+  const { job, loading, error, reload } = useJob(id)
+  const { busy: actionBusy, accept, save } = useJobActions(id, { onMutated: reload })
   const [softLogin, setSoftLogin] = useState(null)
   const requireAuth = (action) => {
     if (user) return true
@@ -28,48 +28,17 @@ export default function JobDetailPage() {
     return false
   }
 
-
-  const load = async () => {
-    setLoading(true)
-    try {
-      const r = await fetch(`/api/jobs/${id}`)
-      if (!r.ok) { setErr((await r.json()).error || 'Not found'); return }
-      const j = await r.json()
-      setJob(j.job || j)
-    } finally { setLoading(false) }
-  }
-  useEffect(() => { if (id) load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id])
-
-  const accept = async () => {
-    if (!requireAuth('bid')) return
-    setActionBusy(true)
-    try {
-      const r = await fetch(`/api/jobs/${id}/accept`, { method: 'POST' })
-      if (!r.ok) throw new Error((await r.json()).error || 'Could not accept')
-      toast.success('Job accepted')
-      await load()
-    } catch (e) { toast.error(e.message || 'Could not accept') } finally { setActionBusy(false) }
-  }
-
-  const save = async () => {
-    if (!requireAuth('save')) return
-    try {
-      const r = await fetch(`/api/jobs/${id}/save`, { method: 'POST' })
-      const j = await r.json()
-      toast.success(j.saved ? 'Saved' : 'Unsaved')
-      load()
-    } catch {}
-  }
-
+  const onAccept = () => { if (requireAuth('bid')) accept() }
+  const onSave = () => { if (requireAuth('save')) save() }
   const message = () => {
     if (!requireAuth('message')) return
     if (job?.poster?.id) router.push(`/inbox?dm=${job.poster.id}`)
   }
 
   if (loading) return <FieldFrame hideHeader title="Job" back="/jobs"><div className="py-10 text-center text-sm text-neutral-400">Loading…</div></FieldFrame>
-  if (err || !job) return <FieldFrame hideHeader title="Job" back="/jobs"><div className="px-4 py-10 text-center text-sm text-neutral-500">{err || 'Job not found.'}</div></FieldFrame>
+  if (error || !job) return <FieldFrame hideHeader title="Job" back="/jobs"><div className="px-4 py-10 text-center text-sm text-neutral-500">{error?.data?.error || 'Job not found.'}</div></FieldFrame>
 
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent([job.address, job.city, job.state, job.zip].filter(Boolean).join(' '))}`
+  const directionsUrl = jobDirectionsUrl(job)
 
   return (
     <FieldFrame
@@ -106,7 +75,7 @@ export default function JobDetailPage() {
             {(job.address || job.city) && (
               <div className="flex items-start gap-1 text-[11px] text-neutral-600">
                 <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
-                <span>{[job.address, job.city, job.state, job.zip].filter(Boolean).join(', ')}</span>
+                <span>{jobAddressLine(job)}</span>
               </div>
             )}
             {job.materialTypes?.length > 0 && (
@@ -135,13 +104,13 @@ export default function JobDetailPage() {
       {/* Sticky action bar */}
       <div className="fixed inset-x-0 bottom-14 z-30 border-t border-neutral-200 bg-white/95 p-2 backdrop-blur" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.5rem)' }}>
         <div className="flex items-center gap-1.5">
-          <Button variant="outline" onClick={save} className="h-11 shrink-0 px-3" aria-label="Save"><Bookmark className="h-4 w-4" /></Button>
+          <Button variant="outline" onClick={onSave} className="h-11 shrink-0 px-3" aria-label="Save"><Bookmark className="h-4 w-4" /></Button>
           <Button variant="outline" asChild className="h-11 shrink-0 px-3">
             <a href={directionsUrl} target="_blank" rel="noopener noreferrer" aria-label="Directions"><Navigation className="h-4 w-4" /></a>
           </Button>
           <Button onClick={message} className="h-11 flex-1 bg-neutral-900 text-white hover:bg-neutral-800"><MessageCircle className="mr-1 h-4 w-4" /> Message</Button>
           {job.status === 'open' && user?.id !== job.poster?.id && (
-            <Button onClick={accept} disabled={actionBusy} className="h-11 flex-1 bg-brand-600 hover:bg-brand-700">
+            <Button onClick={onAccept} disabled={actionBusy} className="h-11 flex-1 bg-brand-600 hover:bg-brand-700">
               {actionBusy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Briefcase className="mr-1 h-4 w-4" />}
               Accept
             </Button>

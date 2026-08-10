@@ -4,20 +4,19 @@
 // Contractor-only. Shows today's status (completed / missing / issues),
 // known vehicles, recent inspections. Big "Start inspection" CTA.
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import ContractorToolsGate from '@/components/ContractorToolsGate'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  Truck, ClipboardCheck, AlertTriangle, Plus, Loader2, Calendar, Gauge, Fuel,
-  CheckCircle2, ChevronRight, ShieldAlert, Camera, Receipt, BarChart3,
+  Truck, ClipboardCheck, AlertTriangle, Plus, Loader2, Gauge, Fuel,
+  CheckCircle2, ChevronRight, ShieldAlert, Camera, Receipt,
 } from 'lucide-react'
-
-const FUEL_LABEL = { empty: 'Empty', '1_4': '¼', '1_2': '½', '3_4': '¾', full: 'Full' }
-const LOAD_LABEL = { empty: 'Empty', half: 'Half full', full: 'Full' }
+import { useVehicleInspections } from '@/hooks/use-vehicle-inspections'
+import { FUEL_LABEL, LOAD_LABEL } from '@/constants/vehicle_inspections_constants'
+import { phaseLabel } from '@/lib/vehicle-inspections-helpers'
 
 export default function VehicleInspectionsPage() {
   return (
@@ -28,24 +27,7 @@ export default function VehicleInspectionsPage() {
 }
 
 function VehicleInspections() {
-  const router = useRouter()
-  const [stats, setStats] = useState(null)
-  const [inspections, setInspections] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [s, l] = await Promise.all([
-        fetch('/api/vehicle-inspections/stats').then((r) => r.json()).catch(() => null),
-        fetch('/api/vehicle-inspections?limit=30').then((r) => r.json()).catch(() => ({ inspections: [] })),
-      ])
-      if (s && !s.error) setStats(s)
-      setInspections(l.inspections || [])
-    } finally { setLoading(false) }
-  }, [])
-
-  useEffect(() => { load() }, [load])
+  const { stats, inspections, loading } = useVehicleInspections(30)
 
   return (
     <div className="min-h-[100dvh] bg-neutral-50">
@@ -118,7 +100,7 @@ function VehicleInspections() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span className="font-bold">{ins.vehicleNumber}</span>
-                          <Badge variant="outline" className="text-[10px]">{ins.phase === 'both' ? 'Pre + Post' : ins.phase === 'post_shift' ? 'Post-shift' : 'Pre-shift'}</Badge>
+                          <Badge variant="outline" className="text-[10px]">{phaseLabel(ins.phase)}</Badge>
                           {ins.issuesFlag && <Badge className="bg-red-100 text-[10px] text-red-700 hover:bg-red-100">Issues</Badge>}
                         </div>
                         <div className="mt-0.5 text-xs text-neutral-600">{ins.driverName} · {ins.date}{ins.startTime ? ` · ${ins.startTime}` : ''}</div>

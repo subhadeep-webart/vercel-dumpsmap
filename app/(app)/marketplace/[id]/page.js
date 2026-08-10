@@ -14,40 +14,19 @@ import { timeAgo } from '@/lib/community-categories'
 import { resolveMarketplaceRole, allowedStatusesForUser, STATUS_META } from '@/lib/marketplace-roles'
 import { SoftLoginModal } from '@/components/SoftLoginModal'
 import { useCurrentUser } from '@/lib/useCurrentUser'
-
-// Legacy uploads stored URLs as "/uploads/<name>". We now serve via
-// "/api/files/<name>" which is more reliable (reads from /data/uploads on each
-// request, survives redeploys). Normalize both shapes at render time so old
-// listings keep rendering.
-function normalizePhoto(url) {
-  if (!url) return null
-  if (typeof url !== 'string') return null
-  if (url.startsWith('/uploads/')) return `/api/files/${url.slice('/uploads/'.length)}`
-  return url
-}
-
-// Pickup windows are now stored as a "YYYY-MM-DDTHH:mm" datetime value from the
-// post form's date-time picker. Render those in a friendly local format; older
-// listings stored a free-text phrase, so fall back to the raw string for those.
-function formatPickupWindow(v) {
-  if (!v || typeof v !== 'string') return v
-  const isDateTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)
-  if (!isDateTime) return v
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime())) return v
-  return d.toLocaleString(undefined, {
-    weekday: 'short', month: 'short', day: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  })
-}
+import { useMarketplaceListing } from '@/hooks/use-marketplace-listing'
+import { useMarketplaceListingActions } from '@/hooks/use-marketplace-listing-actions'
+import {
+  normalizePhoto, formatPickupWindow, mmss, detailPriceLabel, isFreeListing,
+  detailStatusBadge, myReservationOf, otherReservationOf, itemActiveForBuyer,
+} from '@/lib/marketplace-helpers'
 
 export default function MarketplaceListingDetailPage() {
   const { id } = useParams()
   const router = useRouter()
   const { user } = useCurrentUser()
-  const [listing, setListing] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
+  const { listing, loading, error: err, reload, setListing } = useMarketplaceListing(id)
+  const actions = useMarketplaceListingActions()
   const [imgIdx, setImgIdx] = useState(0)
   // Wishlist/save state — mirrors listing.isSaved and toggles optimistically.
   const [saved, setSaved] = useState(false)
@@ -63,19 +42,8 @@ export default function MarketplaceListingDetailPage() {
     return false
   }
 
-
-  const load = async () => {
-    setLoading(true)
-    try {
-      const r = await fetch(`/api/marketplace/${id}`)
-      if (!r.ok) { setErr((await r.json()).error || 'Not found'); return }
-      const j = await r.json()
-      const data = j.listing || j
-      setListing(data)
-      setSaved(!!data.isSaved)
-    } finally { setLoading(false) }
-  }
-  useEffect(() => { if (id) load() /* eslint-disable-line react-hooks/exhaustive-deps */ }, [id])
+  // Keep the local saved flag in sync with the loaded listing.
+  useEffect(() => { if (listing) setSaved(!!listing.isSaved) }, [listing])
 
   const save = async () => {
     if (!requireAuth('save')) return
@@ -85,11 +53,9 @@ export default function MarketplaceListingDetailPage() {
     setSaved(!prev)
     setSavingBookmark(true)
     try {
-      const r = await fetch(`/api/marketplace/${id}/save`, { method: 'POST' })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Failed')
-      setSaved(!!j.saved)
-      toast.success(j.saved ? 'Saved to your list' : 'Removed from your list')
+      const isSaved = await actions.toggleSave(id)
+      setSaved(isSaved)
+      toast.success(isSaved ? 'Saved to your list' : 'Removed from your list')
     } catch (e) {
       setSaved(prev) // revert on failure
       toast.error('Could not update saved list')
@@ -104,7 +70,7 @@ export default function MarketplaceListingDetailPage() {
   }
 
   // ---- Reserve flow ----
-  const [reserving, setReserving] = useState(false)
+  const reserving = actions.busy
   const [reserveOpen, setReserveOpen] = useState(false)   // confirmation modal
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -112,98 +78,45 @@ export default function MarketplaceListingDetailPage() {
     return () => clearInterval(t)
   }, [])
 
-  const myReservation = listing?.reservation && listing.reservation.userId === user?.id ? listing.reservation : null
-  const someoneElseReservation = listing?.reservation && listing.reservation.userId !== user?.id ? listing.reservation : null
+  const myReservation = myReservationOf(listing, user?.id)
+  const someoneElseReservation = otherReservationOf(listing, user?.id)
   const myMsLeft = myReservation ? Math.max(0, new Date(myReservation.expiresAt).getTime() - now) : 0
-  const mmss = (ms) => {
-    const s = Math.floor(ms / 1000)
-    return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-  }
   // Auto-refresh when timer hits zero
   useEffect(() => {
-    if (myReservation && myMsLeft === 0) load()
+    if (myReservation && myMsLeft === 0) reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myReservation, myMsLeft])
 
   const doReserve = async () => {
     if (!requireAuth('save')) return
-    setReserving(true)
-    try {
-      const r = await fetch(`/api/marketplace/${id}/reserve`, { method: 'POST' })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Could not reserve')
-      setListing(j.listing)
-      setReserveOpen(false)
-      toast.success('Reserved! You have 15 minutes to coordinate pickup.')
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setReserving(false)
-    }
+    const l = await actions.reserve(id)
+    if (l) { setListing(l); setReserveOpen(false) }
   }
   const cancelReserve = async () => {
-    setReserving(true)
-    try {
-      const r = await fetch(`/api/marketplace/${id}/reserve/cancel`, { method: 'POST' })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Could not cancel')
-      setListing(j.listing)
-      toast.success('Reservation cancelled')
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setReserving(false)
-    }
+    const l = await actions.cancelReserve(id)
+    if (l) setListing(l)
   }
   const completePickup = async (finalStatus = 'claimed') => {
-    setReserving(true)
-    try {
-      const r = await fetch(`/api/marketplace/${id}/reserve/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finalStatus }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Could not complete')
-      setListing(j.listing)
-      toast.success('Pickup completed')
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setReserving(false)
-    }
+    const l = await actions.completePickup(id, finalStatus)
+    if (l) setListing(l)
   }
 
   // Seller one-tap status change (mobile-friendly field action)
   const quickStatus = async (itemStatus) => {
-    setReserving(true)
-    try {
-      const r = await fetch(`/api/marketplace/${id}/quick-status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemStatus }),
-      })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error || 'Failed')
-      setListing(j.listing)
-      toast.success(`Status: ${itemStatus.replace('_', ' ')}`)
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setReserving(false)
-    }
+    const l = await actions.quickStatus(id, itemStatus)
+    if (l) setListing(l)
   }
 
   const isOwner = user?.id && listing?.sellerId === user.id
   const isReserver = !!myReservation
-  const itemActiveForBuyer = listing && !listing.sold && listing.itemStatus !== 'sold' && listing.itemStatus !== 'claimed' && listing.itemStatus !== 'donated'
+  const activeForBuyer = itemActiveForBuyer(listing)
 
   if (loading) return <FieldFrame hideHeader title="Listing" back="/"><div className="py-10 text-center text-sm text-neutral-400">Loading…</div></FieldFrame>
   if (err || !listing) return <FieldFrame hideHeader title="Listing" back="/"><div className="px-4 py-10 text-center text-sm text-neutral-500">{err || 'Listing not found.'}</div></FieldFrame>
 
   const photos = listing.photos || []
-  const isFree = listing.kind === 'free' || listing.priceType === 'free' || listing.price === 0
-  const priceLabel = isFree ? 'FREE' : listing.price != null ? `$${listing.price}` : 'Contact'
+  const isFree = isFreeListing(listing)
+  const priceLabel = detailPriceLabel(listing)
 
   return (
     <FieldFrame
@@ -270,14 +183,7 @@ export default function MarketplaceListingDetailPage() {
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {listing.itemStatus && listing.itemStatus !== 'available' && (
-                <Badge className={
-                  listing.itemStatus === 'on_truck' ? 'bg-emerald-600 text-white' :
-                  listing.itemStatus === 'at_site' ? 'bg-blue-600 text-white' :
-                  listing.itemStatus === 'last_chance' ? 'bg-rose-600 text-white' :
-                  listing.itemStatus === 'reserved' ? 'bg-amber-500 text-white' :
-                  listing.itemStatus === 'sold' || listing.itemStatus === 'claimed' ? 'bg-neutral-700 text-white' :
-                  'bg-neutral-200 text-neutral-700'
-                }>{listing.itemStatus.replace('_', ' ').toUpperCase()}</Badge>
+                <Badge className={detailStatusBadge(listing.itemStatus)}>{listing.itemStatus.replace('_', ' ').toUpperCase()}</Badge>
               )}
               {listing.leavingInMinutes != null && listing.leavingInMinutes > 0 && (
                 <Badge className="bg-black text-white"><Clock className="mr-1 h-3 w-3" />Leaving in {listing.leavingInMinutes} min</Badge>
@@ -428,7 +334,7 @@ export default function MarketplaceListingDetailPage() {
             >
               <Bookmark className={`h-5 w-5 transition-transform ${saved ? 'scale-110 fill-current' : ''}`} />
             </Button>
-            {itemActiveForBuyer && !someoneElseReservation && !isReserver ? (
+            {activeForBuyer && !someoneElseReservation && !isReserver ? (
               <Button
                 onClick={() => setReserveOpen(true)}
                 className="h-12 flex-1 rounded-xl bg-brand-600 text-[15px] font-semibold shadow-sm hover:bg-brand-700"

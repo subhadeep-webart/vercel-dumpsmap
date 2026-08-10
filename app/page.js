@@ -1,9 +1,7 @@
 'use client'
 
 import { Suspense } from "react";
-import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { toast } from 'sonner'
+import { useState } from 'react'
 import { CommunityCenter } from '@/components/Community'
 import { DashboardDialog } from '@/components/Dashboard'
 import { PhaseTeaserDialog } from '@/components/PhaseTeaser'
@@ -18,104 +16,46 @@ import SubmitFacilityDialog from '@/components/home/SubmitFacilityDialog'
 import AdminDialog from '@/components/home/AdminDialog'
 import AuthDialog from '@/components/home/AuthDialog'
 import ProfileDialog from '@/components/home/ProfileDialog'
-import { clearAuthToken } from '@/hooks/use-logout'
-import { api } from '@/lib/api-client'
+import { useHome } from '@/hooks/use-home'
+import { useHomeActions } from '@/hooks/use-home-actions'
 
 // ---------- App ----------
 // useSearchParams() must live inside a <Suspense> boundary (see the App wrapper
 // exported below) so the page can be statically prerendered without a
 // client-side-rendering bailout.
 function AppInner() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
   const { viewMode, isMobile } = useViewMode()
+
+  // Session + data reads, deep-link auth popup, landing→dashboard sweep, and the
+  // global teaser listener all live in useHome.
+  const {
+    router, returnTo,
+    user, setUser,
+    favoriteIds, setFavoriteIds,
+    authOpen, setAuthOpen,
+    authMode, setAuthMode,
+    teaserKey, setTeaserKey,
+  } = useHome()
+
+  // Pure view state — which screen is showing + dialog visibility.
   const [view, setView] = useState('landing')
   const [submitOpen, setSubmitOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
-  const [authOpen, setAuthOpen] = useState(false)
-  // Which tab the auth dialog opens on ('login' | 'signup'). Register buttons
-  // set 'signup'; plain Log In leaves it 'login'.
-  const [authMode, setAuthMode] = useState('login')
   const [profileOpen, setProfileOpen] = useState(false)
   const [communityOpen, setCommunityOpen] = useState(false)
   const [communityTab, setCommunityTab] = useState('community')
-  const [teaserKey, setTeaserKey] = useState(null)
   const [dashboardOpen, setDashboardOpen] = useState(false)
   const [pendingReport, setPendingReport] = useState(null)
   const [pendingJump, setPendingJump] = useState(null)
-  const [user, setUser] = useState(null)
-  const [favoriteIds, setFavoriteIds] = useState([])
   // Jobs module state
   const [jobsOpen, setJobsOpen] = useState(false)
   const [jobsInitialTab, setJobsInitialTab] = useState('feed')
   const [jobPostOpen, setJobPostOpen] = useState(false)
   const [pendingMapCenter, setPendingMapCenter] = useState(null)
 
-  // Where to send the user after a successful sign-in. Defaults to /dashboard
-  // so logged-in users never get bounced back to the marketing landing.
-  const returnTo = (searchParams?.get('returnTo') || '/dashboard')
-
-  // Auto-pop the auth dialog when the URL says ?login=1 (deep-linked from
-  // protected pages like /dashboard).
-  useEffect(() => {
-    if (searchParams?.get('login') === '1') {
-      setAuthMode(searchParams?.get('mode') === 'signup' ? 'signup' : 'login')
-      setAuthOpen(true)
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    // Auth now rides in an httpOnly cookie (attached automatically by the global
-    // fetch shim), so we can't gate on a JS-readable token — just ask the server.
-    // A 200 with a null user simply means "not logged in".
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.user) {
-          setUser(j.user)
-          fetch('/api/users/me/contributions')
-            .then((r) => r.json())
-            .then((c) => setFavoriteIds(c.favoriteIds || []))
-          // Logged-in users landing on "/" should be sent to their dashboard
-          // instead of the marketing landing. We use replace so the back
-          // button doesn't bounce them back to the brochure.
-          if (typeof window !== 'undefined' && window.location.pathname === '/') {
-            // Respect ?returnTo when present (e.g. came from a protected page).
-            const target = searchParams?.get('returnTo') || '/dashboard'
-            router.replace(target)
-          }
-        }
-      })
-  }, [router, searchParams])
-
-  const logout = async () => {
-    // Expire the httpOnly session cookie server-side (JS can't delete it),
-    // then clear any legacy localStorage token and local state.
-    try { await api.post('/api/auth/logout') } catch { /* best-effort */ }
-    clearAuthToken()
-    setUser(null)
-    setFavoriteIds([])
-    setProfileOpen(false)
-    toast.success('Logged out')
-  }
-
-  const toggleFavorite = async (facilityId) => {
-    if (!user) {
-      toast('Log in to save favorites')
-      setAuthOpen(true)
-      return
-    }
-    // Cookie + CSRF header are attached automatically by the global fetch shim.
-    const r = await fetch(`/api/favorites/${facilityId}`, { method: 'POST' })
-    const j = await r.json()
-    if (j.favorited) {
-      setFavoriteIds((arr) => [...arr, facilityId])
-      toast.success('Saved to favorites')
-    } else {
-      setFavoriteIds((arr) => arr.filter((x) => x !== facilityId))
-      toast('Removed from favorites')
-    }
-  }
+  const { logout, toggleFavorite } = useHomeActions({
+    user, setUser, setFavoriteIds, setAuthOpen, setProfileOpen,
+  })
 
   const userMenuProps = {
     user,
@@ -128,13 +68,6 @@ function AppInner() {
 
   const openCommunity = (tab = 'community') => { setTeaserKey('community_board') }
   const openTeaser = (key) => setTeaserKey(key)
-
-  // global teaser listener (for owner claim button etc.)
-  useEffect(() => {
-    const h = (e) => setTeaserKey(e.detail || 'community_board')
-    window.addEventListener('dm:teaser', h)
-    return () => window.removeEventListener('dm:teaser', h)
-  }, [])
 
   const dashboardJump = (facilityId) => {
     setDashboardOpen(false)

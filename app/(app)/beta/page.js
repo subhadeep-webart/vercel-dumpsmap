@@ -11,21 +11,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { CheckCircle2, ArrowRight, MapPin, CircleDollarSign, Users, Zap, Recycle, HeartHandshake } from 'lucide-react'
+import { CheckCircle2, ArrowRight, Users, HeartHandshake } from 'lucide-react'
+import { BETA_BENEFITS, BETA_ROLES, BETA_INTERESTS, EMPTY_BETA_FORM } from '@/constants/beta_constants'
+import { useBetaActions } from '@/hooks/use-beta-actions'
 
 export default function BetaPage() {
   const router = useRouter()
-  const [submitting, setSubmitting] = useState(false)
+  const { busy: submitting, join } = useBetaActions()
   const [success, setSuccess] = useState(false)
-  const [form, setForm] = useState({
-    email: '',
-    fullName: '',
-    role: '',
-    city: '',
-    state: '',
-    interests: [],
-    notes: '',
-  })
+  const [form, setForm] = useState(EMPTY_BETA_FORM)
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const toggleInterest = (v) => setForm((f) => ({
@@ -36,25 +30,8 @@ export default function BetaPage() {
   const submit = async (e) => {
     e.preventDefault()
     if (!form.email || !form.email.includes('@')) return toast.error('Please enter a valid email')
-    setSubmitting(true)
-    try {
-      const r = await fetch('/api/beta-signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const j = await r.json()
-      if (r.ok) {
-        setSuccess(true)
-        toast.success("You&apos;re on the list! We'll be in touch.")
-      } else {
-        toast.error(j.error || 'Something went wrong')
-      }
-    } catch {
-      toast.error('Network error. Please try again.')
-    } finally {
-      setSubmitting(false)
-    }
+    const ok = await join(form)
+    if (ok) setSuccess(true)
   }
 
   return (
@@ -75,12 +52,7 @@ export default function BetaPage() {
 
             {/* What you get */}
             <div className="mt-8 space-y-3">
-              {[
-                { icon: MapPin,         t: 'Priority access',   d: 'Get onboarded before general release.' },
-                { icon: Zap,            t: 'Live wait times',   d: 'See real-time facility conditions in your area.' },
-                { icon: CircleDollarSign,     t: 'Cashback rewards',  d: 'Earn cash back at participating buy-back centers.' },
-                { icon: HeartHandshake, t: 'Shape the platform', d: 'Direct line to our product team. Your feedback ships.' },
-              ].map((b) => {
+              {BETA_BENEFITS.map((b) => {
                 const Icon = b.icon
                 return (
                   <div key={b.t} className="flex items-start gap-3">
@@ -159,12 +131,9 @@ export default function BetaPage() {
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="resident">Resident / Homeowner</SelectItem>
-                        <SelectItem value="contractor">Contractor / Junk Hauler</SelectItem>
-                        <SelectItem value="facility_owner">Facility Owner / Operator</SelectItem>
-                        <SelectItem value="municipality">Municipality / City Staff</SelectItem>
-                        <SelectItem value="nonprofit">Nonprofit / Donation Org</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {BETA_ROLES.map((r) => (
+                          <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -193,10 +162,7 @@ export default function BetaPage() {
                   <div>
                     <Label className="text-[13px]">What are you most interested in?</Label>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {[
-                        'Recycling', 'Donations', 'Buy-back', 'Transfer stations',
-                        'Hazardous waste', 'E-waste', 'Cashback', 'Community',
-                      ].map((tag) => {
+                      {BETA_INTERESTS.map((tag) => {
                         const on = form.interests.includes(tag)
                         return (
                           <button

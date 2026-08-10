@@ -5,33 +5,28 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Star, ArrowLeft, BadgeCheck, MapPin, Search } from 'lucide-react'
+import { Star, BadgeCheck, MapPin, Search } from 'lucide-react'
 import PageShell from '@/components/PageShell'
+import { useContractorRecommendations } from '@/hooks/use-recommendations'
+import { deriveCities, isVerified } from '@/lib/recommendations-helpers'
+import { CARD_BADGE_LIMIT } from '@/constants/recommendations_constants'
 
 export default function ContractorsDirectoryPage() {
-  const [contractors, setContractors] = useState([])
   const [q, setQ] = useState('')
   const [city, setCity] = useState('')
-  const [loading, setLoading] = useState(true)
+  // Debounce the search/city filters (250ms) before they reach the API — mirrors
+  // the original page's setTimeout-guarded load so typing doesn't fire a request
+  // per keystroke.
+  const [debouncedQ, setDebouncedQ] = useState('')
+  const [debouncedCity, setDebouncedCity] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedQ(q); setDebouncedCity(city) }, 250)
+    return () => clearTimeout(t)
+  }, [q, city])
 
-  const load = async () => {
-    setLoading(true)
-    const params = new URLSearchParams()
-    if (q) params.set('q', q)
-    if (city) params.set('city', city)
-    const r = await fetch(`/api/recommendations/contractors?${params.toString()}`)
-    const j = await r.json()
-    setContractors(j.contractors || [])
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
-  useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t) /* eslint-disable-line */ }, [q, city])
+  const { contractors, loading } = useContractorRecommendations(debouncedQ, debouncedCity)
 
-  const cities = useMemo(() => {
-    const set = new Set()
-    contractors.forEach((c) => c.city && set.add(c.city))
-    return Array.from(set).slice(0, 12)
-  }, [contractors])
+  const cities = useMemo(() => deriveCities(contractors), [contractors])
 
   return (
     <PageShell active="feed" breadcrumbs={[{ label: 'Recommendations', href: '/recommendations' }, { label: 'Contractors' }]} maxWidth="max-w-4xl">
@@ -61,7 +56,7 @@ export default function ContractorsDirectoryPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1 text-sm font-bold">
                         <span className="truncate">{c.name}</span>
-                        {(c.verificationLevel === 'verified_contractor' || c.verificationLevel === 'verified_facility_owner') && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
+                        {isVerified(c.verificationLevel) && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-blue-600" />}
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-neutral-500">
                         <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
@@ -75,7 +70,7 @@ export default function ContractorsDirectoryPage() {
                   {c.bio && <p className="mt-1.5 line-clamp-2 text-[11px] text-neutral-600">{c.bio}</p>}
                   {Array.isArray(c.services) && c.services.length > 0 && (
                     <div className="mt-1.5 flex flex-wrap gap-1">
-                      {c.services.slice(0, 4).map((s, i) => <Badge key={i} variant="outline" className="text-[10px]">{s}</Badge>)}
+                      {c.services.slice(0, CARD_BADGE_LIMIT).map((s, i) => <Badge key={i} variant="outline" className="text-[10px]">{s}</Badge>)}
                     </div>
                   )}
                 </CardContent>
