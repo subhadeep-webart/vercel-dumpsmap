@@ -23,9 +23,14 @@ export default function PortalSidebar({ facility, activeSection, onNavigate, col
           expand button, both centered. */}
       {collapsed ? (
         <div className="mb-3 flex flex-col items-center gap-2">
-          <span className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg">
+          <Link
+            href="/activity-hub"
+            className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg transition-transform duration-200 hover:scale-105 active:scale-95"
+            aria-label="Go to Activity Hub"
+            title="Activity Hub"
+          >
             <Image src="/logo-64.png" alt="DumpMaps" width={24} height={24} className="h-6 w-6 object-contain" />
-          </span>
+          </Link>
           {onToggleCollapse && (
             <>
               <div className="my-1 h-px w-8 bg-neutral-200" />
@@ -43,8 +48,13 @@ export default function PortalSidebar({ facility, activeSection, onNavigate, col
         </div>
       ) : (
         <div className="mb-3 flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+          <Link
+            href="/activity-hub"
+            className="group/logo flex items-center gap-2 rounded-lg transition-opacity hover:opacity-90"
+            aria-label="Go to Activity Hub"
+            title="Activity Hub"
+          >
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg transition-transform duration-200 group-hover/logo:scale-105">
               <Image src="/logo-64.png" alt="DumpMaps" width={24} height={24} className="h-6 w-6 object-contain" />
             </span>
             <div className="leading-tight">
@@ -53,7 +63,7 @@ export default function PortalSidebar({ facility, activeSection, onNavigate, col
               </div>
               <div className="text-[10px] font-semibold uppercase tracking-wide text-neutral-400">Facility Portal</div>
             </div>
-          </div>
+          </Link>
           {onToggleCollapse && (
             <button
               type="button"
