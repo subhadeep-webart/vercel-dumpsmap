@@ -691,3 +691,101 @@ code {
   .pf-fade-up { opacity: 1; transform: none; }
   .pf-avatar-ring:hover { transform: none; }
 }
+/* ------------------------------------------------------------------
+   Scrollbars — Vercel/shadcn-style: thin, unobtrusive, rounded, with
+   a subtle emerald tint on hover to match the SaaS Portal theme.
+
+   • Global: a slim neutral scrollbar so every scroll surface looks
+     refined instead of the chunky OS default.
+   • .portal-scroll: the Portal's own surfaces (sidebar + main column)
+     get the emerald-tinted thumb that warms on hover.
+   Firefox uses scrollbar-width/scrollbar-color; WebKit/Chromium use the
+   ::-webkit-scrollbar pseudo-elements. Both are covered.
+   ------------------------------------------------------------------ */
+
+/* Global slim scrollbar (Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent; /* zinc-300 thumb, transparent track */
+}
+
+/* Global slim scrollbar (WebKit/Chromium) — thin, flat (no rounding), no arrows. */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216); /* zinc-300 */
+  border-radius: 0;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(161 161 170); /* zinc-400 */
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* Kill the up/down arrow buttons (the little tracker) in every state. */
+/* *::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button:start,
+*::-webkit-scrollbar-button:end,
+*::-webkit-scrollbar-button:vertical:start,
+*::-webkit-scrollbar-button:vertical:end,
+*::-webkit-scrollbar-button:horizontal:start,
+*::-webkit-scrollbar-button:horizontal:end {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+} */
+
+*::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button:single-button,
+*::-webkit-scrollbar-button:vertical:decrement,
+*::-webkit-scrollbar-button:vertical:increment,
+*::-webkit-scrollbar-button:horizontal:decrement,
+*::-webkit-scrollbar-button:horizontal:increment,
+*::-webkit-scrollbar-button:start,
+*::-webkit-scrollbar-button:end {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+}
+
+/* Portal surfaces — emerald-tinted thumb that warms on hover. */
+.portal-scroll {
+  scrollbar-color: rgb(167 243 208) transparent; /* emerald-200 thumb */
+}
+.portal-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(167 243 208); /* emerald-200 */
+  border-radius: 0;
+}
+.portal-scroll:hover::-webkit-scrollbar-thumb,
+.portal-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(52 211 153); /* emerald-400 */
+}
+
+/* Dark mode — dim the thumbs so they read on dark surfaces. */
+.dark * {
+  scrollbar-color: rgb(63 63 70) transparent; /* zinc-700 */
+}
+.dark *::-webkit-scrollbar-thumb {
+  background-color: rgb(63 63 70); /* zinc-700 */
+}
+.dark *::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(82 82 91); /* zinc-600 */
+}
+.dark .portal-scroll {
+  scrollbar-color: rgb(6 95 70) transparent; /* emerald-800 */
+}
+.dark .portal-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(6 95 70); /* emerald-800 */
+}
+.dark .portal-scroll:hover::-webkit-scrollbar-thumb,
+.dark .portal-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(5 150 105); /* emerald-600 */
+}

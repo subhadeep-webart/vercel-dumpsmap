@@ -9,11 +9,17 @@
 //   facilities, center, zoom, selectedId, onSelect, onToggleFavorite, onReport,
 //   favoriteIds, userLocation, loading, error, className, compact
 //
-// Waze-style condition coloring: each pin's BODY color reflects the facility's
+// Price pins: each pin is a rounded PRICE BUBBLE (Waze fuel-price style) that
+// shows the facility's dumping price — "$65", "$3.40", or "FREE" — resolved
+// from its pricing fields (see priceLabel below). Facilities with no posted
+// price show a muted "$?" bubble. This replaces the old facility-type emoji
+// glyph, per the client's Points-of-Interest price-map design.
+//
+// Waze-style condition coloring: each pin's BUBBLE color reflects the facility's
 // live condition — 🟢 free / 🟡 moderate / 🔴 busy — derived from `liveStatus`
 // (mirrored by the Activity Hub) or, as a fallback, `topAlertSeverity`. A pin
-// with no live signal keeps its facility-TYPE color. The type glyph always
-// shows inside the pin so you can still tell what kind of facility it is.
+// with no live signal keeps its facility-TYPE color; an unknown price is muted
+// grey regardless.
 //
 // Leaflet touches `window`, so leaflet itself is imported dynamically inside an
 // effect (never on the server). This component is 'use client' and its single
@@ -33,20 +39,6 @@ const TYPE_COLORS = {
   'E-Waste Center': { bg: '#a855f7', ring: '#7e22ce' },
   'Reuse Center': { bg: '#22c55e', ring: '#15803d' },
   'Construction Debris Facility': { bg: '#ea580c', ring: '#9a3412' },
-}
-
-// Emoji glyph per facility type (rendered inside the divIcon — no icon font
-// needed, keeps the pin self-contained HTML).
-const TYPE_GLYPH = {
-  Landfill: '🗑️',
-  'Transfer Station': '🚚',
-  'Recycling Center': '♻️',
-  'Donation Center': '❤️',
-  'Scrap Yard': '🔧',
-  'CRV Center': '♻️',
-  'E-Waste Center': '💻',
-  'Reuse Center': '🛋️',
-  'Construction Debris Facility': '🔨',
 }
 
 // ---- Waze-style live-condition colors for the pin BODY ----------------------
@@ -87,34 +79,66 @@ function escapeHtml(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-// Build the HTML for a facility divIcon: colored teardrop + glyph + optional
-// verified check, favorite heart, alert-count badge, and a condition/alert chip.
+// ---- Price label for the pin -------------------------------------------------
+// The client wants each map pin to READ AS A PRICE (like Waze fuel prices),
+// instead of the old facility-type glyph. We resolve a short, dollar-formatted
+// label from whatever pricing shape a facility carries:
+//   • pricingFields.pricePerTon / pricePerPound / pricePerItem  (owner-entered)
+//   • pricing.pricePerTon  (nested pricing object)
+//   • pricingType 'free' / 'donation_only'  → "FREE"
+//   • pricingUnknown (or nothing usable)     → "$?"  (call to confirm)
+// Returns { text, isFree, isUnknown }. `text` is what shows inside the bubble.
+function priceLabel(f) {
+  const fields = f?.pricingFields || {}
+  const pricing = f?.pricing && typeof f.pricing === 'object' ? f.pricing : null
+  const type = fields.pricingType || pricing?.pricingType
+
+  // Numeric per-ton/pound/item price → "$NN" (drop cents when whole).
+  const num =
+    fields.pricePerTon ?? fields.pricePerPound ?? fields.pricePerItem ??
+    pricing?.pricePerTon ?? null
+  const n = num == null ? null : Number(num)
+
+  if (type === 'free' || type === 'donation_only' || n === 0) {
+    return { text: 'FREE', isFree: true, isUnknown: false }
+  }
+  if (n != null && !Number.isNaN(n) && n > 0) {
+    const rounded = Number.isInteger(n) ? String(n) : n.toFixed(2)
+    return { text: `$${rounded}`, isFree: false, isUnknown: false }
+  }
+  return { text: '$?', isFree: false, isUnknown: true }
+}
+
+// Build the HTML for a facility divIcon: a Waze-style PRICE BUBBLE (condition-
+// colored) with a downward pointer tail, plus optional verified check, favorite
+// heart, and alert-count badge. The bubble text is the facility's price.
 function markerHtml(f, { isFavorite, isSelected }) {
   const condition = facilityCondition(f)
   const c = condition ? CONDITION_COLORS[condition] : (TYPE_COLORS[f.type] || TYPE_COLORS['Recycling Center'])
-  const glyph = TYPE_GLYPH[f.type] || '♻️'
-  const size = isSelected ? 40 : 32
-  const chipLabel = condition ? CONDITION_COLORS[condition].label : ''
-  const chip = chipLabel
-    ? `<div style="margin-top:2px;white-space:nowrap;border-radius:9999px;padding:1px 6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:${c.bg};box-shadow:0 1px 3px rgba(0,0,0,.3)">${escapeHtml(chipLabel)}</div>`
-    : ''
+  const { text, isFree, isUnknown } = priceLabel(f)
+  // Unknown prices are muted so real prices stand out; FREE/priced use the
+  // live-condition (or type) color as the bubble fill.
+  const bg = isUnknown ? '#94a3b8' : c.bg
+  const ring = isUnknown ? '#475569' : c.ring
+  const padY = isSelected ? 5 : 4
+  const padX = isSelected ? 10 : 8
+  const fontSize = isSelected ? 14 : 12
   const verified = f.verified
-    ? `<span style="position:absolute;right:-4px;top:-4px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#0B4DBA;color:#fff;font-size:10px;font-weight:900">✓</span>`
+    ? `<span style="position:absolute;right:-5px;top:-5px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#0B4DBA;color:#fff;font-size:10px;font-weight:900">✓</span>`
     : ''
   const fav = isFavorite
-    ? `<span style="position:absolute;left:-6px;bottom:-2px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#f43f5e;color:#fff;font-size:9px">♥</span>`
+    ? `<span style="position:absolute;left:-6px;bottom:-6px;display:flex;height:16px;width:16px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;background:#f43f5e;color:#fff;font-size:9px">♥</span>`
     : ''
   const alertBadge = f.activeAlertCount > 0
-    ? `<span style="position:absolute;left:-8px;top:-8px;display:flex;height:18px;min-width:18px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;padding:0 4px;font-size:10px;font-weight:800;color:#fff;background:${c.bg};box-shadow:0 1px 3px rgba(0,0,0,.3)">${f.activeAlertCount}</span>`
+    ? `<span style="position:absolute;left:-8px;top:-8px;display:flex;height:18px;min-width:18px;align-items:center;justify-content:center;border-radius:9999px;border:2px solid #fff;padding:0 4px;font-size:10px;font-weight:800;color:#fff;background:#dc2626;box-shadow:0 1px 3px rgba(0,0,0,.3)">${f.activeAlertCount}</span>`
     : ''
   return `
     <div style="display:flex;flex-direction:column;align-items:center;transform:translateY(-100%)">
-      <div style="position:relative;display:flex;align-items:center;justify-content:center;height:${size}px;width:${size}px;border-radius:9999px;background:${c.bg};color:#fff;font-size:${isSelected ? 18 : 15}px;box-shadow:0 4px 12px ${c.ring}88;border:2px solid #fff">
-        <span>${glyph}</span>
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;white-space:nowrap;border-radius:8px;padding:${padY}px ${padX}px;background:${bg};color:#fff;font-size:${fontSize}px;font-weight:800;line-height:1;letter-spacing:.01em;box-shadow:0 4px 12px ${ring}88;border:2px solid #fff${isSelected ? ';outline:2px solid ' + bg + ';outline-offset:1px' : ''}">
+        <span>${escapeHtml(text)}</span>
         ${verified}${fav}${alertBadge}
       </div>
-      <div style="height:8px;width:3px;margin-top:-1px;background:linear-gradient(to bottom, ${c.bg}, transparent)"></div>
-      ${chip}
+      <div style="width:0;height:0;margin-top:-1px;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${bg};filter:drop-shadow(0 2px 1px ${ring}66)"></div>
     </div>`
 }
 
@@ -143,10 +167,18 @@ function popupHtml(f, { isFavorite }) {
         .join('')}</div>`
     : ''
   const dir = `https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lng}`
+  const { text: price, isFree, isUnknown } = priceLabel(f)
+  const priceUnit = (f?.pricingFields?.pricePerPound != null) ? '/lb'
+    : (f?.pricingFields?.pricePerItem != null) ? '/item'
+    : (!isFree && !isUnknown) ? '/ton' : ''
+  const priceBadge = `<span style="display:inline-flex;align-items:baseline;gap:2px;border-radius:6px;padding:2px 7px;font-size:12px;font-weight:800;color:#fff;background:${isUnknown ? '#94a3b8' : isFree ? '#16a34a' : '#0B4DBA'}">${escapeHtml(price)}${priceUnit ? `<span style="font-size:9px;font-weight:700;opacity:.85">${priceUnit}</span>` : ''}</span>`
   return `
     <div style="width:248px;font-family:inherit">
-      <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#171717">
-        <span>${escapeHtml(f.name || 'Facility')}</span>${f.verified ? '<span style="color:#0B4DBA">✓</span>' : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:800;color:#171717;min-width:0">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(f.name || 'Facility')}</span>${f.verified ? '<span style="color:#0B4DBA">✓</span>' : ''}
+        </div>
+        ${priceBadge}
       </div>
       <div style="font-size:11px;color:#737373">${escapeHtml(f.type || '')}</div>
       ${statusPanel}

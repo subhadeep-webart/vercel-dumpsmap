@@ -13,6 +13,10 @@ import { usePathname } from 'next/navigation'
 import LayoutModeToggle from '@/components/LayoutModeToggle'
 import { useViewMode } from '@/lib/view-mode'
 
+// The unified Portal renders at these routes (dashboard + profile merged); the
+// footer is suppressed on all of them.
+const PORTAL_ROUTES = ['/profile', '/dashboard', '/facility-owner/portal', '/facility-owner/dashboard']
+
 export default function AppFooter() {
   const { viewMode, isMobile } = useViewMode()
   const pathname = usePathname() || ''
@@ -21,6 +25,9 @@ export default function AppFooter() {
   if (viewMode === 'field' && isMobile) return null
   // Hide on admin freeze-pane pages (they use a full-height shell)
   if (pathname.startsWith('/admin')) return null
+  // Hide on the unified Portal (dashboard + profile) — it's a full-height SaaS
+  // shell with its own sidebar; a marketing footer doesn't belong there.
+  if (PORTAL_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return null
 
   const year = new Date().getFullYear()
   return (
