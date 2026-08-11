@@ -31,7 +31,7 @@ import {
 
 export default function FacilityPortal() {
   const {
-    status, user, facilities, facility, selectFacility,
+    status, user, facility,
     savingKey, saveOwnerUpdate, savePricing, postAnnouncement, retry,
   } = useFacilityPortal()
 
@@ -97,8 +97,6 @@ export default function FacilityPortal() {
   return (
     <PortalShell
       facility={facility}
-      facilities={facilities}
-      onSelect={selectFacility}
       header={header}
       renderPanel={renderPanel}
     />

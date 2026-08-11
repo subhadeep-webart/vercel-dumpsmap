@@ -789,3 +789,16 @@ code {
 .dark .portal-scroll::-webkit-scrollbar-thumb:hover {
   background-color: rgb(5 150 105); /* emerald-600 */
 }
+
+/* .no-scrollbar — fully hides the scrollbar while keeping scroll functionality.
+   Used by the Portal sidebar, which scrolls via up/down chevron buttons instead
+   of a visible bar (a premium SaaS-console touch). */
+.no-scrollbar {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* legacy Edge/IE */
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none;                  /* WebKit/Chromium */
+}

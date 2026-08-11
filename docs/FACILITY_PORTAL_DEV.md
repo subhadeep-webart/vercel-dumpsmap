@@ -145,3 +145,50 @@ Per the project's codebase-cleanup rules:
 - Cashback Offers editor (stub / "coming soon").
 - New reporting backend (surface existing reports read-only if no write API).
 - Section sub-routes (single-page anchors first; split later if needed).
+
+---
+
+## 6. Open questions — pending client clarification
+
+> Sent to the client on 2026-08-11. **Paste answers inline under each question as
+> they come back**, then update the affected code/section above. Current build
+> assumes: portal shows for every user; all menu items visible to everyone;
+> non-owners get a placeholder facility + empty states; Cashback & Analytics are
+> stubs; edit actions are shown for everyone (backend still gates writes).
+
+1. **Availability** — Is this dashboard available for *all users*, or only certain
+   user types (e.g. facility owners)?
+   - **Answer:** _(pending)_
+
+2. **Menu access** — Are *all menu items* accessible by every user, or do they
+   vary by role?
+   - **Answer:** _(pending)_
+
+3. **Role-based menus** — If menus vary by role, which menus should each user type
+   see? (e.g. resident vs. facility owner — and what does a resident's version of
+   this page show instead of Pricing/Wait Time/Hours?)
+   - **Answer:** _(pending)_
+
+4. **Non-facility / empty state** — For a user who doesn't manage a facility, what
+   should the facility sections (Pricing, Wait Time, Materials, Hours) show —
+   hidden, disabled, or a "claim your facility" prompt?
+   - **Answer:** _(pending)_
+
+5. **Cashback & Analytics** — Both are currently placeholders. Are they in scope
+   now, and what should Analytics display / link to?
+   - **Answer:** _(pending)_
+
+6. **Edit permissions** — Who can edit the operational data (pricing, hours,
+   status) — every user, or only the verified facility owner? (Determines whether
+   Edit buttons render.)
+   - **Answer:** _(pending)_
+
+### Implications once answered
+- **Q1/Q2/Q3 → routing + menu gating.** If access varies by role, add a
+  role-aware menu filter (reuse `lib/dashboard-routing.js` `isFacilityOwner` or a
+  new predicate) in `constants/facility_portal_constants.js` / `PortalSidebar`.
+- **Q4 → `useFacilityPortal` empty state.** Currently synthesizes a placeholder
+  facility (no "claim" gate). Switch to hidden/disabled/prompt per the answer.
+- **Q5 → panels.jsx.** Flesh out `CashbackPanel` / wire Analytics, or keep stubbed.
+- **Q6 → card actions.** Gate the Edit / Update / Add buttons in the cards on an
+  `isOwner` (or role) flag instead of always showing them.

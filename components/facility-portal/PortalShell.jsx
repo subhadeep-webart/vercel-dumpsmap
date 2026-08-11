@@ -11,14 +11,15 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Menu } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import PortalTopbar from './PortalTopbar'
+import AppHeader from '@/components/AppHeader'
 import PortalSidebar from './PortalSidebar'
 import { PORTAL_MENU, DEFAULT_SECTION } from '@/constants/facility_portal_constants'
 
 const VALID_SECTIONS = new Set(PORTAL_MENU.filter((m) => m.section).map((m) => m.section))
 
-export default function PortalShell({ facility, facilities, onSelect, unread, header, renderPanel }) {
+export default function PortalShell({ facility, header, renderPanel }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -59,20 +60,28 @@ export default function PortalShell({ facility, facilities, onSelect, unread, he
 
   return (
     <div className="portal-scroll min-h-[100dvh] bg-brand-surface">
-      <PortalTopbar
-        facility={facility}
-        facilities={facilities}
-        onSelect={onSelect}
-        onOpenMenu={() => setDrawerOpen(true)}
-        unread={unread}
-      />
+      {/* Shared global header — gives the portal the same cross-page navigation
+          (Facilities · Activity Hub · Community · …), the DumpMaps logo, support
+          CTA, notifications, and account menu that every other page has. */}
+      <AppHeader active="dashboard" />
+
+      {/* Mobile-only sub-bar: opens the portal's section menu (the sidebar lives
+          in a drawer on mobile). Desktop shows the fixed rail instead. */}
+      <div className="sticky top-14 z-20 flex items-center gap-2 border-b border-neutral-200 bg-white/90 px-4 py-2 backdrop-blur lg:hidden">
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-1.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
+        >
+          <Menu className="h-4 w-4" /> {active.label}
+        </button>
+      </div>
 
       {/* Desktop sidebar — FIXED full-height rail below the 56px top bar. It's
           taken out of the scroll flow (position:fixed), so ONLY the main content
-          scrolls and the sidebar never moves or jerks. If the menu ever exceeds
-          the viewport it scrolls internally. Collapses to an icon rail. */}
+          scrolls and the sidebar never moves or jerks. Collapses to an icon rail. */}
       <aside
-        className={`portal-scroll fixed left-0 top-14 bottom-0 z-20 hidden overflow-y-auto border-r border-neutral-200 bg-white p-3 transition-[width] duration-200 lg:block ${
+        className={`fixed left-0 top-14 bottom-0 z-20 hidden flex-col border-r border-neutral-200 bg-white p-3 transition-[width] duration-200 lg:flex ${
           collapsed ? 'w-16' : 'w-60'
         }`}
       >
@@ -106,7 +115,7 @@ export default function PortalShell({ facility, facilities, onSelect, unread, he
 
       {/* Mobile drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="left" className="w-72 p-4">
+        <SheetContent side="left" className="flex w-72 flex-col p-4">
           <SheetTitle className="sr-only">Portal menu</SheetTitle>
           <PortalSidebar facility={facility} activeSection={activeSection} onNavigate={selectSection} />
         </SheetContent>
