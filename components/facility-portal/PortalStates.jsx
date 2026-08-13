@@ -50,8 +50,10 @@ export function PortalError({ onRetry }) {
   )
 }
 
+// Shown to an OWNER whose facility record couldn't be loaded. Residents don't see
+// this — they get the Claim Your Facility panel instead.
 export function PortalNoFacility() {
-  const { icon: Icon, title, body, cta, href } = PORTAL_COPY.noFacility
+  const { icon: Icon, title, body, cta, href } = PORTAL_COPY.ownerNoFacility
   return (
     <div className="flex min-h-[70dvh] items-center justify-center bg-brand-surface px-4">
       <Card className="max-w-lg border-amber-200 bg-amber-50/40">

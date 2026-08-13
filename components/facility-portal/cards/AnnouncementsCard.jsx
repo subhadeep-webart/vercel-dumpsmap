@@ -19,7 +19,9 @@ import { timeAgo } from '../portal-helpers'
 
 const NEW_WINDOW_MS = 48 * 3600 * 1000
 
-export default function AnnouncementsCard({ facility, saving, onPost, index = 0 }) {
+// `canEdit` mirrors the server's check on POST /facilities/:id/owner-updates —
+// only the verified owner or staff may post official announcements.
+export default function AnnouncementsCard({ facility, saving, onPost, index = 0, canEdit = true }) {
   const notices = (facility?.activeAlerts || []).filter((a) => a.official || a.type === 'OWNER_UPDATE')
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
@@ -40,9 +42,11 @@ export default function AnnouncementsCard({ facility, saving, onPost, index = 0 
       title="Announcements"
       index={index}
       action={
-        <Link href={`/facilities/${facility?.id}`}>
-          <Button variant="outline" size="sm">Manage</Button>
-        </Link>
+        canEdit ? (
+          <Link href={`/facilities/${facility?.id}`}>
+            <Button variant="outline" size="sm">Manage</Button>
+          </Link>
+        ) : null
       }
     >
       {notices.length ? (
@@ -70,6 +74,7 @@ export default function AnnouncementsCard({ facility, saving, onPost, index = 0 
         </div>
       )}
 
+      {canEdit && (
       <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setText('') }}>
         <DialogTrigger asChild>
           <button type="button" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
@@ -91,6 +96,7 @@ export default function AnnouncementsCard({ facility, saving, onPost, index = 0 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
     </PortalCard>
   )
 }

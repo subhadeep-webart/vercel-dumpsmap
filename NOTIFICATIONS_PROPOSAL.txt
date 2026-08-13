@@ -1,0 +1,261 @@
+================================================================================
+DUMPSMAP - NOTIFICATIONS FEATURE PROPOSAL
+================================================================================
+
+Prepared for : Client review
+Date         : 13 August 2026
+Status       : Awaiting scope decision
+Validity     : Estimates valid for 30 days
+
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+
+Today DumpsMap can only reach a user who already has the site open in their
+browser. If they close the tab, they receive nothing at all.
+
+This document sets out three options for changing that - what each one reaches,
+what each one costs, and which one we recommend starting with.
+
+Quick view:
+
+  OPTION 1  In-app notifications      $850     2-3 days    $0/month
+  OPTION 2  + Email delivery          $1,450   4-5 days    ~$20/month
+  OPTION 3  + Phone push              $2,600   8-10 days   ~$20/month
+
+Our recommendation is OPTION 1. Reasoning is at the end of this document.
+
+
+--------------------------------------------------------------------------------
+1. WHERE THE APP STANDS TODAY
+--------------------------------------------------------------------------------
+
+Some groundwork is already in place, which lowers the cost of everything below.
+But the honest summary is that a user who closes the tab currently receives
+nothing.
+
+  WORKING - Live message alerts
+      The app checks for new messages every 5 seconds and raises an on-screen
+      toast, a browser alert and an optional sound. Works only while the tab
+      is open.
+
+  WORKING - Unread counts
+      A single endpoint totals unread DMs, marketplace, jobs and group
+      messages. This drives the badges in the inbox.
+
+  PLACEHOLDER - Notification bell
+      The bell renders in the header, but its dropdown is a fixed line of
+      text: "You're all caught up." The number shown on it is the message
+      count, not a notification count.
+
+  BROKEN - Notifications page
+      The /notifications page redirects to an inbox tab that was never built,
+      so it silently lands the user on Messages instead.
+
+  WRITE-ONLY - Notification records
+      The database stores one type of notification (a marketplace listing
+      auto-promotion), but nothing ever reads it back. The data is written
+      and never seen by anyone.
+
+  INERT - Email & SMS preferences
+      Users can toggle Email, SMS and Push in their settings. The choices
+      save correctly, but no part of the system reads them. Switching them
+      has no effect.
+
+  NOT BUILT - Push to a closed tab
+      None of the required infrastructure exists.
+
+  ONE TECHNICAL NOTE WORTH FLAGGING EARLY
+  The app currently clears out background workers on every load, to keep users
+  on the latest version. That same mechanism is what real push notifications
+  depend on, so Option 3 includes the work to make the two coexist. This is not
+  a blocker - it is simply why Option 3 costs more than the feature alone would
+  suggest.
+
+
+--------------------------------------------------------------------------------
+2. WHAT WE WOULD NOTIFY PEOPLE ABOUT
+--------------------------------------------------------------------------------
+
+  facility.wait_spike        A followed facility's wait time crosses a threshold
+  facility.closure           A facility posts a closure or hours change
+  marketplace.offer          Someone makes an offer on your listing
+  marketplace.last_chance    Your listing is auto-promoted (already written)
+  job.application            A contractor applies to your posted job
+  community.reply            Someone replies to your post or comment
+  rewards.earned             Points credited from a verified receipt
+
+Each type is a switch. Users choose which ones reach them and by which channel,
+using the preference screen that already exists in the app.
+
+What the user would see: the bell stays exactly where it is today. The
+difference is that it would carry real records, a true unread count, a read
+state that persists between visits, and links that take you straight to the
+item in question.
+
+
+--------------------------------------------------------------------------------
+3. THE THREE OPTIONS
+--------------------------------------------------------------------------------
+
+These are cumulative, not alternatives. Option 2 includes Option 1, and
+Option 3 includes both. You can also start at Option 1 and add the others later
+without rework, because each builds on the same underlying records.
+
+
+................................................................................
+OPTION 1 - IN-APP NOTIFICATIONS                    [RECOMMENDED STARTING POINT]
+................................................................................
+
+  Price          : $850 one-time
+  Timeline       : 2-3 working days
+  Ongoing cost   : $0 per month
+  Reaches users  : When they next return to the app
+
+  A working bell, a real notifications page, and a read state that persists.
+  Users see what they missed when they next open the app.
+
+  INCLUDED:
+    - Bell dropdown with live unread count
+    - Full notifications page with history
+    - Mark one as read / mark all as read
+    - Deep links that jump straight to the relevant item
+    - All seven notification types wired up
+    - Fixes the currently broken /notifications page
+
+  NOT INCLUDED:
+    - Does not reach users while they are away from the app
+
+
+................................................................................
+OPTION 2 - ADDS EMAIL
+................................................................................
+
+  Price          : $1,450 one-time
+  Timeline       : 4-5 working days
+  Ongoing cost   : approx. $20 per month
+  Reaches users  : Anywhere, within minutes
+
+  Everything in Option 1, plus email delivery for the notifications a user
+  chooses to receive that way - so they hear from us with the app closed.
+
+  INCLUDED:
+    - Everything in Option 1
+    - Branded HTML email templates
+    - Per-type email preferences made live (the toggles start working)
+    - Daily digest option, to limit volume
+    - One-click unsubscribe (legally required)
+    - Proper delivery service, so mail lands in inboxes rather than spam
+
+  NOT INCLUDED:
+    - Not instant. Email is checked on the user's schedule, not pushed.
+
+
+................................................................................
+OPTION 3 - ADDS PHONE PUSH
+................................................................................
+
+  Price          : $2,600 one-time
+  Timeline       : 8-10 working days
+  Ongoing cost   : approx. $20 per month
+  Reaches users  : Immediately, wherever they are
+
+  Everything above, plus true push notifications that appear on a user's phone
+  or desktop even when DumpsMap is completely closed.
+
+  INCLUDED:
+    - Everything in Options 1 and 2
+    - Push notifications to phone with the app fully closed
+    - Tap the alert, land on the right screen
+    - Installable app icon on the home screen
+    - Quiet hours, so alerts respect the clock
+    - Resolves the background-worker conflict described above
+    - Works on Android, desktop, and iOS 16.4 and later
+
+
+  NOTE ON PRICING
+  Prices are fixed-fee for the scope described, and assume the work runs
+  against the current codebase without competing priorities. The ongoing cost
+  covers third-party email delivery at current volumes. Phone push itself
+  carries no per-message fee.
+
+
+--------------------------------------------------------------------------------
+4. WHAT EACH OPTION ACTUALLY REACHES
+--------------------------------------------------------------------------------
+
+This is the heart of the decision. The figures below are the share of
+notifications that reach a user in a way they can act on. The rest go unseen,
+or arrive too late to matter.
+
+                            OPTION 1      OPTION 2      OPTION 3
+                            In-app        + Email       + Push
+  ----------------------------------------------------------------
+  Sees it same day            ~35%          ~75%          ~90%
+  Sees it eventually          ~70%          ~90%          ~95%
+  Acts within the hour        ~10%          ~30%          ~65%
+
+  OPTION 1 depends entirely on the user choosing to come back. Fine for
+  anything that is not time-sensitive.
+
+  OPTION 2 gives good coverage, but email is read on the user's schedule.
+  A wait-time spike is stale by the time it is opened.
+
+  OPTION 3 is the only option that works for time-critical alerts - a wait
+  spike or a closure that a driver needs before they set off.
+
+  These percentages are planning estimates based on typical engagement patterns
+  for apps of this kind. They are not measured DumpsMap data. They are here to
+  show the relative gap between the options, and should be re-measured once
+  Option 1 is live.
+
+
+--------------------------------------------------------------------------------
+5. WHAT IS GENUINELY REQUIRED, AND WHAT IS A WANT
+--------------------------------------------------------------------------------
+
+  MUST - Fix the broken pieces
+      The /notifications page currently sends users to the wrong screen, the
+      bell promises alerts it never shows, and the settings toggles do nothing
+      when switched. Each of these is visible to users today and reads as a
+      defect. This work sits inside Option 1.
+
+  MUST - Store notifications properly
+      Everything else depends on this. Without stored records there is no
+      history, no read state, and nothing for email or push to send. It is the
+      foundation, and it is the reason Options 2 and 3 stay affordable if
+      built later.
+
+  SHOULD - Email, once there is a reason to leave the app
+      Worth adding when marketplace offers or job applications start arriving.
+      Those are moments where a seller losing a deal to a slow reply is a real
+      cost. Less urgent while volume is low.
+
+  LATER - Phone push, when timing starts to matter
+      The strongest case is wait-time spikes and closures - information a
+      driver needs before they set off, not after. Genuinely valuable, and the
+      most expensive item here. We would rather prove which notification types
+      earn attention first, then push the ones that do.
+
+
+--------------------------------------------------------------------------------
+6. RECOMMENDATION
+--------------------------------------------------------------------------------
+
+Start with OPTION 1 - In-app notifications, $850, 2-3 working days.
+
+It repairs what is visibly broken, puts the foundation in place, and costs the
+least. Because Options 2 and 3 build on the same records, nothing is wasted if
+you decide to add them in three months.
+
+Committing to phone push now means paying for reach before we know which
+notifications people actually want.
+
+We suggest revisiting email once marketplace and job volume picks up.
+
+
+================================================================================
+Happy to walk through any option in more detail, or to re-scope if a different
+combination suits the budget better.
+================================================================================

@@ -24,11 +24,11 @@ import SignOutButton from '@/components/settings/SignOutButton'
 // ── Dashboard (overview) ──────────────────────────────────────────────────────
 // A broad-view landing panel so the user sees the whole picture at a glance, then
 // drills into a specific section via the sidebar.
-export function DashboardPanel({ facility, saving, onSavePricing, onSaveOwner }) {
+export function DashboardPanel({ facility, saving, onSavePricing, onSaveOwner, canEdit = true }) {
   return (
     <>
-      <PricingCard facility={facility} saving={saving === 'pricing'} onSave={(p) => onSavePricing(p)} />
-      <WaitCapacityCard facility={facility} saving={saving === 'wait'} onSave={(p) => onSaveOwner(p, { label: 'Wait time', key: 'wait' })} />
+      <PricingCard facility={facility} saving={saving === 'pricing'} onSave={(p) => onSavePricing(p)} canEdit={canEdit} />
+      <WaitCapacityCard facility={facility} saving={saving === 'wait'} onSave={(p) => onSaveOwner(p, { label: 'Wait time', key: 'wait' })} canEdit={canEdit} />
       <ActivityCard facility={facility} />
     </>
   )

@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { Suspense, useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, MessageCircle, ShoppingBag, Briefcase, Users, Mail } from 'lucide-react'
@@ -38,6 +39,18 @@ function SoundToggle() {
 const POLL_MS = 5000
 
 export default function InboxPage() {
+  // Suspense boundary required by Next 15 for the useSearchParams() inside
+  // InboxInner (reads the ?dm=<userId> deep link).
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-50" />}>
+      <InboxInner />
+    </Suspense>
+  )
+}
+
+function InboxInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [token, setToken] = useState(null)
   const [user, setUser] = useState(null)
@@ -84,6 +97,40 @@ export default function InboxPage() {
     const t = setInterval(load, POLL_MS)
     return () => clearInterval(t)
   }, [load])
+
+  // Deep link: /inbox?dm=<userId> opens that conversation directly. Used by the
+  // Activity Hub card message button (mobile), job + marketplace detail pages,
+  // and FieldShell — all of which previously landed here with nothing selected
+  // because the param was never read.
+  //
+  // POST /dm/threads resolves the deterministic thread id (it writes nothing),
+  // then we select it and strip the param so a refresh or back-nav doesn't
+  // re-trigger this.
+  useEffect(() => {
+    const dmUserId = searchParams.get('dm')
+    if (!dmUserId || !token) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const j = await api.post('/api/dm/threads', { userId: dmUserId })
+        if (!cancelled && j?.thread) {
+          setTab('dm')
+          setSelected(j.thread)
+        }
+      } catch {
+        // Unknown user / self-DM — fall through to the normal inbox.
+      } finally {
+        if (!cancelled) {
+          const sp = new URLSearchParams(searchParams.toString())
+          sp.delete('dm')
+          const qs = sp.toString()
+          router.replace(qs ? `/inbox?${qs}` : '/inbox', { scroll: false })
+        }
+      }
+    })()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, token])
 
   if (!mounted) return <div className="min-h-screen bg-neutral-50" />
   if (!token) {

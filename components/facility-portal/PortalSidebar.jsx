@@ -1,10 +1,10 @@
 'use client'
 
-// Left menu for the unified Portal. Renders PORTAL_MENU — section items swap the
-// main panel (active item highlighted emerald), href items navigate. A collapse
-// toggle shrinks the rail to icons only. The logo now lives in the shared global
-// header (AppHeader), so the sidebar starts with a compact "Portal" label + the
-// collapse toggle.
+// Left menu for the Portal. Renders the role-scoped `menu` passed by PortalShell
+// (owner vs. resident — see menuForRole) — section items swap the main panel
+// (active item highlighted emerald), href items navigate. A collapse toggle
+// shrinks the rail to icons only. The logo lives in the shared global header
+// (AppHeader), so the sidebar starts with a compact label + the collapse toggle.
 //
 // PREMIUM SCROLL: the menu has NO visible scrollbar. Instead, when it overflows,
 // up/down chevron buttons appear at the top/bottom of the menu and scroll it —
@@ -15,11 +15,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ShieldCheck, LogOut, ChevronsLeft, ChevronsRight, LifeBuoy, ArrowUpRight, ChevronUp, ChevronDown } from 'lucide-react'
 import { useLogout } from '@/hooks/use-logout'
-import { PORTAL_MENU } from '@/constants/facility_portal_constants'
+import { OWNER_MENU } from '@/constants/facility_portal_constants'
 import { SUPPORT_EMAIL } from '@/constants/app_constants'
 import { deriveInitials } from '@/components/profile/primitives'
 
-export default function PortalSidebar({ facility, activeSection, onNavigate, collapsed = false, onToggleCollapse }) {
+export default function PortalSidebar({
+  facility, menu = OWNER_MENU, isOwner = false,
+  activeSection, onNavigate, collapsed = false, onToggleCollapse,
+}) {
   const logout = useLogout()
 
   // Scroll-button state for the menu region.
@@ -72,7 +75,9 @@ export default function PortalSidebar({ facility, activeSection, onNavigate, col
         </div>
       ) : (
         <div className="mb-2 flex items-center justify-between px-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Facility Portal</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            {isOwner ? 'Facility Portal' : 'My Portal'}
+          </span>
           {onToggleCollapse && (
             <button
               type="button"
@@ -101,7 +106,7 @@ export default function PortalSidebar({ facility, activeSection, onNavigate, col
 
       {/* Menu — scrolls with NO visible scrollbar (hidden via .no-scrollbar). */}
       <nav ref={scrollRef} className="no-scrollbar flex-1 space-y-1.5 overflow-y-auto">
-        {PORTAL_MENU.map((item) => {
+        {menu.map((item) => {
           const Icon = item.icon
           const active = item.section && item.section === activeSection
           const base = collapsed

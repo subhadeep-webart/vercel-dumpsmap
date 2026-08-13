@@ -29,7 +29,8 @@ function StatTile({ icon: Icon, label, value, valueClass = 'text-neutral-900', s
   )
 }
 
-export default function WaitCapacityCard({ facility, saving, onSave, index = 0 }) {
+// `canEdit` mirrors the server's owner-only check on the owner-update PATCH.
+export default function WaitCapacityCard({ facility, saving, onSave, index = 0, canEdit = true }) {
   const wait = facility?.waitMinutes
   const trucks = facility?.trucksInLine
   const scale = facility?.scaleStatus || 'open'
@@ -56,6 +57,7 @@ export default function WaitCapacityCard({ facility, saving, onSave, index = 0 }
       info="Help drivers plan their trip with real-time updates."
       index={index}
       action={
+        !canEdit ? null : (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setForm({ waitMinutes: wait ?? '', trucksInLine: trucks ?? '', capacityPct: capacity ?? '' }) }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5"><RefreshCw className="h-3.5 w-3.5" /> Update Now</Button>
@@ -83,9 +85,10 @@ export default function WaitCapacityCard({ facility, saving, onSave, index = 0 }
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )
       }
     >
-      <p className="mb-4 text-sm text-neutral-500">Help drivers plan their trip with real-time updates.</p>
+      {canEdit && <p className="mb-4 text-sm text-neutral-500">Help drivers plan their trip with real-time updates.</p>}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           icon={Clock}

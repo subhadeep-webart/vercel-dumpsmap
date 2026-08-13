@@ -17,6 +17,7 @@ doubt, the source is the source of truth.
 | [API.md](./API.md) | The endpoint map — how routing works, and a grouped reference of the routes exposed by `route.js` and the extracted handlers. |
 | [FRONTEND.md](./FRONTEND.md) | The App Router page tree, role-based dashboards, the shared component library, and the `lib/` gating/business-logic helpers. |
 | [SETUP.md](./SETUP.md) | Environment variables, running locally, seed data, and the production deployment checklist. |
+| [MESSAGING.md](./MESSAGING.md) | Direct messages — the derived-thread data model, the `/api/dm/*` endpoints, the polling (no-cache) frontend, and the plan for the Activity Hub comment/message icon split. |
 
 ## The 60-second overview
 

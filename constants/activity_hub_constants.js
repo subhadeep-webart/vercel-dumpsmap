@@ -6,8 +6,25 @@
 
 import {
   AlertTriangle, Briefcase, CircleDollarSign, Heart, Building2, Gift,
-  MessageSquare, Globe, Lightbulb, Landmark,
+  MessageSquare, MessageCircle, Send, Globe, Lightbulb, Landmark,
 } from 'lucide-react'
+
+// Feed-card action icons.
+//
+// Comment and direct-message are deliberately DIFFERENT SHAPES, not two
+// variants of a speech bubble. The card previously used MessageSquare for
+// comments, which reads as a chat/DM bubble — the client flagged that it looked
+// like a message icon rather than a comment icon.
+//
+//   COMMENT_ICON = MessageCircle → rounded speech bubble, the conventional
+//                                  "reply to this post" affordance.
+//   DM_ICON      = Send          → paper plane, the near-universal "send a
+//                                  message to this person" affordance.
+//
+// Keep these visually distinct if either is ever swapped: two similar bubbles
+// side by side in the same action row are indistinguishable on a phone.
+export const COMMENT_ICON = MessageCircle
+export const DM_ICON = Send
 
 // Story-style filter bar. Each key maps to a feed API `filter` value.
 export const FILTERS = [

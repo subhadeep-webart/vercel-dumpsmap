@@ -1,0 +1,200 @@
+================================================================================
+DUMPSMAP - NOTIFICATIONS: THIRD-PARTY SERVICE COSTS
+================================================================================
+
+Subject : What the notification feature will cost to RUN each month
+Note    : This document covers third-party service fees only. Development
+
+All prices verified against official vendor pricing pages in August 2026.
+Sources are listed at the end of this document.
+
+
+--------------------------------------------------------------------------------
+THE SHORT ANSWER
+--------------------------------------------------------------------------------
+
+Push notifications are FREE. There is no per-message charge, at any volume.
+
+  Push notifications to phone/desktop ............ $0 per month
+  In-app notifications (bell + page) ............. $0 per month
+  Email notifications ............................ $0 to $20 per month
+
+The only service that ever costs money is email, and only once volume grows
+past the free allowance. At DumpsMap's current scale that is very likely $0.
+
+No credit card is required to start. No Apple Developer account is required.
+
+
+--------------------------------------------------------------------------------
+1. PUSH NOTIFICATIONS - $0 PER MONTH
+--------------------------------------------------------------------------------
+
+There are two ways to send push notifications. Both are free.
+
+  OPTION A - FIREBASE CLOUD MESSAGING (FCM)
+  Cost: $0. Unlimited messages.
+
+    Google lists Cloud Messaging as "No-cost" on every Firebase plan. There
+    is no per-message fee, no monthly cap, and no overage charge. This is
+    true at 5,000 messages a month and at 5,000,000.
+
+    No credit card is required. A billing account is only needed if you use
+    other Firebase products (database, file storage, cloud functions), which
+    this feature does not.
+
+  OPTION B - SELF-HOSTED WEB PUSH  [OUR RECOMMENDATION]
+  Cost: $0. No account with anyone.
+
+    The browser push services run by Google, Mozilla and Apple are free to
+    use and require no registration or account at all. The security keys are
+    generated on our own server at no cost.
+
+    This runs entirely on DumpsMap's existing server and database. It adds
+    no new vendor, no new bill, and no dependency on Google.
+
+  WHY WE RECOMMEND OPTION B
+  Both cost nothing, but Option A ties DumpsMap to a Google service that
+  could change its terms later. Option B has no third party involved at all,
+  so there is no account that can be suspended and no pricing that can
+  change. It also fits the existing codebase more naturally.
+
+
+--------------------------------------------------------------------------------
+2. EMAIL NOTIFICATIONS - $0 TO $20 PER MONTH
+--------------------------------------------------------------------------------
+
+This is the only line item that can cost money. Email needs a sending service
+so that messages land in inboxes rather than spam folders.
+
+  RECOMMENDED: RESEND
+
+    Free tier    : 3,000 emails per month (limit of 100 per day)
+    Paid tier    : $20 per month for 50,000 emails
+    Credit card  : Not required for the free tier
+
+    At DumpsMap's current volume the free tier is very likely enough. The
+    one thing to watch is the 100-per-day limit: 3,000 a month averages 100
+    a day exactly, so a busy day can hit the ceiling even when the monthly
+    total is fine. If sending is uneven, budget $20 per month.
+
+  CHEAPEST AT HIGH VOLUME: AMAZON SES
+
+    Cost         : $0.10 per 1,000 emails
+    Credit card  : Required (AWS account)
+
+    Roughly four times cheaper than Resend at volume, but more work to set
+    up and requires approval from Amazon before it can send to real users.
+    Worth switching to only if email volume passes about 100,000 a month.
+
+  A WARNING ABOUT SENDGRID
+
+    SendGrid discontinued its free plan on 27 May 2025. It is now a 60-day
+    trial, after which sending stops until you pay $19.95 per month. If you
+    have seen older advice recommending SendGrid's free tier, that advice is
+    now out of date.
+
+
+--------------------------------------------------------------------------------
+3. SMS NOTIFICATIONS - NOT RECOMMENDED
+--------------------------------------------------------------------------------
+
+SMS is included here for completeness, but we advise against it for general
+notifications.
+
+  Cost per message : approx. $0.012 to $0.013 (Twilio, including carrier fees)
+  Phone number     : $1.15 per month
+  Registration     : One-time and recurring US carrier fees also apply
+
+  WHY WE ADVISE AGAINST IT
+  SMS costs roughly 30 to 60 times more than email, and infinitely more than
+  push, which is free. At 50,000 users receiving 10 messages a month, SMS
+  would cost about $6,500 per month, where push costs nothing at all.
+
+  If SMS is ever wanted, restrict it to critical events only, such as login
+  codes. Never use it for general notifications.
+
+
+--------------------------------------------------------------------------------
+4. TOTAL MONTHLY COST AS DUMPSMAP GROWS
+--------------------------------------------------------------------------------
+
+Assuming each user receives about 10 notifications per month.
+
+  PUSH NOTIFICATIONS ONLY (recommended starting point)
+
+      500 users  ........  $0 per month
+    5,000 users  ........  $0 per month
+   50,000 users  ........  $0 per month
+
+    Free at every scale. There is no volume at which push starts to cost
+    money.
+
+  PUSH + EMAIL (email used as a fallback for about half the notifications)
+
+      500 users  ........  $0 per month        (within the free allowance)
+    5,000 users  ........  $0 to $20 per month (Resend free tier or paid)
+   50,000 users  ........  $25 to $350 per month
+
+    At 50,000 users the range depends on the service: about $25 with Amazon
+    SES, about $350 with Resend. That decision can be made later, when the
+    volume actually arrives.
+
+  PUSH + EMAIL + SMS (SMS for critical alerts only)
+
+    Add approximately $2 / $14 / $131 per month at the three scales above.
+
+
+--------------------------------------------------------------------------------
+5. THINGS THAT ARE OFTEN ASSUMED TO COST MONEY, BUT DO NOT
+--------------------------------------------------------------------------------
+
+  APPLE DEVELOPER ACCOUNT - NOT REQUIRED
+    Push notifications on iPhone do not require the $99 per year Apple
+    Developer Program. Apple's own developer documentation confirms this.
+    That fee applies only to publishing a native app to the App Store, which
+    this feature does not involve.
+
+  GOOGLE CLOUD / FIREBASE BILLING - NOT REQUIRED
+    Firebase Cloud Messaging works without a billing account or credit card.
+
+  PER-MESSAGE PUSH FEES - DO NOT EXIST
+    Neither Firebase nor self-hosted web push charges per notification sent,
+    at any volume.
+
+  ONE GENUINE LIMITATION TO BE AWARE OF
+    On iPhone, users must add DumpsMap to their home screen before push
+    notifications can reach them. This is an Apple restriction that applies
+    to every website, not something specific to DumpsMap. It costs nothing,
+    but it does mean fewer iPhone users will opt in than Android users.
+    Android and desktop have no such requirement.
+
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+
+Notifications are effectively free to run.
+
+Push costs nothing at any scale. Email is free up to 3,000 messages a month,
+and $20 a month after that. There are no setup fees, no minimum commitments,
+and no Apple or Google charges.
+
+For DumpsMap today, the realistic ongoing cost is $0 per month, rising to
+around $20 per month if and when email volume grows past the free allowance.
+
+
+--------------------------------------------------------------------------------
+SOURCES
+--------------------------------------------------------------------------------
+
+  Firebase pricing        https://firebase.google.com/pricing
+  Resend pricing          https://resend.com/pricing
+  Amazon SES pricing      https://aws.amazon.com/ses/pricing/
+  SendGrid pricing        https://www.twilio.com/en-us/products/email-api/pricing
+  Twilio SMS pricing      https://www.twilio.com/en-us/sms/pricing/us
+  Apple web push docs     https://webkit.org/blog/12945/meet-web-push/
+
+  All figures checked in August 2026. Vendor pricing can change without
+  notice, so we would re-confirm the specific tiers before committing.
+
+================================================================================

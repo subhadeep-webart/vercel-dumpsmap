@@ -19,6 +19,16 @@ export const PRIMARY_NAV = [
   { key: 'business',    href: '/business',      label: 'For Business' },
 ]
 
+// Notification panel rows (header bell). Each entry maps a counter returned by
+// GET /api/inbox/unread-count onto a display row. `icon` is a HEADER_ICONS key;
+// `href` is where the row navigates. Order here is the order in the panel.
+export const NOTIFICATION_SOURCES = [
+  { key: 'dm',          icon: 'MessageSquare', tint: 'emerald', href: '/inbox?tab=dm',          label: 'Direct messages', noun: 'new message' },
+  { key: 'marketplace', icon: 'ShoppingBag',   tint: 'amber',   href: '/inbox?tab=marketplace', label: 'Marketplace',     noun: 'new message' },
+  { key: 'jobs',        icon: 'Briefcase',     tint: 'orange',  href: '/inbox?tab=jobs',        label: 'Jobs',            noun: 'new message' },
+  { key: 'groups',      icon: 'Users',         tint: 'sky',     href: '/inbox?tab=groups',      label: 'Group chats',     noun: 'new message' },
+]
+
 // Full header configuration. `icon` values are keys into HEADER_ICONS
 // (defined in components/AppHeader.jsx). `tint` picks a DrawerRow color chip.
 // `activeKey` (when present) is compared against the header's active key for

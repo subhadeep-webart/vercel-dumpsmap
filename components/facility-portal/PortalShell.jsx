@@ -15,14 +15,18 @@ import { Menu } from 'lucide-react'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import AppHeader from '@/components/AppHeader'
 import PortalSidebar from './PortalSidebar'
-import { PORTAL_MENU, DEFAULT_SECTION } from '@/constants/facility_portal_constants'
+import { menuForRole, DEFAULT_SECTION } from '@/constants/facility_portal_constants'
 
-const VALID_SECTIONS = new Set(PORTAL_MENU.filter((m) => m.section).map((m) => m.section))
-
-export default function PortalShell({ facility, header, renderPanel }) {
+export default function PortalShell({ facility, header, renderPanel, isOwner = false }) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  // The menu is role-scoped: residents never see (or can deep-link to) the
+  // facility-management sections. Validating ?section= against THIS menu means a
+  // resident hitting ?section=pricing falls back to their default panel.
+  const menu = menuForRole(isOwner)
+  const validSections = new Set(menu.filter((m) => m.section).map((m) => m.section))
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -31,7 +35,7 @@ export default function PortalShell({ facility, header, renderPanel }) {
   // refresh and is shareable/back-button friendly. Falls back to the default when
   // the param is missing or invalid.
   const paramSection = searchParams.get('section')
-  const activeSection = paramSection && VALID_SECTIONS.has(paramSection) ? paramSection : DEFAULT_SECTION
+  const activeSection = paramSection && validSections.has(paramSection) ? paramSection : DEFAULT_SECTION
 
   // The page (window) scrollbar lives on <html>, not this component's tree, so
   // tag the document with .portal-scroll while the portal is mounted to give the
@@ -56,7 +60,7 @@ export default function PortalShell({ facility, header, renderPanel }) {
   }
 
   // The active menu item, so the top bar / panel can show its label as a heading.
-  const active = PORTAL_MENU.find((m) => m.section === activeSection) || PORTAL_MENU[0]
+  const active = menu.find((m) => m.section === activeSection) || menu[0]
 
   return (
     <div className="portal-scroll min-h-[100dvh] bg-brand-surface">
@@ -87,6 +91,8 @@ export default function PortalShell({ facility, header, renderPanel }) {
       >
         <PortalSidebar
           facility={facility}
+          menu={menu}
+          isOwner={isOwner}
           activeSection={activeSection}
           onNavigate={selectSection}
           collapsed={collapsed}
@@ -117,7 +123,7 @@ export default function PortalShell({ facility, header, renderPanel }) {
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="left" className="flex w-72 flex-col p-4">
           <SheetTitle className="sr-only">Portal menu</SheetTitle>
-          <PortalSidebar facility={facility} activeSection={activeSection} onNavigate={selectSection} />
+          <PortalSidebar facility={facility} menu={menu} isOwner={isOwner} activeSection={activeSection} onNavigate={selectSection} />
         </SheetContent>
       </Sheet>
     </div>

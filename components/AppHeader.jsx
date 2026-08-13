@@ -38,7 +38,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import {
-  Activity, MapPin, Users, Menu, Bell, Shield, LogIn, LogOut,
+  Activity, MapPin, Users, Menu, Bell, Shield, LogIn, LogOut, Inbox, Briefcase,
   LayoutDashboard, HeartHandshake, Building2, Info, Settings, HelpCircle,
   MessageSquare, User as UserIcon, ChevronRight, ShoppingBag,
 } from 'lucide-react'
@@ -46,13 +46,48 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/co
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
 import { HEADER_CONFIG } from '@/constants/layout_constants'
 import { useAuth } from '@/components/AuthContext'
-import { getFirstName, getInitial, isNavActive } from '@/lib/nav-helpers'
+import { getAvatarUrl, getFirstName, getInitial, isNavActive } from '@/lib/nav-helpers'
+import { useHeaderNotifications } from '@/hooks/use-header-notifications'
+import NotificationPanel from '@/components/header/NotificationPanel'
 
 // Icon registry — HEADER_CONFIG references icons by string name so the config
 // stays a plain (React-free) object. Resolve names to components here.
 const HEADER_ICONS = {
   Activity, MapPin, Users, ShoppingBag, LayoutDashboard, MessageSquare,
   UserIcon, HeartHandshake, Building2, Info, Settings, HelpCircle, Shield,
+  Briefcase, Bell, Inbox,
+}
+
+// Small red count bubble shared by the inbox and bell buttons.
+function CountBadge({ count }) {
+  if (!count) return null
+  return (
+    <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
+// Avatar chip: the user's profile photo when they have one, otherwise their
+// initial. `className` sizes it; `fallbackClass` styles the initial circle.
+function Avatar({ user, initial, className, fallbackClass }) {
+  const [broken, setBroken] = useState(false)
+  const src = getAvatarUrl(user)
+  if (src && !broken) {
+    return (
+      <img
+        src={src}
+        alt=""
+        onError={() => setBroken(true)}
+        className={`${className} shrink-0 rounded-full object-cover`}
+      />
+    )
+  }
+  return (
+    <span className={`${className} ${fallbackClass} flex shrink-0 items-center justify-center rounded-full`}>
+      {initial}
+    </span>
+  )
 }
 
 export default function AppHeader({ active, showSearch = false }) {
@@ -66,6 +101,9 @@ export default function AppHeader({ active, showSearch = false }) {
 
   const firstName = getFirstName(user)
   const initial = getInitial(user)
+
+  // Bell panel + inbox badge share one poll of /api/inbox/unread-count.
+  const { items: notifItems, total: notifTotal, loading: notifLoading } = useHeaderNotifications(loggedIn)
 
   const isActive = (key) => isNavActive(key, pathname, active)
   const CtaIcon = HEADER_ICONS[cta.icon] || HeartHandshake
@@ -124,12 +162,31 @@ export default function AppHeader({ active, showSearch = false }) {
             <div className="h-9 w-24 animate-pulse rounded-md bg-neutral-100" aria-hidden />
           ) : loggedIn ? (
             <>
-              <Link href="/inbox" className="hidden h-9 items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-2.5 text-sm text-neutral-700 hover:bg-neutral-50 sm:inline-flex" aria-label="Notifications">
-                <Bell className="h-4 w-4" />
+              {/* Inbox — goes straight to the messages inbox. */}
+              <Link
+                href="/inbox"
+                className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 sm:inline-flex"
+                aria-label={notifTotal > 0 ? `Inbox, ${notifTotal} unread` : 'Inbox'}
+              >
+                <Inbox className="h-4 w-4" />
+                <CountBadge count={notifTotal} />
               </Link>
+
+              {/* Bell — opens the notification panel in place (no navigation). */}
               <DropdownMenu>
-                <DropdownMenuTrigger className="inline-flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-2.5 text-sm font-semibold text-white hover:bg-emerald-700" aria-label="Account menu">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px]">{initial}</span>
+                <DropdownMenuTrigger
+                  className="relative hidden h-9 w-9 items-center justify-center rounded-md border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 sm:inline-flex"
+                  aria-label={notifTotal > 0 ? `Notifications, ${notifTotal} new` : 'Notifications'}
+                >
+                  <Bell className="h-4 w-4" />
+                  <CountBadge count={notifTotal} />
+                </DropdownMenuTrigger>
+                <NotificationPanel items={notifItems} total={notifTotal} loading={notifLoading} icons={HEADER_ICONS} />
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger className="inline-flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 py-1 pl-1 pr-2.5 text-sm font-semibold text-white hover:bg-emerald-700" aria-label="Account menu">
+                  <Avatar user={user} initial={initial} className="h-7 w-7 text-[11px]" fallbackClass="bg-white/20 font-bold" />
                   <span className="hidden sm:inline">{firstName || 'Account'}</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
@@ -191,9 +248,12 @@ export default function AppHeader({ active, showSearch = false }) {
                   </div>
                 ) : loggedIn ? (
                   <button onClick={() => { setMobileOpen(false); router.push('/profile') }} className="flex items-center gap-3 text-left">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 text-lg font-bold text-white shadow-sm">
-                      {initial}
-                    </span>
+                    <Avatar
+                      user={user}
+                      initial={initial}
+                      className="h-11 w-11 text-lg shadow-sm"
+                      fallbackClass="bg-gradient-to-br from-emerald-500 to-emerald-700 font-bold text-white"
+                    />
                     <div className="min-w-0 flex-1">
                       <SheetTitle className="truncate text-left text-base font-bold">{user.name || user.email}</SheetTitle>
                       <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-neutral-600">

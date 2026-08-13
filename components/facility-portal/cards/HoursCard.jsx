@@ -59,7 +59,8 @@ function Empty() {
   return <div className="rounded-xl border border-dashed border-neutral-200 p-5 text-center text-sm text-neutral-500">No hours set yet.</div>
 }
 
-export default function HoursCard({ facility, saving, onSave, index = 0 }) {
+// `canEdit` mirrors the server's owner-only check on the owner-update PATCH.
+export default function HoursCard({ facility, saving, onSave, index = 0, canEdit = true }) {
   const hours = facility?.hours
   const initial =
     hours && typeof hours === 'object' && !Array.isArray(hours)
@@ -80,6 +81,7 @@ export default function HoursCard({ facility, saving, onSave, index = 0 }) {
       title="Hours of Operation"
       index={index}
       action={
+        !canEdit ? null : (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) setText(initial) }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Edit Hours</Button>
@@ -99,6 +101,7 @@ export default function HoursCard({ facility, saving, onSave, index = 0 }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )
       }
     >
       <HoursBody hours={hours} />

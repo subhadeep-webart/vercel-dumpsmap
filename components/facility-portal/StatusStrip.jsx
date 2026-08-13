@@ -22,7 +22,7 @@ function Tile({ label, children, className = '' }) {
   )
 }
 
-export default function StatusStrip({ facility, saving, onUpdateStatus }) {
+export default function StatusStrip({ facility, saving, onUpdateStatus, canEdit = true }) {
   if (!facility) return null
   const current = facilityStatus(facility)
   const active = STATUS_OPTIONS.find((o) => o.value === current) || STATUS_OPTIONS[0]
@@ -63,7 +63,8 @@ export default function StatusStrip({ facility, saving, onUpdateStatus }) {
           />
         </Tile>
 
-        {/* Update status */}
+        {/* Update status — owner/staff only; the API rejects anyone else. */}
+        {canEdit && (
         <div className="flex items-center justify-start px-4 py-3 sm:justify-center">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -90,6 +91,7 @@ export default function StatusStrip({ facility, saving, onUpdateStatus }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        )}
       </div>
     </section>
   )

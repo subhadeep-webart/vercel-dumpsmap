@@ -2401,13 +2401,22 @@ async function handleRoute(request, context) {
     if (route.match(/^\/facilities\/[^/]+\/pricing$/) && method === 'PATCH') {
       const facilityId = route.split('/')[2]
       const auth = getAuth(request)
-      // For MVP: allow any authenticated user to suggest pricing — flagged as 'user' verified
       if (!auth) return handleCORS(NextResponse.json({ error: 'Auth required' }, { status: 401 }))
       const body = await request.json()
       const user = await db.collection('users').findOne({ id: auth.id })
       const isOwner = (user?.ownedFacilities || []).includes(facilityId)
       const isAdmin = isStaff(auth.role)
-      const verifiedBy = isAdmin ? 'admin' : isOwner ? 'facility' : 'user'
+      // Only the verified facility owner (or staff) may write authoritative pricing
+      // — this is the pricing the map displays. Regular users observing a price
+      // change report it via POST /posts (scope: 'facility'), which is stamped
+      // isOfficial:false and never overwrites facility.pricing. See FACILITY_PORTAL_DEV.md Q6.
+      if (!isOwner && !isAdmin) {
+        return handleCORS(NextResponse.json(
+          { error: 'Only the verified facility owner may update pricing. Post a report instead.' },
+          { status: 403 },
+        ))
+      }
+      const verifiedBy = isAdmin ? 'admin' : 'facility'
       const update = {
         'pricing.lastUpdated': new Date().toISOString(),
         'pricing.verifiedBy': verifiedBy,

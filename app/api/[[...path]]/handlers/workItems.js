@@ -7,6 +7,7 @@
 //   JOBS
 //     POST   /jobs                       create new job (draft)
 //     GET    /jobs?state=open            list jobs (filterable)
+//     GET    /jobs?mine=true             list jobs posted by the caller
 //     GET    /jobs/:id                   fetch one
 //     PATCH  /jobs/:id/state             transition state (poster only)
 //
@@ -66,6 +67,13 @@ export async function handle(ctx) {
     const q = {}
     if (url.searchParams.get('state')) q.state = url.searchParams.get('state')
     if (url.searchParams.get('posterId')) q.posterId = url.searchParams.get('posterId')
+    // ?mine=true — jobs posted by the caller, for the resident portal's Jobs
+    // panel. Resolved from the session rather than a caller-supplied id so a user
+    // can't enumerate someone else's drafts. Unauthenticated → empty list.
+    if (url.searchParams.get('mine') === 'true') {
+      const { user, err } = await requireAuth(ctx); if (err) return err
+      q.posterId = user.id
+    }
     const rows = await db.collection('jobs').find(q).sort({ createdAt: -1 }).limit(100).toArray()
     return handleCORS(NextResponse.json({ jobs: rows.map(clean) }))
   }

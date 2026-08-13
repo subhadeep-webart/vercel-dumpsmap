@@ -10,15 +10,21 @@
 
 import {
   LayoutDashboard, Building2, DollarSign, Clock, CalendarClock, Image as ImageIcon,
-  Megaphone, BadgePercent, MessageSquareWarning, BarChart3, Settings,
-  CircleCheck, CircleSlash, Timer, TriangleAlert,
+  Megaphone, BadgePercent, MessageSquareWarning, Settings,
+  CircleCheck, CircleSlash, Timer, KeyRound, Briefcase, Activity, TriangleAlert,
 } from 'lucide-react'
 
-// Portal sidebar menu. `section` items scroll to an in-page anchor (single-page
-// portal. `section` items swap the main panel (SaaS-style, one section at a
-// time — clicking Pricing shows ONLY the pricing panel). `href` items deep-link
-// to real pages elsewhere in the app (Analytics, Account settings).
-export const PORTAL_MENU = [
+// Portal sidebar menu. `section` items swap the main panel (SaaS-style, one
+// section at a time — clicking Pricing shows ONLY the pricing panel). `href`
+// items deep-link to real pages elsewhere in the app.
+//
+// ROLE-BASED (client answers, docs/FACILITY_PORTAL_DEV.md §6 Q1–Q3): the facility
+// backend is restricted to facility owners. Residents get a different menu —
+// activity, jobs, and reporting — and cannot access facility management at all.
+// Use menuForRole() rather than reading these arrays directly.
+
+// Facility owner / facility user: manages the business side of the platform.
+export const OWNER_MENU = [
   { key: 'dashboard',     label: 'Dashboard',           icon: LayoutDashboard, section: 'dashboard' },
   { key: 'profile',       label: 'Profile',             icon: Building2,       section: 'profile' },
   { key: 'pricing',       label: 'Pricing & Materials', icon: DollarSign,      section: 'pricing' },
@@ -28,11 +34,33 @@ export const PORTAL_MENU = [
   { key: 'announcements', label: 'Announcements',       icon: Megaphone,       section: 'announcements' },
   { key: 'cashback',      label: 'Cashback Offers',     icon: BadgePercent,    section: 'cashback' },
   { key: 'reports',       label: 'Reports & Feedback',  icon: MessageSquareWarning, section: 'activity' },
-  { key: 'analytics',     label: 'Analytics',           icon: BarChart3,       href: '/analytics' },
   { key: 'account',       label: 'Account Settings',    icon: Settings,        section: 'settings' },
 ]
 
-// The panel shown first when the portal opens.
+// Regular user / resident: general platform activity, jobs, and reporting. No
+// facility backend. "Claim Facility" is the upgrade path to the owner menu.
+export const RESIDENT_MENU = [
+  { key: 'dashboard',  label: 'My Activity',       icon: Activity,   section: 'dashboard' },
+  { key: 'profile',    label: 'Profile',           icon: Building2,  section: 'profile' },
+  { key: 'jobs',       label: 'Jobs',              icon: Briefcase,  section: 'jobs' },
+  { key: 'reports',    label: 'My Reports',        icon: MessageSquareWarning, section: 'activity' },
+  { key: 'claim',      label: 'Claim Facility',    icon: KeyRound,   section: 'claim' },
+  { key: 'account',    label: 'Account Settings',  icon: Settings,   section: 'settings' },
+]
+
+// Back-compat export — some callers (and the shell's section validator) want the
+// full universe of sections. Prefer menuForRole() for anything user-facing.
+export const PORTAL_MENU = OWNER_MENU
+
+/**
+ * The sidebar menu for a given role.
+ * @param {boolean} isOwner — true for facility owners/staff, false for residents
+ */
+export function menuForRole(isOwner) {
+  return isOwner ? OWNER_MENU : RESIDENT_MENU
+}
+
+// The panel shown first when the portal opens (same key in both menus).
 export const DEFAULT_SECTION = 'dashboard'
 
 // Facility live-status options — the "Update Status" dropdown on the status strip
@@ -84,11 +112,39 @@ export const STRENGTH_FIELDS = [
 
 // Empty/edge copy so the shell doesn't inline strings.
 export const PORTAL_COPY = {
+  // Shown to residents in the Claim Facility section. Per Q4, users claim their
+  // facility, validate ownership, accept the terms, and then become responsible
+  // for maintaining its information.
   noFacility: {
+    icon: KeyRound,
+    title: 'Claim Your Facility',
+    body: 'Do you run a drop-off location — a donation centre, recycling facility, trash station, or buyback facility? Claim it to manage your pricing, hours, accepted materials, and operational status. Once we verify the facility belongs to you, its information becomes yours to maintain.',
+    cta: 'Find your facility',
+    href: '/facilities',
+  },
+  // Owner role, but no facility record came back (deleted, or the fetch failed).
+  // Distinct from noFacility — this account HAS ownership, so "claim one" is the
+  // wrong instruction.
+  ownerNoFacility: {
     icon: TriangleAlert,
-    title: "You don't manage a facility yet",
-    body: 'Find your facility in the directory and claim ownership. Once verified, it appears here with pricing, wait time, hours, and customer reports you can manage.',
+    title: "We couldn't load your facility",
+    body: 'Your account manages a facility, but we couldn’t load its record just now. Try again in a moment — if it keeps happening, contact support and we’ll sort it out.',
     cta: 'Browse facilities',
     href: '/facilities',
+  },
+  claimPending: {
+    title: 'Claim under review',
+    body: 'Our team is verifying your ownership. We usually reply to your business email within 1–2 business days. Once approved, your facility management tools appear here automatically.',
+  },
+  // Terms the claimant accepts before submitting (Q4: "accept the applicable
+  // terms/conditions … become responsible for maintaining the facility information").
+  claimTerms: [
+    'I am an owner, manager, or authorised representative of this facility.',
+    'I will keep the pricing, hours, accepted materials, and operational status accurate and up to date.',
+    'I understand the information I publish is shown to the public as verified facility data.',
+  ],
+  residentNotice: {
+    title: 'Facility management is for facility accounts',
+    body: 'Pricing, hours, and materials are maintained by each facility. You can still report what you see — a price change, a long wait, a closed gate — and help keep the map accurate for everyone.',
   },
 }

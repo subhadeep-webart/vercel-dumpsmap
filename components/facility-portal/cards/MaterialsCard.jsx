@@ -14,7 +14,8 @@ import {
 import PortalCard from '../PortalCard'
 import { materialChips } from '../portal-helpers'
 
-export default function MaterialsCard({ facility, saving, onSave, index = 0 }) {
+// `canEdit` mirrors the server's owner-only check on the owner-update PATCH.
+export default function MaterialsCard({ facility, saving, onSave, index = 0, canEdit = true }) {
   const { visible, extra, total } = materialChips(facility)
   const all = Array.isArray(facility?.accepted) ? facility.accepted.filter(Boolean) : []
 
@@ -41,6 +42,7 @@ export default function MaterialsCard({ facility, saving, onSave, index = 0 }) {
       title="Materials Accepted"
       index={index}
       action={
+        !canEdit ? null : (
         <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) { setItems(all); setDraft('') } }}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Edit Materials</Button>
@@ -74,9 +76,10 @@ export default function MaterialsCard({ facility, saving, onSave, index = 0 }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        )
       }
     >
-      <p className="mb-4 text-sm text-neutral-500">Update materials you accept at this location.</p>
+      {canEdit && <p className="mb-4 text-sm text-neutral-500">Update materials you accept at this location.</p>}
       {total ? (
         <div className="flex flex-wrap gap-2">
           {visible.map((m) => (

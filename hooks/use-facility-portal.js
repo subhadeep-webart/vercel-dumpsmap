@@ -10,6 +10,11 @@
 // (facility ids). There is no /facilities/mine endpoint, so we read the profile,
 // then fetch each owned facility. The portal renders ONE facility at a time; the
 // selected id is state, seeded to the first owned facility (or a ?facility= param).
+//
+// ROLE-BASED (client answers, docs/FACILITY_PORTAL_DEV.md §6): only facility
+// owners get the facility management console. Residents get the resident view and
+// a "Claim Your Facility" prompt. This hook exposes `isOwner` / `canEdit` so every
+// write affordance downstream can be gated to match the server's authorization.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -17,6 +22,7 @@ import useSWR from 'swr'
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { clearAuthToken } from '@/hooks/use-logout'
+import { isFacilityOwner, isStaffUser } from '@/lib/dashboard-routing'
 
 const PROFILE_KEY = '/api/users/me/profile'
 const LOGIN_REDIRECT = '/?login=1&returnTo=/profile'
@@ -172,33 +178,39 @@ export function useFacilityPortal() {
     [facility, mutateFacilities],
   )
 
-  // The portal is the profile/dashboard for EVERY user — it always renders, even
-  // when the account manages no facility. In that case we synthesize a lightweight
-  // "facility" from the user's own record so the layout + cards show (empty/
-  // editable) instead of a "claim a facility" gate. Ownership just means there's a
-  // real facility to bind to.
-  const effectiveFacility =
-    facility || (user
-      ? {
-          id: user.id,
-          name: user.name || user.companyName || user.email || 'Your facility',
-          verified: !!user.verified,
-          phone: user.phone || '',
-          website: user.website || '',
-          address: user.address || [user.city, user.state, user.zip].filter(Boolean).join(', '),
-          city: user.city || '',
-          state: user.state || '',
-          createdAt: user.createdAt,
-          photos: [],
-          accepted: [],
-          pricing: {},
-          activeAlerts: [],
-          _placeholder: true,
-        }
-      : null)
+  // Ownership (client answers, docs/FACILITY_PORTAL_DEV.md §6 Q1/Q6): the facility
+  // backend is role-based. A user who owns no facility is a resident — they get the
+  // resident view + a "Claim Your Facility" prompt, NOT a synthesized facility with
+  // live edit buttons.
+  //
+  // `isOwner` is a ROLE, derived from the user record alone — deliberately NOT
+  // `&& facility`. If an owner's facility fetch comes back empty (deleted record,
+  // or the per-facility catch above swallowing a transient failure) they must not
+  // be silently demoted into the resident view and told to claim a facility they
+  // already own; they stay an owner and see the empty/error state instead.
+  const isStaff = isStaffUser(user)
+  const isOwner = isFacilityOwner(user) || isStaff
+  // `canEdit` additionally requires a real facility to write to, and mirrors the
+  // server-side authorization so the UI hides exactly what the API rejects.
+  const canEdit = isOwner && !!facility
 
-  // Status machine: loading → error → ready. There is NO "no-facility" gate — an
-  // account without a facility still gets the portal (with the placeholder above).
+  // Pending/​rejected claims for this user, so the claim prompt can show status
+  // instead of re-offering a claim that's already under admin review. Only fetched
+  // for non-owners — owners have nothing to claim.
+  const claimsKey = user && !isOwner ? '/facility-claims/mine' : null
+  const { data: claimsData, mutate: mutateClaims } = useSWR(
+    claimsKey,
+    () => api.get('/facility-claims/mine'),
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  )
+  const claims = claimsData?.claims || []
+  const pendingClaim = useMemo(
+    () => claims.find((c) => c.status === 'pending' || c.status === 'needs_more_info') || null,
+    [claims],
+  )
+
+  // Status machine: loading → error → ready. A non-owner is still 'ready' — the
+  // portal renders the resident view for them, gated by isOwner downstream.
   let status
   if (isAuthFailure) status = 'redirecting'
   else if (profileError || facilitiesError) status = 'error'
@@ -209,8 +221,14 @@ export function useFacilityPortal() {
     status,
     user,
     facilities: facilities || [],
-    facility: effectiveFacility,
+    facility,
     hasFacility: !!facility,
+    isOwner,
+    isStaff,
+    canEdit,
+    claims,
+    pendingClaim,
+    refreshClaims: mutateClaims,
     selectedId: facility?.id || null,
     selectFacility: setSelectedId,
     savingKey,

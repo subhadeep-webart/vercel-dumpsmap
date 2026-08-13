@@ -10,14 +10,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Heart, MessageSquare, MapPin, Eye, ThumbsUp, Bookmark, Share2 } from 'lucide-react'
+import { Heart, MapPin, Eye, ThumbsUp, Bookmark, Share2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import SafeImage from '@/components/SafeImage'
 import PostOwnerMenu from '@/components/community/detail/PostOwnerMenu'
 import EditPostModal from '@/components/community/detail/EditPostModal'
-import { FEED_TYPE_META } from '@/constants/activity_hub_constants'
+import { FEED_TYPE_META, COMMENT_ICON } from '@/constants/activity_hub_constants'
 import { ActionButton, AuthorAvatar, timeAgoShort } from '@/components/activity-hub/primitives'
 import InlineComments from '@/components/activity-hub/InlineComments'
+import CardMessageButton from '@/components/activity-hub/CardMessageButton'
 
 export default function FeedCard({ card, user, requireAuth, actions }) {
   const meta = FEED_TYPE_META[card.type] || FEED_TYPE_META.general
@@ -27,6 +28,10 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
   const isBounty = card.type === 'bounty'
   const isUserPost = card.kind === 'post'
   const canManage = isUserPost && !!user && card.posterId === user.id
+  // Message the author: user posts only (aggregate cards have no author), never
+  // your own post. Logged-out users DO see it — the click routes through
+  // requireAuth('message') and opens the sign-in modal, matching like/save.
+  const canMessage = isUserPost && !!card.author?.id && card.author.id !== user?.id
   const [busyAction, setBusyAction] = useState(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -126,10 +131,15 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
                     onClick={() => setCommentsOpen((v) => !v)}
                     className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition hover:bg-neutral-100 ${commentsOpen ? 'text-brand-700' : 'text-neutral-600'}`}
                   >
-                    <MessageSquare className="h-4 w-4" /> {card.comments || 0}
+                    <COMMENT_ICON className="h-4 w-4" /> {card.comments || 0}
                   </button>
                   <ActionButton onClick={onSave} active={!!card.savedByMe} icon={Bookmark} label={card.saves || 0} activeTone="text-brand-600 fill-brand-600" />
                   <ActionButton onClick={onShare} active={false} icon={Share2} label="" activeTone="text-brand-600" />
+                  {/* Direct message the author. Hidden on your own posts (the API
+                      rejects self-DMs) and when the card carries no author. */}
+                  {canMessage && (
+                    <CardMessageButton author={card.author} user={user} requireAuth={requireAuth} />
+                  )}
                   <span className="ml-1 inline-flex items-center gap-1 px-1.5 text-[11px] text-neutral-400">
                     <Eye className="h-3.5 w-3.5" /> {card.views || 0}
                   </span>
@@ -153,7 +163,7 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
             <div className="flex items-center justify-between gap-2 border-t border-neutral-100 px-4 py-2.5 text-xs text-neutral-500">
               <div className="flex items-center gap-3.5">
                 <span className="inline-flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {card.likes || 0}</span>
-                <span className="inline-flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {card.comments || 0}</span>
+                <span className="inline-flex items-center gap-1"><COMMENT_ICON className="h-3.5 w-3.5" /> {card.comments || 0}</span>
                 <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" /> {card.views || 0}</span>
               </div>
               {card.href && (

@@ -99,7 +99,10 @@ function EditDialog({ tiles, saving, onSave, trigger }) {
   )
 }
 
-export default function PricingCard({ facility, saving, onSave, index = 0 }) {
+// `canEdit` mirrors the server's authorization (only the verified owner or staff
+// may PATCH /facilities/:id/pricing — see route.js). Read-only viewers get the
+// rates without any write affordance.
+export default function PricingCard({ facility, saving, onSave, index = 0, canEdit = true }) {
   const tiles = pricingTiles(facility)
   const updatedAt = facility?.pricing?.lastUpdated
 
@@ -110,15 +113,17 @@ export default function PricingCard({ facility, saving, onSave, index = 0 }) {
       info="Update your current rates. Changes publish instantly to drivers."
       index={index}
       action={
-        <EditDialog
-          tiles={tiles}
-          saving={saving}
-          onSave={onSave}
-          trigger={<Button variant="outline" size="sm" className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Edit Pricing</Button>}
-        />
+        canEdit ? (
+          <EditDialog
+            tiles={tiles}
+            saving={saving}
+            onSave={onSave}
+            trigger={<Button variant="outline" size="sm" className="gap-1.5"><Pencil className="h-3.5 w-3.5" /> Edit Pricing</Button>}
+          />
+        ) : null
       }
     >
-      <p className="mb-4 text-sm text-neutral-500">Update your current rates. Changes publish instantly.</p>
+      {canEdit && <p className="mb-4 text-sm text-neutral-500">Update your current rates. Changes publish instantly.</p>}
       {tiles.length ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {tiles.map((t, i) => <RateTile key={i} {...t} updatedAt={updatedAt} />)}
@@ -128,16 +133,18 @@ export default function PricingCard({ facility, saving, onSave, index = 0 }) {
           No rates set yet.
         </div>
       )}
-      <EditDialog
-        tiles={tiles}
-        saving={saving}
-        onSave={onSave}
-        trigger={
-          <button type="button" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
-            <Plus className="h-4 w-4" /> Add Material / Rate
-          </button>
-        }
-      />
+      {canEdit && (
+        <EditDialog
+          tiles={tiles}
+          saving={saving}
+          onSave={onSave}
+          trigger={
+            <button type="button" className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800">
+              <Plus className="h-4 w-4" /> Add Material / Rate
+            </button>
+          }
+        />
+      )}
     </PortalCard>
   )
 }
