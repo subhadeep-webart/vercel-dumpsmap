@@ -125,7 +125,11 @@ export default function RootLayout({ children }) {
               <FieldOnboardingDialog />
               <FieldModeRoot />
               <VersionWatcher />
-              <GlobalFab />
+              {/* Suspense for the same reason as TopProgressBar above: the FAB
+                  reads useSearchParams() to hide itself on the group chat tab. */}
+              <Suspense fallback={null}>
+                <GlobalFab />
+              </Suspense>
             </LayoutModeProvider>
           </ViewModeProvider>
         </AuthProvider>

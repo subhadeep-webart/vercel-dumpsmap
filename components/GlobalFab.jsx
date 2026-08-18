@@ -16,7 +16,7 @@
 // Hidden on auth pages and inside iframes/admin shell.
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Plus, X, MapPin, Briefcase, Gift, HeartHandshake, AlertTriangle, MessageSquare } from 'lucide-react'
 import QuickCheckInModal from '@/components/QuickCheckInModal'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -38,6 +38,7 @@ const ACTIONS = [
 
 export default function GlobalFab() {
   const pathname = usePathname() || ''
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -47,14 +48,25 @@ export default function GlobalFab() {
   // Also hide on the Facilities Directory — the mobile card rebuild (July 2026)
   // provides contextual per-card "Check In" buttons that replace the FAB's role
   // there, and the FAB was previously covering card actions on narrow screens.
+  const activeTab = searchParams?.get('tab') || ''
   const hide = useMemo(() => {
     if (!pathname) return true
     if (pathname.startsWith('/admin')) return true
     if (pathname.startsWith('/forgot-password')) return true
     if (pathname.startsWith('/profile/setup')) return true
     if (pathname === '/facilities' || pathname.startsWith('/facilities?')) return true
+    // Messaging surfaces: the FAB is fixed bottom-right at z-50, which is exactly
+    // where a chat composer's Send button lands — it sat on top of Send in the
+    // inbox, making it unclickable. Same class of collision as /facilities above.
+    // Nothing is lost by hiding it: every FAB action posts new content, which is
+    // unrelated to replying in a thread.
+    if (pathname.startsWith('/inbox')) return true
+    if (pathname.startsWith('/messages')) return true
+    // Group pages carry the same composer, but only on the chat tab — the Posts
+    // and About tabs are ordinary browsing where the FAB still earns its place.
+    if (pathname.startsWith('/community/groups/') && activeTab === 'chat') return true
     return false
-  }, [pathname])
+  }, [pathname, activeTab])
 
   // Close menu on route change
   useEffect(() => { setOpen(false) }, [pathname])
