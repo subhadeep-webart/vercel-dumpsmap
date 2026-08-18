@@ -8,6 +8,7 @@ import {
   LayoutDashboard, Users, MapPin, Store, Briefcase, Activity,
   Flag, ScrollText, BarChart3, LogOut, Shield, Menu, X, ChevronRight,
   BadgeCheck, KeyRound, CreditCard, Plug, Settings, Mail, HeartHandshake, Database, Building2, Award, ToggleRight, Inbox, ShoppingBag, Video,
+  Eye, EyeOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,6 +48,7 @@ export default function AdminShell({ children }) {
   const pathname = usePathname()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [counts, setCounts] = useState({})
@@ -98,11 +100,27 @@ export default function AdminShell({ children }) {
           >
             <div>
               <Label className="text-xs text-neutral-300">Email</Label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 bg-neutral-800 text-white border-neutral-700" placeholder="jamal@dumpmaps.org" />
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 bg-neutral-800 text-white border-neutral-700" placeholder="you@dumpmaps.org" />
             </div>
             <div>
               <Label className="text-xs text-neutral-300">Password</Label>
-              <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" className="mt-1 bg-neutral-800 text-white border-neutral-700" />
+              <div className="relative mt-1">
+                <Input
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  type={showPassword ? 'text' : 'password'}
+                  className="bg-neutral-800 pr-10 text-white border-neutral-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 transition hover:text-neutral-200"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             {loginError && <div className="rounded-md bg-red-500/15 px-3 py-2 text-xs text-red-300">{loginError}</div>}
             <Button type="submit" disabled={submitting} className="w-full bg-blue-600 hover:bg-blue-700">
