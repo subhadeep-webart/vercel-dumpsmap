@@ -55,7 +55,7 @@ export default function InlineComments({ postId, user, requireAuth, onCommented 
   const visible = showAll ? list : list.slice(-3)
 
   return (
-    <div className="border-t border-neutral-100 bg-neutral-50/40 px-3 py-3">
+    <div className="mt-4 border-t border-neutral-100 px-1 pt-4">
       {loading ? (
         <div className="flex items-center gap-1 text-xs text-neutral-400"><Loader2 className="h-3 w-3 animate-spin" /> Loading comments…</div>
       ) : list.length === 0 ? (

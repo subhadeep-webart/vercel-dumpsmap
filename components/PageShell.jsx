@@ -48,6 +48,7 @@ export default function PageShell({
   contentClass = '',
   padding = 'px-4 py-6 sm:py-8',
   bg = 'bg-neutral-50',
+  breadcrumbsMaxWidth,
   showBottomNav = true, // retained for API back-compat; bottom nav is now global
   fab,
 }) {
@@ -60,7 +61,7 @@ export default function PageShell({
       <AppHeader active={active} />
 
       {Array.isArray(breadcrumbs) && breadcrumbs.length > 0 && (
-        <Breadcrumbs items={breadcrumbs} maxWidth={maxWidth} />
+        <Breadcrumbs items={breadcrumbs} maxWidth={breadcrumbsMaxWidth ?? maxWidth} />
       )}
 
       <main className="flex-1">

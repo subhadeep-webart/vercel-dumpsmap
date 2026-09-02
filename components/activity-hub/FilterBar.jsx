@@ -4,13 +4,10 @@
 // extra "My Posts" chip appended. Controlled: the active key + change handler
 // come from the page.
 
-import { UserRound } from 'lucide-react'
-import { FILTERS } from '@/constants/activity_hub_constants'
-
-const MINE_CHIP = { key: 'mine', label: 'My Posts', icon: UserRound, tone: 'text-teal-600 bg-teal-100' }
+import { FILTERS, PERSONAL_FILTERS } from '@/constants/activity_hub_constants'
 
 export default function FilterBar({ user, filter, onChange }) {
-  const chips = user ? [...FILTERS, MINE_CHIP] : FILTERS
+  const chips = user ? [...FILTERS, ...PERSONAL_FILTERS] : FILTERS
   return (
     <div className="mb-4 -mx-4 flex gap-2.5 overflow-x-auto scroll-smooth px-4 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:justify-center sm:gap-3 sm:px-0">
       {chips.map((f) => {

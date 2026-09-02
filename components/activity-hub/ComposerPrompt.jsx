@@ -1,33 +1,50 @@
 'use client'
 
-// ComposerPrompt — the "Share an update…" card at the top of the feed that
-// opens the composer. Purely presentational; the click handler is passed in.
+// ComposerPrompt — the "Share an update…" bar at the top of the feed that opens
+// the composer. Purely presentational; the click handler is passed in.
+//
+// The whole bar is the click target, so the quick icons and the Post button are
+// decorative affordances rather than separate actions — they all open the same
+// composer. They're marked aria-hidden and the bar carries the single button
+// role so screen readers announce one control, not six.
 
-import { Sparkles, Camera, Video, AlertTriangle, Briefcase, CircleDollarSign } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+import { Image, Video, BarChart3, MapPin } from 'lucide-react'
 
+// Bare (un-pilled) icons, each keeping its own accent colour.
 const QUICK_ICONS = [
-  { Icon: Camera,          tone: 'bg-sky-100 text-sky-600' },
-  { Icon: Video,           tone: 'bg-purple-100 text-purple-600' },
-  { Icon: AlertTriangle,   tone: 'bg-red-100 text-red-600' },
-  { Icon: Briefcase,       tone: 'bg-blue-100 text-blue-600' },
-  { Icon: CircleDollarSign, tone: 'bg-green-100 text-green-600' },
+  { Icon: Image,     tone: 'text-blue-500' },
+  { Icon: Video,     tone: 'text-purple-500' },
+  { Icon: BarChart3, tone: 'text-orange-500' },
+  { Icon: MapPin,    tone: 'text-red-500' },
 ]
 
-export default function ComposerPrompt({ user, onOpen }) {
+export default function ComposerPrompt({ user, onOpen, className = '' }) {
+  const label = user ? 'Share an update…' : 'Sign in to share an update…'
   return (
-    <Card className="mb-4 cursor-pointer transition hover:border-green-300" onClick={onOpen}>
-      <CardContent className="flex items-center gap-3 p-3">
-        <div className="flex w-7 h-7 md:h-9 md:w-9 items-center justify-center rounded-full bg-green-600 text-white">
-          <Sparkles className="h-4 w-4" />
-        </div>
-        <div className="flex-1 text-sm text-neutral-500">{user ? 'Share an update…' : 'Sign in to share an update…'}</div>
-        <div className="flex gap-1.5">
-          {QUICK_ICONS.map(({ Icon, tone }, i) => (
-            <span key={i} className={`hidden h-7 w-7 items-center justify-center rounded-full sm:inline-flex ${tone}`}><Icon className="h-3.5 w-3.5" /></span>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
+      aria-label={label}
+      className={`flex cursor-pointer items-center gap-3 rounded-[16px] border border-[#E0EBE2] bg-white px-4 py-3 transition hover:border-green-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${className}`}
+    >
+      <span className="flex-1 truncate text-[16px] font-normal leading-[24px] text-neutral-500">
+        {label}
+      </span>
+
+      <span aria-hidden className="hidden items-center gap-3 sm:flex">
+        {QUICK_ICONS.map(({ Icon, tone }, i) => (
+          <Icon key={i} className={`h-5 w-5 ${tone}`} strokeWidth={1.8} />
+        ))}
+      </span>
+
+      <span
+        aria-hidden
+        className="ml-1 shrink-0 rounded-md bg-green-800 px-4 py-1.5 text-[14px] font-normal text-white"
+      >
+        Post
+      </span>
+    </div>
   )
 }

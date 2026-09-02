@@ -58,12 +58,15 @@ export default function CardMessageButton({ author, user, requireAuth }) {
 
   return (
     <>
+      {/* Styled to match the ReactionPill siblings in the card footer (see
+          components/activity-hub/primitives) — same pill border, padding and
+          hover, so like/comment/save/share/message read as one row. */}
       <button
         onClick={onClick}
         disabled={loading}
         title={`Message ${authorName}`}
         aria-label={`Message ${authorName}`}
-        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600 transition hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
       >
         <DM_ICON className="h-4 w-4" />
       </button>
