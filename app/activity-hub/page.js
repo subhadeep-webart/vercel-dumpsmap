@@ -13,7 +13,7 @@
 import { Suspense } from 'react'
 import { Loader2 } from 'lucide-react'
 import RouteFeatureLock from '@/components/RouteFeatureLock'
-import ActivityHubInner from '@/components/activity-hub/ActivityhubInner'
+import ActivityHubInner from '@/components/activity-hub/ActivityHubInner'
 
 export default function ActivityHubPage() {
   return (
