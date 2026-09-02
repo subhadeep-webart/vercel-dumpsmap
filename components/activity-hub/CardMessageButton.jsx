@@ -66,7 +66,7 @@ export default function CardMessageButton({ author, user, requireAuth }) {
         disabled={loading}
         title={`Message ${authorName}`}
         aria-label={`Message ${authorName}`}
-        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 px-3 py-1.5 text-[13px] font-medium text-neutral-600 transition hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-full border border-neutral-200 px-2.5 py-1 text-[12px] font-medium text-neutral-600 transition hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[13px]"
       >
         <DM_ICON className="h-4 w-4" />
       </button>

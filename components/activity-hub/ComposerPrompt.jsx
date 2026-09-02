@@ -29,7 +29,7 @@ export default function ComposerPrompt({ user, onOpen, className = '' }) {
       aria-label={label}
       className={`flex cursor-pointer items-center gap-3 rounded-[16px] border border-[#E0EBE2] bg-white px-4 py-3 transition hover:border-green-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 ${className}`}
     >
-      <span className="flex-1 truncate text-[16px] font-normal leading-[24px] text-neutral-500">
+      <span className="flex-1 truncate text-[14px] font-normal leading-[20px] text-neutral-500 sm:text-[16px] sm:leading-[24px]">
         {label}
       </span>
 
@@ -41,7 +41,7 @@ export default function ComposerPrompt({ user, onOpen, className = '' }) {
 
       <span
         aria-hidden
-        className="ml-1 shrink-0 rounded-md bg-green-800 px-4 py-1.5 text-[14px] font-normal text-white"
+        className="ml-1 shrink-0 rounded-md bg-green-800 px-3 py-1.5 text-[13px] font-normal text-white sm:px-4 sm:text-[14px]"
       >
         Post
       </span>

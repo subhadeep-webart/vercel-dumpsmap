@@ -27,7 +27,7 @@ export function AuthorAvatar({ author }) {
   const url = author?.avatarUrl
   const initials = ((author?.name || 'U')[0] || 'U').toUpperCase()
   return (
-    <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-100 text-lg font-bold text-brand-700 ring-1 ring-black/5">
+    <div className="flex h-[44px] w-[44px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-100 text-base font-bold text-brand-700 ring-1 ring-black/5 sm:h-[58px] sm:w-[58px] sm:text-lg">
       {url ? <SafeImage src={url} alt="" kind="avatar" fallbackWhenEmpty="none" className="h-full w-full object-cover" /> : initials}
     </div>
   )
@@ -105,7 +105,7 @@ export function ReactionPill({ onClick, active, icon: Icon, label, activeTone = 
     <button
       onClick={onClick}
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition ${
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-[13px] ${
         active
           ? `border-transparent ${activeTone}`
           : 'border-neutral-200 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50'

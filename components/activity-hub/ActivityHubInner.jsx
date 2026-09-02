@@ -113,8 +113,8 @@ function ActivityHubInner() {
           }`}
         >
           <header className="overflow-hidden">
-            <h1 className="text-[24px] font-semibold leading-[24px] tracking-normal text-neutral-900">What&apos;s happening now?</h1>
-            <p className="mt-1 text-[16px] font-normal leading-[24px] tracking-normal text-neutral-600">Real-time updates from your community.</p>
+            <h1 className="text-[20px] leading-[28px] font-semibold tracking-normal text-neutral-900 sm:text-[24px] sm:leading-[24px]">What&apos;s happening now?</h1>
+            <p className="mt-1 text-[14px] font-normal leading-[20px] tracking-normal text-neutral-600 sm:text-[16px] sm:leading-[24px]">Real-time updates from your community.</p>
           </header>
         </div>
 

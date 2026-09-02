@@ -81,11 +81,11 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
             {isUserPost && <AuthorAvatar author={card.author} />}
             <div className="min-w-0">
               {isUserPost && (
-                <div className="truncate text-[18px] font-semibold leading-[24px] tracking-normal text-neutral-900">
+                <div className="truncate text-[16px] font-semibold leading-[22px] tracking-normal text-neutral-900 sm:text-[18px] sm:leading-[24px]">
                   {card.author?.name || 'User'}
                 </div>
               )}
-              <span className={`mt-1 inline-flex items-center rounded-full px-3 py-1 text-[13px] font-medium ${meta.tone}`}>
+              <span className={`mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-[12px] font-medium sm:px-3 sm:py-1 sm:text-[13px] ${meta.tone}`}>
                 {meta.label}
               </span>
             </div>
@@ -130,7 +130,7 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
           )}
 
           {card.description && (
-            <p className={`text-[16px] font-normal leading-[24px] tracking-normal text-neutral-700 ${card.title ? 'mt-1.5' : ''}`}>
+            <p className={`text-[15px] font-normal leading-[22px] tracking-normal text-neutral-700 sm:text-[16px] sm:leading-[24px] ${card.title ? 'mt-1.5' : ''}`}>
               {card.description}
             </p>
           )}
@@ -146,7 +146,7 @@ export default function FeedCard({ card, user, requireAuth, actions }) {
 
         {/* Footer — provenance left, reactions right */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1.5 text-[13px] text-neutral-500">
+          <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-neutral-500 sm:text-[13px]">
             {place && (
               <>
                 <MapPin className="h-3.5 w-3.5 shrink-0" />
